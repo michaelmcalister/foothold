@@ -1,8 +1,28 @@
 <script setup>
+import { ref } from 'vue'
 import HeroMap from './components/HeroMap.vue'
+import IntroScreen from './components/IntroScreen.vue'
+
+// Play the startup animation once per session, or always with ?intro=1.
+function shouldShowIntro() {
+  if (new URLSearchParams(location.search).has('intro')) return true
+  try {
+    if (sessionStorage.getItem('fh-intro-seen')) return false
+    sessionStorage.setItem('fh-intro-seen', '1')
+  } catch { /* storage blocked: just play it */ }
+  return true
+}
+const showIntro = ref(shouldShowIntro())
+const heroKey = ref(0)
+
+function introDone() {
+  showIntro.value = false
+  heroKey.value++ // replay the hero map now that it's visible
+}
 </script>
 
 <template>
+  <IntroScreen v-if="showIntro" @done="introDone" />
   <header class="top">
     <a class="brand" href="#">
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -25,7 +45,7 @@ import HeroMap from './components/HeroMap.vue'
         </p>
         <a class="button" href="#beta">Join the Sydney beta</a>
       </div>
-      <HeroMap class="hero-map" />
+      <HeroMap :key="heroKey" class="hero-map" />
     </section>
 
     <section class="how" aria-labelledby="how-title">
@@ -91,6 +111,6 @@ import HeroMap from './components/HeroMap.vue'
   </main>
 
   <footer class="foot">
-    <p>Foothold is made in Sydney.</p>
+    <p>Foothold is made in Sydney. <a href="brand/">Logo concepts</a></p>
   </footer>
 </template>

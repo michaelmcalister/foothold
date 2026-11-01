@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Foothold logo concepts</title>
+<link rel="icon" type="image/svg+xml" href="icon-claimed-hex.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #F3F5EF; --ink: #16302A; --ink-60: rgba(22,48,42,.62); --ink-15: rgba(22,48,42,.14);
+    --you: #2E55E6; --rival: #E8A817;
+    --font: 'Archivo', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.55 var(--font); }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--you); outline-offset: 3px; border-radius: 4px; }
+  header, section { padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 48px); }
+  header { display: grid; gap: 14px; border-bottom: 1px solid var(--ink-15); }
+  h1 { margin: 0; font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 850; font-stretch: 125%; letter-spacing: -.03em; line-height: 1.02; }
+  h2 { margin: 0; font-size: 1.6rem; font-weight: 800; font-stretch: 112%; letter-spacing: -.015em; }
+  p { margin: 0; max-width: 62ch; }
+  .muted { color: var(--ink-60); }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+  .button { display: inline-block; background: var(--you); color: #fff; font-weight: 700; text-decoration: none; padding: 12px 20px; border-radius: 999px; }
+  .button.ghost { background: none; color: var(--ink); border: 2px solid var(--ink); }
+  section { border-bottom: 1px solid var(--ink-15); display: grid; gap: 22px; }
+  .head { display: grid; gap: 8px; }
+  .pick { font-weight: 700; color: var(--you); }
+  .row { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: stretch; }
+  .tile { border-radius: 14px; padding: 28px; display: grid; place-items: center; min-height: 200px; }
+  .tile.paper { background: #fff; box-shadow: inset 0 0 0 1px var(--ink-15); }
+  .tile.ink { background: var(--ink); color: var(--paper); }
+  .tile.home { background: linear-gradient(160deg, #C9D8C0, #8FAEA0); }
+  .tile img.mark { width: 120px; height: 120px; }
+  .tile img.icon { width: 120px; height: 120px; border-radius: 26px; box-shadow: 0 12px 30px -16px rgba(22,48,42,.6); }
+  .lockup { display: flex; align-items: center; gap: 14px; }
+  .lockup img { width: 54px; height: 54px; }
+  .word { font-weight: 850; font-stretch: 112%; font-size: 2.3rem; letter-spacing: -.025em; line-height: 1; }
+  .small { font-size: .9rem; }
+  .downloads { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .95rem; }
+  /* Wordmark concept: the two o's are hexes, one yours, one a rival's. */
+  .hexword { display: inline-flex; align-items: baseline; font-weight: 850; font-stretch: 112%; font-size: clamp(2.6rem, 8vw, 4.6rem); letter-spacing: -.03em; line-height: 1; }
+  .hexword svg { width: .62em; height: .62em; margin: 0 .02em; align-self: center; transform: translateY(.1em); }
+  .tile.ink .hexword { color: var(--paper); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Foothold logo concepts</h1>
+  <p class="muted">Five directions, each shown on light, as an app icon and with the wordmark. All marks use flat-topped hexes, the same shape as the game map, so the logo and the map read as one system.</p>
+  <div class="actions">
+    <a class="button" href="../?intro=1">Watch the startup animation</a>
+    <a class="button ghost" href="../">Back to the site</a>
+  </div>
+</header>
+
+<section>
+  <div class="head">
+    <h2>1. Claimed hex</h2>
+    <p class="pick">Recommended, and used in the startup animation.</p>
+    <p class="muted">A hex in your colour with an F drawn like a run line. It's the simplest read at icon size and it is literally a piece of ground you hold.</p>
+  </div>
+  <div class="row">
+    <div class="tile paper"><img class="mark" src="mark-claimed-hex.svg" alt="Claimed hex mark" /></div>
+    <div class="tile home"><img class="icon" src="icon-claimed-hex.svg" alt="Claimed hex app icon" /></div>
+    <div class="tile paper"><div class="lockup"><img src="mark-claimed-hex.svg" alt="" /><span class="word">Foothold</span></div></div>
+    <div class="tile ink"><div class="lockup"><img src="mark-claimed-hex.svg" alt="" /><span class="word">Foothold</span></div></div>
+  </div>
+  <div class="downloads"><a href="mark-claimed-hex.svg" download>Mark SVG</a><a href="mark-claimed-hex-mono.svg" download>One-colour SVG</a><a href="icon-claimed-hex.svg" download>App icon SVG</a></div>
+</section>
+
+<section>
+  <div class="head">
+    <h2>2. Closed loop</h2>
+    <p class="muted">A run route that ends where it began, with the ground inside filled in. It explains the whole game in one picture.</p>
+  </div>
+  <div class="row">
+    <div class="tile paper"><img class="mark" src="mark-closed-loop.svg" alt="Closed loop mark" /></div>
+    <div class="tile home"><img class="icon" src="icon-closed-loop.svg" alt="Closed loop app icon" /></div>
+    <div class="tile paper"><div class="lockup"><img src="mark-closed-loop.svg" alt="" /><span class="word">Foothold</span></div></div>
+  </div>
+  <div class="downloads"><a href="mark-closed-loop.svg" download>Mark SVG</a><a href="icon-closed-loop.svg" download>App icon SVG</a></div>
+</section>
+
+<section>
+  <div class="head">
+    <h2>3. Hex footprint</h2>
+    <p class="muted">A footprint built from hexes, with one gold cell taken from a rival. It says running and territory at once.</p>
+  </div>
+  <div class="row">
+    <div class="tile paper"><img class="mark" src="mark-hex-footprint.svg" alt="Hex footprint mark" /></div>
+    <div class="tile home"><img class="icon" src="icon-hex-footprint.svg" alt="Hex footprint app icon" /></div>
+    <div class="tile paper"><div class="lockup"><img src="mark-hex-footprint.svg" alt="" /><span class="word">Foothold</span></div></div>
+  </div>
+  <div class="downloads"><a href="mark-hex-footprint.svg" download>Mark SVG</a><a href="icon-hex-footprint.svg" download>App icon SVG</a></div>
+</section>
+
+<section>
+  <div class="head">
+    <h2>4. Expanding ground</h2>
+    <p class="muted">Three hexes growing out from a filled one: foothold, outpost, stronghold. It carries the progression ladder from the game.</p>
+  </div>
+  <div class="row">
+    <div class="tile paper"><img class="mark" src="mark-expanding-ground.svg" alt="Expanding ground mark" /></div>
+    <div class="tile home"><img class="icon" src="icon-expanding-ground.svg" alt="Expanding ground app icon" /></div>
+    <div class="tile paper"><div class="lockup"><img src="mark-expanding-ground.svg" alt="" /><span class="word">Foothold</span></div></div>
+  </div>
+  <div class="downloads"><a href="mark-expanding-ground.svg" download>Mark SVG</a><a href="mark-expanding-ground-on-ink.svg" download>On dark SVG</a><a href="icon-expanding-ground.svg" download>App icon SVG</a></div>
+</section>
+
+<section>
+  <div class="head">
+    <h2>5. Hex wordmark</h2>
+    <p class="muted">A wordmark only. The two o's become hexes: one yours, one a rival's. Good for the website header and merch, paired with any mark above.</p>
+  </div>
+  <div class="row">
+    <div class="tile paper">
+      <span class="hexword" aria-label="Foothold">F<svg viewBox="0 0 20 18" aria-hidden="true"><polygon points="20,9 15,17.66 5,17.66 0,9 5,0.34 15,0.34" fill="#2E55E6"/></svg><svg viewBox="0 0 20 18" aria-hidden="true"><polygon points="20,9 15,17.66 5,17.66 0,9 5,0.34 15,0.34" fill="#E8A817"/></svg>thold</span>
+    </div>
+    <div class="tile ink">
+      <span class="hexword" aria-label="Foothold">F<svg viewBox="0 0 20 18" aria-hidden="true"><polygon points="20,9 15,17.66 5,17.66 0,9 5,0.34 15,0.34" fill="#2E55E6"/></svg><svg viewBox="0 0 20 18" aria-hidden="true"><polygon points="20,9 15,17.66 5,17.66 0,9 5,0.34 15,0.34" fill="#E8A817"/></svg>thold</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <h2>Colour</h2>
+    <p class="muted">Gum green ink and map paper for the base. Cobalt is always your ground, wattle gold is always a rival's.</p>
+  </div>
+  <div class="row small">
+    <div class="tile ink">Ink #16302A</div>
+    <div class="tile paper">Paper #F3F5EF</div>
+    <div class="tile" style="background:#2E55E6;color:#fff">Your ground #2E55E6</div>
+    <div class="tile" style="background:#E8A817;color:#16302A">Rival ground #E8A817</div>
+  </div>
+</section>
+</body>
+</html>
