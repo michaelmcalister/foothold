@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/michaelmcalister/foothold#readme",
   "dependencies": {
+    "@auth0/auth0-spa-js": "^2.30.0",
     "h3-js": "^4.5.0",
     "maplibre-gl": "^6.16.0",
     "vue": "^3.5.44",

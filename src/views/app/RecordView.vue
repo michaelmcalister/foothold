@@ -1,0 +1,188 @@
+<script setup>
+// Record a run, walk or ride. Shows time, distance and pace, the route on
+// the map, and how far you are from closing your loop. Also imports GPX
+// files from a watch, and (in the practice map) simulates a loop.
+import { ref, computed, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+import TerritoryMap from '../../components/TerritoryMap.vue'
+import { rec, start, pause, resume, stop } from '../../lib/recorder.js'
+import { api, isLocal } from '../../lib/api/index.js'
+import { store, refresh, toast } from '../../lib/store.js'
+import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
+import { loopTrack, parseGpx } from '../../lib/tracks.js'
+import { setLastResult } from '../../lib/lastResult.js'
+
+const router = useRouter()
+const mode = ref(store.mode)
+const saving = ref(false)
+const error = ref(null)
+const fileInput = ref(null)
+
+const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
+const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
+const loopReady = computed(() => rec.distanceM > 400 && rec.toStartM != null && rec.toStartM <= 30)
+const loopHint = computed(() => {
+  if (rec.status !== 'recording' || rec.distanceM < 150) return null
+  if (loopReady.value) return 'Your loop closes here. Finish now or keep going for a bigger one.'
+  if (rec.distanceM < 400) return 'Keep going. Loops need at least 400 m.'
+  return `${rec.toStartM} m back to your start closes the loop.`
+})
+
+function begin() {
+  error.value = null
+  start(mode.value)
+}
+
+async function save(payload, label = 'Saving') {
+  saving.value = label
+  error.value = null
+  try {
+    const res = await api.postActivity(payload)
+    setLastResult(res)
+    await refresh()
+    router.replace({ name: 'result', params: { id: res.activity.id } })
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    saving.value = false
+  }
+}
+
+async function finish() {
+  const out = stop()
+  if (out.points.length < 10) {
+    toast('That was too short to save. Nothing was recorded.')
+    return
+  }
+  await save({ ...out, source: 'phone' })
+}
+
+function cancel() {
+  if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
+  stop()
+}
+
+async function simulate() {
+  const perimeterKm = mode.value === 'ride' ? 9 : mode.value === 'walk' ? 2.5 : 3.6
+  const kmh = mode.value === 'ride' ? 24 : mode.value === 'walk' ? 5.2 : 10.5
+  const startAt = Date.now() - (perimeterKm / kmh) * 3600000 - 60000
+  const angle = Math.random() * Math.PI * 2
+  const r = 300 + Math.random() * 500
+  const centre = { lat: store.centre.lat + (Math.sin(angle) * r) / 111000, lng: store.centre.lng + (Math.cos(angle) * r) / (111000 * Math.cos((store.centre.lat * Math.PI) / 180)) }
+  const points = loopTrack({ centre, perimeterKm, kmh, startAt, seed: Math.floor(Math.random() * 1e9), stretch: 0.8 + Math.random() * 0.6, rotate: Math.random() * Math.PI })
+  await save({ mode: mode.value, source: 'phone', startedAt: startAt, points }, 'Running your practice loop')
+}
+
+async function onFile(e) {
+  const f = e.target.files?.[0]
+  e.target.value = ''
+  if (!f) return
+  try {
+    const { points, mode: m } = parseGpx(await f.text())
+    await save({ mode: m, source: 'import', startedAt: points[0].t, points }, 'Importing')
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+onBeforeUnmount(() => {
+  // Leaving mid-recording keeps the recording going only if we're still on screen;
+  // a route change stops it so GPS isn't left running.
+  if (rec.status !== 'idle') stop()
+})
+</script>
+
+<template>
+  <div class="rec">
+    <div class="maparea">
+      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" />
+      <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </RouterLink>
+      <div v-if="loopHint" class="loophint" :class="{ ready: loopReady }" aria-live="polite">{{ loopHint }}</div>
+    </div>
+
+    <section class="panel-bottom">
+      <template v-if="saving">
+        <div class="saving" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <strong>{{ saving }}</strong>
+          <span class="muted small">Finding your loops and claiming ground</span>
+        </div>
+      </template>
+
+      <template v-else-if="!live">
+        <div class="seg" role="group" aria-label="Activity type">
+          <button v-for="m in ['run', 'walk', 'ride']" :key="m" type="button" :aria-pressed="mode === m" @click="mode = m">{{ MODE_LABEL[m] }}</button>
+        </div>
+        <p class="small muted">
+          Keep Foothold open on screen while you {{ mode }}. Browsers pause GPS when the phone locks.
+          Close a loop of at least 400 m and everything inside is yours.
+        </p>
+        <div v-if="rec.error || error" class="notice bad">{{ rec.error || error }}</div>
+        <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
+        <div class="alt">
+          <button class="btn quiet small" type="button" @click="fileInput.click()">Import a GPX file</button>
+          <button v-if="isLocal" class="btn quiet small" type="button" @click="simulate">Practice loop (no GPS)</button>
+          <input ref="fileInput" type="file" accept=".gpx,application/gpx+xml" hidden @change="onFile" />
+        </div>
+      </template>
+
+      <template v-else>
+        <div v-if="rec.status === 'acquiring'" class="acq" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <span>Finding GPS<template v-if="rec.accuracy"> (±{{ rec.accuracy }} m)</template></span>
+        </div>
+        <div class="live">
+          <div class="stat"><span class="big-num">{{ duration(rec.elapsedS) }}</span><span class="label">Time</span></div>
+          <div class="stat"><span class="big-num">{{ km(rec.distanceM) }}</span><span class="label">km</span></div>
+          <div class="stat">
+            <span class="big-num">{{ rec.mode === 'ride' ? speedKmh(rec.paceSPerKm) : pace(rec.paceSPerKm) }}</span>
+            <span class="label">{{ rec.mode === 'ride' ? 'km/h' : 'Pace /km' }}</span>
+          </div>
+        </div>
+        <div class="controls">
+          <button v-if="rec.status === 'recording'" class="btn secondary" type="button" @click="pause">Pause</button>
+          <button v-else-if="rec.status === 'paused'" class="btn secondary" type="button" @click="resume">Resume</button>
+          <button v-else class="btn secondary" type="button" @click="cancel">Cancel</button>
+          <button class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="finish">Finish</button>
+        </div>
+        <button v-if="rec.status !== 'acquiring'" class="discard" type="button" @click="cancel">Discard</button>
+      </template>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.rec { display: grid; grid-template-rows: 1fr auto; height: 100dvh; }
+.maparea { position: relative; min-height: 0; }
+.maparea > :first-child { position: absolute; inset: 0; }
+.back {
+  position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
+  width: 44px; height: 44px; border-radius: 50%; background: #fff; color: var(--ink);
+  display: grid; place-items: center; box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
+}
+.loophint {
+  position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 64px; right: 12px; z-index: 2;
+  background: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 650; font-size: 0.95rem;
+  box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
+}
+.loophint.ready { background: var(--you); color: #fff; }
+.panel-bottom {
+  background: var(--paper); padding: 18px var(--pad) calc(18px + env(safe-area-inset-bottom));
+  display: grid; gap: 14px; border-top: 1px solid var(--line);
+}
+.go { min-height: 58px; font-size: 1.15rem; }
+.alt { display: flex; gap: 10px; flex-wrap: wrap; }
+.live { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.live .big-num { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.discard { justify-self: center; border: 0; background: none; color: var(--ink-60); font: inherit; text-decoration: underline; cursor: pointer; padding: 6px; }
+.acq, .saving { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.saving { flex-direction: column; padding: 12px 0; }
+.spinner {
+  width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--soft); border-top-color: var(--you);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>

@@ -98,9 +98,9 @@ export function applyClaim(cells, targets, who, gain, { now = Date.now(), isPriv
 // Progression ladder, by hexes held in one mode.
 export const LEVELS = [
   { id: 'foothold', name: 'Foothold', min: 1 },
-  { id: 'outpost', name: 'Outpost', min: 25 },
-  { id: 'stronghold', name: 'Stronghold', min: 150 },
-  { id: 'fortress', name: 'Fortress', min: 500 },
+  { id: 'outpost', name: 'Outpost', min: 60 },
+  { id: 'stronghold', name: 'Stronghold', min: 250 },
+  { id: 'fortress', name: 'Fortress', min: 800 },
 ]
 export function levelFor(count) {
   let lvl = null

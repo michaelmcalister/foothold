@@ -1,0 +1,107 @@
+<script setup>
+// Your numbers: ground held, where you are on the ladder, your weeks,
+// and every activity.
+import { ref, computed, onMounted, watch } from 'vue'
+import { api } from '../../lib/api/index.js'
+import { store, refresh } from '../../lib/store.js'
+import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
+import { LEVELS } from '../../lib/engine/index.js'
+
+const activities = ref([])
+async function load() {
+  await refresh()
+  activities.value = (await api.activities({ limit: 100 })).activities
+}
+onMounted(load)
+watch(() => store.mode, load)
+
+const s = computed(() => store.stats || {})
+const weeks = computed(() => (s.value.weekKm12 || s.value.weekKm || []).slice().reverse())
+const maxWeek = computed(() => Math.max(5, ...weeks.value))
+const ladderPct = computed(() => {
+  const h = s.value.hexes || 0
+  if (!s.value.next) return 100
+  const lo = s.value.level?.min || 0
+  return Math.round(((h - lo) / (s.value.next.min - lo)) * 100)
+})
+</script>
+
+<template>
+  <div class="screen">
+    <header class="screen-head head">
+      <div>
+        <h1>{{ store.user.name || 'You' }}</h1>
+        <p class="muted">{{ s.level ? s.level.name : 'No ground yet' }} on the {{ store.mode }} map</p>
+      </div>
+      <RouterLink class="btn quiet small" :to="{ name: 'settings' }">Settings</RouterLink>
+    </header>
+
+    <div class="stat-row">
+      <div class="stat"><span class="big-num">{{ s.hexes || 0 }}</span><span class="label">hexes held</span></div>
+      <div class="stat"><span class="big-num">{{ s.km2 || 0 }}</span><span class="label">km² of ground</span></div>
+      <div class="stat"><span class="big-num">{{ s.streakWeeks || 0 }}</span><span class="label">{{ s.streakWeeks === 1 ? 'week' : 'weeks' }} in a row</span></div>
+    </div>
+
+    <section aria-labelledby="ladder">
+      <h2 id="ladder">The ladder</h2>
+      <ol class="ladder">
+        <li v-for="l in LEVELS" :key="l.id" :class="{ got: (s.hexes || 0) >= l.min, now: s.level?.id === l.id }">
+          <span class="hexdot" aria-hidden="true"></span>
+          <span class="name">{{ l.name }}</span>
+          <span class="small muted">{{ l.min }}+ hexes</span>
+        </li>
+      </ol>
+      <div v-if="s.next" class="meter" :aria-label="`${s.toNext} hexes to ${s.next.name}`"><span :style="{ width: `${ladderPct}%` }"></span></div>
+      <p v-if="s.next" class="small muted">{{ s.toNext }} more hexes to reach {{ s.next.name }}.</p>
+    </section>
+
+    <section aria-labelledby="weeks">
+      <h2 id="weeks">Your weeks</h2>
+      <div class="bars" role="img" :aria-label="`Kilometres per week for the last ${weeks.length} weeks. This week ${weeks[weeks.length - 1] || 0} km.`">
+        <div v-for="(w, i) in weeks" :key="i" class="bar" :class="{ now: i === weeks.length - 1 }">
+          <span :style="{ height: `${(w / maxWeek) * 100}%` }"></span>
+        </div>
+      </div>
+      <p class="small muted">Last 12 weeks, this week on the right. {{ s.totalKm || 0 }} km in total on the {{ store.mode }} map.</p>
+    </section>
+
+    <section aria-labelledby="acts">
+      <h2 id="acts">Activities</h2>
+      <div v-if="!activities.length" class="empty">
+        <p class="muted">No activities yet. Your first loop puts you on the map.</p>
+        <RouterLink class="btn" :to="{ name: 'record' }">Record one</RouterLink>
+      </div>
+      <ul v-else class="rows plain">
+        <li v-for="a in activities" :key="a.id">
+          <RouterLink class="act" :to="{ name: 'activity', params: { id: a.id } }">
+            <div>
+              <strong>{{ km(a.distanceM) }} km {{ MODE_LABEL[a.mode].toLowerCase() }}</strong>
+              <p class="small muted">{{ ago(a.startedAt) }} · {{ a.mode === 'ride' ? `${speedKmh(a.paceSPerKm)} km/h` : `${pace(a.paceSPerKm)} /km` }}</p>
+            </div>
+            <span v-if="a.rejected" class="chip">Not counted</span>
+            <span v-else-if="a.claimed || a.taken" class="chip claimed">+{{ (a.claimed || 0) + (a.taken || 0) }}</span>
+          </RouterLink>
+        </li>
+      </ul>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.head { grid-template-columns: 1fr auto; align-items: start; }
+.ladder { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ladder li { display: grid; gap: 4px; justify-items: start; }
+.ladder .hexdot { width: 24px; height: 21px; background: var(--soft); }
+.ladder li.got .hexdot { background: var(--you); }
+.ladder li.now .name { color: var(--you); }
+.ladder .name { font-weight: 750; }
+.meter { height: 10px; border-radius: 5px; background: var(--soft); overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--you); }
+.bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 110px; align-items: end; margin-top: 12px; }
+.bar { height: 100%; display: flex; align-items: flex-end; }
+.bar span { display: block; width: 100%; background: #AFC0F7; border-radius: 4px 4px 0 0; min-height: 3px; }
+.bar.now span { background: var(--you); }
+.plain { list-style: none; margin: 0; padding: 0; }
+.act { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.chip.claimed { background: rgba(46, 85, 230, 0.12); color: var(--you); }
+</style>

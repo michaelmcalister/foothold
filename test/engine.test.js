@@ -121,8 +121,9 @@ describe('claims', () => {
 
   it('climbs the ladder', () => {
     expect(levelFor(0).level).toBeNull()
-    expect(levelFor(30).level.id).toBe('outpost')
-    expect(levelFor(30).toNext).toBe(120)
+    expect(levelFor(30).level.id).toBe('foothold')
+    expect(levelFor(80).level.id).toBe('outpost')
+    expect(levelFor(80).toNext).toBe(170)
   })
 })
 

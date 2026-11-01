@@ -1,0 +1,40 @@
+# Cloudflare Worker for Foothold: serves the built Vue app and the /api routes (see docs/SERVER.md).
+name = "foothold"
+main = "worker/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+# Keep variables added in the Cloudflare dashboard when deploying
+keep_vars = true
+
+# The built Vue app is served as static assets. Anything that isn't a file
+# falls back to index.html so client-side routes work. /api goes to the Worker.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "foothold"
+database_id = "REPLACE_WITH_D1_ID"
+migrations_dir = "migrations"
+
+[vars]
+FORMTRACK_URL = "https://formtrack.com.au"
+APP_URL = "https://foothold.com.au"
+# Sign-in, same Auth0 tenant as FormTrack (set these here or in the dashboard):
+#   AUTH0_DOMAIN    e.g. "formtrack.au.auth0.com"
+#   AUTH0_CLIENT_ID the Foothold SPA application's client id
+#   AUTH0_AUDIENCE  the API identifier, same one FormTrack uses
+# Local development only: ALLOW_DEVICE_IDS = "1" accepts an X-Device-Id header
+# instead of a sign-in. Never set it in production.
+# Extra origins allowed to call the API from a browser (comma separated),
+# e.g. the GitHub Pages build: ALLOWED_ORIGINS = "https://michaelmcalister.github.io"
+
+# Secrets (set with `npx wrangler secret put NAME`):
+#   TOKEN_KEY  any long random string; encrypts linked FormTrack tokens (AES-GCM)
+
+[triggers]
+# Hourly: end finished battles and send "fading soon" reminders
+crons = ["0 * * * *"]

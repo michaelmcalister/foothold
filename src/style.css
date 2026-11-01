@@ -121,6 +121,8 @@ a { color: inherit; }
   border-radius: 999px;
 }
 .button:hover { background: #2347CC; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
+.link { font-weight: 650; text-underline-offset: 4px; }
 
 /* How it works */
 .how {
