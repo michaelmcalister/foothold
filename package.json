@@ -4,7 +4,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "dev:api": "wrangler dev --port 8787",
+    "db:migrate": "wrangler d1 migrations apply foothold --remote"
   },
   "repository": {
     "type": "git",
@@ -15,11 +18,15 @@
   },
   "homepage": "https://github.com/michaelmcalister/foothold#readme",
   "dependencies": {
-    "vue": "^3.5.44"
+    "h3-js": "^4.5.0",
+    "maplibre-gl": "^6.16.0",
+    "vue": "^3.5.44",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.10",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   },
   "private": true,
   "type": "module"
