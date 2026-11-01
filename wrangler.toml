@@ -17,7 +17,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "foothold"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "2e237cf8-a01f-4de1-841a-f852b9aa3b98"
 migrations_dir = "migrations"
 
 [vars]
