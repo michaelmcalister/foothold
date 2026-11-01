@@ -1,0 +1,225 @@
+/* Foothold: street directory palette.
+   Pale map paper, white streets, deep gum-green ink.
+   Cobalt is your ground, wattle gold is a rival's. */
+:root {
+  --paper: #F3F5EF;
+  --map-paper: #ECEFE4;
+  --ink: #16302A;
+  --ink-60: rgba(22, 48, 42, 0.62);
+  --ink-40: rgba(22, 48, 42, 0.4);
+  --ink-15: rgba(22, 48, 42, 0.14);
+  --on-ink: #F3F5EF;
+  --on-ink-muted: rgba(243, 245, 239, 0.72);
+  --you: #2E55E6;
+  --you-fill: rgba(46, 85, 230, 0.34);
+  --rival: #D99A12;
+  --rival-fill: rgba(232, 168, 23, 0.38);
+  --street: #FFFFFF;
+  --street-edge: rgba(22, 48, 42, 0.35);
+  --park: #D4E3C3;
+  --park-ink: #4F7A45;
+  --water: #CFE0E6;
+
+  --font: 'Archivo', system-ui, sans-serif;
+  --measure: 62ch;
+  --gutter: clamp(16px, 4vw, 48px);
+
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-stretch: 100%;
+}
+
+h1, h2, h3 { margin: 0; line-height: 1.05; }
+
+h1 {
+  font-size: clamp(3rem, 9vw, 6.4rem);
+  font-weight: 850;
+  font-stretch: 125%;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 2.6rem);
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 750;
+  font-stretch: 100%;
+}
+
+p { margin: 0; max-width: var(--measure); }
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--you);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Top bar */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--gutter);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+.brand svg { width: 30px; height: 30px; color: var(--you); }
+.top-cta {
+  font-weight: 650;
+  font-size: 0.95rem;
+  text-underline-offset: 4px;
+}
+
+/* Hero */
+.hero {
+  display: grid;
+  gap: clamp(28px, 5vw, 64px);
+  align-items: center;
+  padding: clamp(24px, 6vw, 72px) var(--gutter) clamp(48px, 8vw, 96px);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .hero { grid-template-columns: 5fr 7fr; }
+}
+.hero-copy { display: grid; gap: 22px; justify-items: start; }
+.lede { font-size: 1.2rem; color: var(--ink-60); max-width: 38ch; }
+
+.button {
+  display: inline-block;
+  background: var(--you);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 14px 22px;
+  border-radius: 999px;
+}
+.button:hover { background: #2347CC; }
+
+/* How it works */
+.how {
+  padding: clamp(48px, 8vw, 96px) var(--gutter);
+  border-top: 1px solid var(--ink-15);
+}
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 36px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.steps li {
+  counter-increment: step;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.steps li::before {
+  content: counter(step);
+  font-weight: 850;
+  font-stretch: 125%;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--you);
+}
+.steps p { color: var(--ink-60); }
+
+/* Legend */
+.legend {
+  background: var(--ink);
+  color: var(--on-ink);
+  padding: clamp(48px, 8vw, 96px) var(--gutter);
+  display: grid;
+  gap: 40px;
+}
+@media (min-width: 900px) {
+  .legend { grid-template-columns: 4fr 8fr; }
+}
+.legend-intro { display: grid; gap: 14px; align-content: start; }
+.legend-intro p { color: var(--on-ink-muted); max-width: 36ch; }
+.legend dl {
+  margin: 0;
+  display: grid;
+  gap: 28px 40px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .legend dl { grid-template-columns: 1fr 1fr; }
+}
+.legend dt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 750;
+  font-size: 1.1rem;
+}
+.legend dd { margin: 8px 0 0 40px; color: var(--on-ink-muted); }
+
+.swatch {
+  width: 28px;
+  height: 24px;
+  flex: none;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.swatch.you { background: var(--you); }
+.swatch.rival { background: #E8A817; }
+.swatch.wild {
+  background: repeating-linear-gradient(135deg, rgba(243,245,239,0.55) 0 2px, transparent 2px 6px);
+}
+.swatch.private {
+  clip-path: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px dashed var(--on-ink);
+  margin-right: 2px;
+}
+
+/* Coach and beta */
+.coach, .beta {
+  padding: clamp(48px, 8vw, 96px) var(--gutter);
+  display: grid;
+  gap: 16px;
+}
+.coach p, .beta p { font-size: 1.15rem; }
+.coach .note { font-size: 0.95rem; color: var(--ink-60); }
+.beta { border-top: 1px solid var(--ink-15); }
+
+.foot {
+  padding: 28px var(--gutter) 40px;
+  color: var(--ink-60);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--ink-15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
