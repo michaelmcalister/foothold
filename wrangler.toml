@@ -6,6 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 # Keep variables added in the Cloudflare dashboard when deploying
 keep_vars = true
 
+# Build the app before every deploy (Cloudflare's build step runs only `wrangler deploy`)
+[build]
+command = "npm run build"
+
 # The built Vue app is served as static assets. Anything that isn't a file
 # falls back to index.html so client-side routes work. /api goes to the Worker.
 [assets]
