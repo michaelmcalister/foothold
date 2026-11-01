@@ -1,0 +1,1 @@
+var e=null,t=t=>{e=t},n=t=>e&&e.activity.id===t?e:null;export{t as n,n as t};
