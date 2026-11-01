@@ -4,7 +4,7 @@
 
 import { api } from './api/index.js'
 import { store } from './store.js'
-import { nudgeFor, nextSession } from './coach/index.js'
+import { nudgeFor, nextSession, toISO } from './coach/index.js'
 
 export async function nudgeContext() {
   const now = Date.now()
@@ -27,7 +27,7 @@ export async function nudgeContext() {
       them: b.attacker === store.user.id ? b.score.defender : b.score.attacker,
       endsInDays: Math.max(0, Math.ceil((b.endsAt - now) / 86400000)),
     })),
-    nextSession: plan ? nextSession(plan, new Date(now).toISOString().slice(0, 10)) : null,
+    nextSession: plan ? nextSession(plan, toISO(now)) : null,
     loadLevel: load?.level || 'ok',
     firstTime: activities.length === 0,
   }

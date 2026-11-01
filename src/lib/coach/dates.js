@@ -1,4 +1,6 @@
-// Date helpers for the coach: plain YYYY-MM-DD strings in UTC so plans read the same on every device.
+// Date helpers for the coach: plans hold plain YYYY-MM-DD calendar dates, and
+// date maths runs on them as UTC so it reads the same on every device. A moment
+// in time (a timestamp or Date) becomes the calendar date where the runner is.
 export const DAY_MS = 86400000
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 export const DAY_LABEL = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' }
@@ -7,7 +9,8 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 export function toISO(x) {
   if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)) return x
   const d = x == null ? new Date() : new Date(x)
-  return d.toISOString().slice(0, 10)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 export function toMs(x) {
   const [y, m, d] = toISO(x).split('-').map(Number)

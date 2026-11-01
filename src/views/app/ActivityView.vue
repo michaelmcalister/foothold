@@ -9,6 +9,7 @@ import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, dateLong, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { distance } from '../../lib/engine/index.js'
 import { toGpx } from '../../lib/tracks.js'
+import { toISO } from '../../lib/coach/dates.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,7 +48,7 @@ function exportGpx() {
   const blob = new Blob([toGpx(track.value, `Foothold ${a.value.mode}`)], { type: 'application/gpx+xml' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `foothold-${new Date(a.value.startedAt).toISOString().slice(0, 10)}.gpx`
+  link.download = `foothold-${toISO(a.value.startedAt)}.gpx`
   link.click()
   setTimeout(() => URL.revokeObjectURL(link.href), 2000)
 }

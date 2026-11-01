@@ -302,3 +302,25 @@ describe('FormTrack', () => {
     expect(await decryptSecret('other', s)).toBeNull()
   })
 })
+
+describe('FormTrack week boundary', () => {
+  it('counts a Monday morning session in Sydney, though it is still Sunday in UTC', async () => {
+    const { mapSummary, weekStart } = await import('../worker/formtrack.js')
+    const now = Date.parse('2026-11-01T23:14:00Z') // Mon 2 Nov, 10:14am in Sydney (AEDT)
+    expect(new Date(weekStart(now)).toISOString()).toBe('2026-11-01T13:00:00.000Z')
+    const s = mapSummary(null, null, [
+      { date: '2026-11-01 22:00:00' }, // Mon 9am Sydney: this week
+      { date: '2026-11-01 12:30:00' }, // Sun 11:30pm Sydney: last week
+      { date: '2026-11-01T13:00:00Z' }, // exactly Monday midnight
+    ], now)
+    expect(s.strengthThisWeek).toBe(2)
+  })
+
+  it('finds Monday midnight across the daylight saving change', async () => {
+    const { weekStart } = await import('../worker/formtrack.js')
+    // Clocks went forward on Sun 4 Oct 2026; Monday 28 Sep was still AEST (+10)
+    expect(new Date(weekStart(Date.parse('2026-10-04T05:00:00Z'))).toISOString()).toBe('2026-09-27T14:00:00.000Z')
+    // Monday 5 Oct is AEDT (+11)
+    expect(new Date(weekStart(Date.parse('2026-10-05T03:00:00Z'))).toISOString()).toBe('2026-10-04T13:00:00.000Z')
+  })
+})

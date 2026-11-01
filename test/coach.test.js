@@ -383,3 +383,12 @@ describe('nudges', () => {
     expect(nudgeFor({ now: NOW, daysSinceLast: 1, loadLevel: 'ok' })).toBeNull()
   })
 })
+
+describe('today in the runner\'s time zone', () => {
+  it('turns a moment into the local calendar date, not the UTC one', async () => {
+    const { toISO } = await import('../src/lib/coach/dates.js')
+    const at = new Date(2026, 10, 2, 9, 30) // 9:30am on 2 Nov wherever the test runs
+    expect(toISO(at.getTime())).toBe('2026-11-02')
+    expect(toISO('2026-11-02')).toBe('2026-11-02')
+  })
+})

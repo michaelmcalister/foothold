@@ -3,11 +3,11 @@
 
 import { api } from './api/index.js'
 import { store } from './store.js'
-import { suggestLoop, nextSession } from './coach/index.js'
+import { suggestLoop, nextSession, toISO } from './coach/index.js'
 
 export async function suggestLoopFor(centre, mode = 'run') {
   const { plan } = await api.plan()
-  const next = plan ? nextSession(plan, new Date().toISOString().slice(0, 10)) : null
+  const next = plan ? nextSession(plan, toISO(Date.now())) : null
   const { activities } = await api.activities({ limit: 20 })
   const runs = activities.filter((a) => a.mode === mode && !a.rejected)
   const usual = runs.length ? runs.reduce((s, a) => s + a.distanceM, 0) / runs.length / 1000 : { run: 4, walk: 3, ride: 12 }[mode]

@@ -6,7 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, toast } from '../../lib/store.js'
 import { pace } from '../../lib/format.js'
-import { generatePlan, adaptPlan, nextSession, estimateFitness } from '../../lib/coach/index.js'
+import { generatePlan, adaptPlan, nextSession, estimateFitness, toISO } from '../../lib/coach/index.js'
 
 const plan = ref(null)
 const acts = ref([])
@@ -36,7 +36,7 @@ const awayTo = ref('')
 const editKm = ref(0)
 const editDate = ref('')
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => toISO(Date.now())
 
 onMounted(async () => {
   const [{ plan: p }, { activities }] = await Promise.all([api.plan(), api.activities({ limit: 200 })])

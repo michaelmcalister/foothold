@@ -67,12 +67,28 @@ export function readinessFrom(wellbeing) {
   return parts.length ? Math.round(mean(parts)) : null
 }
 
-// Monday of this week in Sydney, as YYYY-MM-DD
-function weekStart(now = Date.now(), tz = 'Australia/Sydney') {
+// How far a time zone is ahead of UTC at a given instant, in ms
+function tzOffset(at, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(at).map((x) => [x.type, x.value]))
+  return Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`) - Math.floor(at / 1000) * 1000
+}
+
+// The instant Monday of this week starts in Sydney (epoch ms). FormTrack
+// stores workout times in UTC, so on a Monday morning in Sydney it is still
+// Sunday in UTC; comparing calendar dates would drop those sessions.
+export function weekStart(now = Date.now(), tz = 'Australia/Sydney') {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
   const dow = new Intl.DateTimeFormat('en-AU', { timeZone: tz, weekday: 'short' }).format(now)
   const back = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }[dow] ?? 0
-  return new Date(Date.parse(day + 'T00:00:00Z') - back * 86400000).toISOString().slice(0, 10)
+  const local = Date.parse(day + 'T00:00:00Z') - back * 86400000 // Monday midnight as if it were UTC
+  return local - tzOffset(local - tzOffset(local, tz), tz)
+}
+
+// FormTrack times look like "2026-11-02 08:30:00" (UTC, no zone) or ISO
+function whenMs(v) {
+  const s = String(v || '').trim().replace(' ', 'T')
+  if (!s) return NaN
+  return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s) || s.length <= 10 ? s : s + 'Z')
 }
 
 /** { today, readiness, strengthThisWeek } from the three tool results, tolerant of anything missing */
@@ -83,7 +99,7 @@ export function mapSummary(summary, wellbeing, workouts, now = Date.now()) {
     : null
   const from = weekStart(now)
   const list = Array.isArray(workouts) ? workouts : []
-  const strengthThisWeek = list.filter((w) => String(w?.date || w?.started_at || '').slice(0, 10) >= from).length
+  const strengthThisWeek = list.filter((w) => whenMs(w?.date || w?.started_at) >= from).length
   return { today, readiness: readinessFrom(wellbeing), strengthThisWeek }
 }
 
