@@ -334,7 +334,7 @@ export function checkWeek(plan, week) {
   const cap = LONG_CAP_KM[plan.goal] ?? 32
   for (const s of live.filter((x) => isRun(x) && x.type !== 'race')) {
     if (s.distanceKm > cap) out.push(`${s.distanceKm} km is longer than we'd suggest for this plan (${cap} km max).`)
-    else if (s.type === 'long' && km > 0 && s.distanceKm > km * 0.3 + 0.05 && km >= 15) out.push(`The long run is ${Math.round((s.distanceKm / km) * 100)}% of the week. Around 30% or less is kinder on your legs.`)
+    else if (s.type === 'long' && km > 0 && s.distanceKm > km * 0.33 && km >= 15) out.push(`The long run is ${Math.round((s.distanceKm / km) * 100)}% of the week. Around 30% or less is kinder on your legs.`)
   }
   return out
 }

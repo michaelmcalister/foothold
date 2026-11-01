@@ -22,6 +22,8 @@ const days = ref(3)
 const longDay = ref('sun')
 const strength = ref(true)
 const recent5k = ref('')
+const usualKm = ref('')
+const longestKm = ref('')
 const draft = ref(null)
 
 // Sheets
@@ -68,8 +70,9 @@ function build() {
     raceDate: raceDate.value || undefined,
     daysPerWeek: Number(days.value),
     longRunDay: longDay.value,
-    currentWeeklyKm: history.value.weeklyKm,
-    longestRecentKm: history.value.longestKm,
+    // What they tell us, checked against what they record (the engine caps it when history disagrees)
+    currentWeeklyKm: Number(usualKm.value) || history.value.weeklyKm,
+    longestRecentKm: Number(longestKm.value) || history.value.longestKm,
     recent5kS: parseTime(recent5k.value) || undefined,
     activities: runs.value,
     includeStrength: strength.value,
@@ -92,6 +95,14 @@ async function apply(event) {
   changes.value = r.changes || []
   warnings.value = r.warnings || []
   sheet.value = null
+  await api.savePlan(plan.value)
+}
+
+async function startReturn() {
+  const p = generatePlan({ ...plan.value.offer.options, activities: runs.value, today: today() })
+  plan.value = p
+  changes.value = ['Your run/walk return plan is ready. Ease back in and stop if it hurts.']
+  warnings.value = p.warnings || []
   await api.savePlan(plan.value)
 }
 
@@ -150,6 +161,16 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
             <select id="long" v-model="longDay"><option value="sat">Saturday</option><option value="sun">Sunday</option><option value="fri">Friday</option><option value="wed">Wednesday</option></select>
           </div>
         </div>
+        <div class="row">
+          <div class="field">
+            <label for="uk">Usual week (km)</label>
+            <input id="uk" v-model="usualKm" type="number" inputmode="decimal" min="0" max="200" step="1" :placeholder="history.weeklyKm ? String(history.weeklyKm) : 'for example 15'" />
+          </div>
+          <div class="field">
+            <label for="lk">Longest run lately (km)</label>
+            <input id="lk" v-model="longestKm" type="number" inputmode="decimal" min="0" max="60" step="1" :placeholder="history.longestKm ? String(history.longestKm) : 'for example 6'" />
+          </div>
+        </div>
         <div class="field">
           <label for="r5k">Recent 5K time (optional)</label>
           <input id="r5k" v-model="recent5k" inputmode="numeric" placeholder="mm:ss, for example 27:30" />
@@ -192,7 +213,16 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
       <div v-for="(c, i) in changes" :key="'c' + i" class="notice good">{{ c }}</div>
       <div v-for="(w, i) in warnings" :key="'w' + i" class="notice">{{ w }}</div>
 
-      <section v-if="next" class="panel stack next">
+      <section v-if="plan.paused" class="panel stack next">
+        <h2>Your plan is paused</h2>
+        <p>{{ plan.offer?.message || 'Rest up. Start again when it feels right.' }}</p>
+        <div class="row">
+          <button v-if="plan.offer" class="btn" type="button" @click="startReturn">I've got the all clear</button>
+          <button class="btn quiet" type="button" @click="endPlan">End this plan</button>
+        </div>
+      </section>
+
+      <section v-else-if="next" class="panel stack next">
         <p class="small muted">Next up · {{ dayName(next.date) }}</p>
         <h2>{{ next.title }}</h2>
         <p>{{ next.description }}</p>
@@ -211,7 +241,7 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
           <li v-for="s in thisWeek.sessions" :key="s.id" class="sess" :class="s.status">
             <span class="day">{{ dayName(s.date) }}</span>
             <span class="what"><strong>{{ TYPE_LABEL[s.type] || s.type }}</strong><template v-if="s.distanceKm"> {{ s.distanceKm }} km</template><template v-else-if="s.durationMin"> {{ s.durationMin }} min</template></span>
-            <span class="st">{{ s.status === 'done' ? 'Done' : s.status === 'skipped' ? 'Skipped' : s.status === 'missed' ? 'Missed' : '' }}</span>
+            <span class="st">{{ s.status === 'done' ? 'Done' : s.status === 'skipped' ? 'Skipped' : s.status === 'missed' ? 'Missed' : s.status === 'cancelled' ? 'Paused' : '' }}</span>
           </li>
         </ul>
       </section>
@@ -291,6 +321,7 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
 .check { display: flex; gap: 12px; align-items: flex-start; font-weight: 600; }
 .check input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--you); flex: none; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > .field { flex: 1 1 140px; }
 .weeks { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .weeks li { display: grid; grid-template-columns: 64px 1fr 56px; align-items: center; gap: 10px; font-size: 0.9rem; }
 .wbar { height: 12px; background: var(--soft); border-radius: 6px; overflow: hidden; }

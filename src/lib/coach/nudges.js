@@ -35,7 +35,7 @@ function sessionPhrase(s) {
 }
 
 export function clean(text) {
-  return String(text).replace(/\s*[—–]\s*/g, ', ').replace(/\s+/g, ' ').trim()
+  return String(text).replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/\s+/g, ' ').trim()
 }
 
 function out(n) {
@@ -125,7 +125,7 @@ export function nudgeFor(ctx = {}) {
 export function passesRegretTest(n) {
   if (!n) return true
   const text = `${n.title} ${n.body} ${n.cta || ''}`.toLowerCase()
-  if (/[—–]/.test(text)) return false
+  if (/[\u2014\u2013]/.test(text)) return false
   if (!n.title.trim().endsWith('?')) return false
   return !BANNED.some((w) => text.includes(w))
 }
