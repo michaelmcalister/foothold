@@ -6,4 +6,6 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   base: process.env.BASE_PATH || '/',
+  // MapLibre's worker is an ES module
+  worker: { format: 'es' },
 })
