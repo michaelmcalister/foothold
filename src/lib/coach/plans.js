@@ -463,3 +463,18 @@ export function goalLabel(goal) {
   return GOAL_LABEL[goal] || goal
 }
 export { DAY_LABEL }
+
+// Rebuild one session of a given type for an existing plan (used when adapting or editing).
+export function makeSession(plan, type, date, km, { weekKm = null, id = null } = {}) {
+  const ctx = { planId: plan.id, week: 0, daysPerWeek: plan.settings?.daysPerWeek ?? 3, longRunDay: plan.settings?.longRunDay ?? 'sun', paces: plan.fitness.paces, fitness: plan.fitness }
+  const k = km != null ? r1(km) : null
+  let s
+  if (type === 'easy' || type === 'recovery') s = easySession(ctx, date, k ?? 4, type)
+  else if (type === 'long') s = longSession(ctx, date, k ?? 8)
+  else if (type === 'strides') s = stridesSession(ctx, date, k ?? 4)
+  else if (type === 'tempo' || type === 'intervals') s = qualitySession(ctx, date, k ?? 6, type, weekKm ?? (k ?? 6) * 4)
+  else if (type === 'strength') s = strengthSession(ctx, date)
+  else s = restSession(ctx, date)
+  if (id) s.id = id
+  return s
+}

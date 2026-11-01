@@ -40,6 +40,7 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 
 | Method | Path | Body / query | Returns |
 | --- | --- | --- | --- |
+| GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | GET | /api/me | | `{ user }` |
 | PUT | /api/me | `{ name?, colour?, mode?, zones? }` | `{ user }` |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |

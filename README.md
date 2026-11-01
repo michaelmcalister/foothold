@@ -15,8 +15,8 @@ npm run dev
 - **GitHub Pages:** every push to `main` builds the site and publishes `dist` to the
   `gh-pages` branch (see `.github/workflows/deploy.yml`). Live at
   https://michaelmcalister.github.io/foothold/
-- **Cloudflare (optional):** `wrangler.jsonc` is ready. Import the repo in Cloudflare
-  Workers with build command `npm run build` to deploy at the site root.
+- **Cloudflare (optional):** the Worker in `worker/` (configured in `wrangler.toml`)
+  serves the app and the API with a D1 database. Setup steps are in `docs/SERVER.md`.
 
 ## Stack
 

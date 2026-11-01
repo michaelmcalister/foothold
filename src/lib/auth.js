@@ -10,11 +10,12 @@ import { setTokenGetter } from './api/remote.js'
 export const auth = reactive({ ready: false, enabled: false, loggedIn: false, user: null, error: '' })
 let client = null
 
-const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+const RAW = import.meta.env.VITE_API_URL || ''
+const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
 const home = () => location.origin + import.meta.env.BASE_URL
 
 export async function initAuth() {
-  if (!API && !import.meta.env.VITE_API_URL) { auth.ready = true; return }
+  if (!RAW) { auth.ready = true; return } // practice map: no sign-in
   try {
     const conf = await fetch(API + '/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
     const cfg = conf.auth0

@@ -1,7 +1,9 @@
 // Remote adapter: calls the Foothold Worker (worker/, docs/API.md).
 // Used when VITE_API_URL is set at build time.
 
-const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+// 'self' means the Worker serving this page also serves the API (same origin)
+const RAW = import.meta.env.VITE_API_URL || ''
+const BASE = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
 let tokenGetter = async () => null
 
 export function setTokenGetter(fn) { tokenGetter = fn }

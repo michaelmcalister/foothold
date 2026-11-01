@@ -87,6 +87,32 @@ export function mapSummary(summary, wellbeing, workouts, now = Date.now()) {
   return { today, readiness: readinessFrom(wellbeing), strengthThisWeek }
 }
 
+/** The ftk_ token from a pasted token or a full FormTrack MCP link, or null */
+export function extractToken(v) {
+  const m = typeof v === 'string' ? v.trim().match(/ftk_[A-Za-z0-9_-]+/) : null
+  return m && TOKEN_RE.test(m[0]) ? m[0] : null
+}
+
+/**
+ * Best effort: log a finished activity in FormTrack as cardio. FormTrack
+ * returns "Unknown tool" until docs/FORMTRACK.md is applied; that's fine.
+ * Never throws and never logs the token.
+ */
+export async function logCardio(env, token, a) {
+  try {
+    await callTool(env, token, 'log_cardio', {
+      kind: a.mode,
+      started_at: new Date(a.startedAt).toISOString(),
+      duration_s: Math.round(a.movingS || 0),
+      distance_m: Math.round(a.distanceM || 0),
+      hexes: (a.claimed || 0) + (a.taken || 0),
+      foothold_id: a.id,
+    })
+  } catch {
+    // ignored on purpose
+  }
+}
+
 /** Everything the app shows, in one go. Wellbeing and workouts are optional extras. */
 export async function fetchSummary(env, token, now = Date.now()) {
   const summary = await callTool(env, token, 'get_summary')
