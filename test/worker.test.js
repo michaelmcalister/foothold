@@ -1,13 +1,13 @@
 // Worker tests: every route against a fake D1 (Node's built-in SQLite with
-// migrations/0001_init.sql applied), with FormTrack's MCP endpoint mocked.
+// every file in migrations/ applied in order), with FormTrack's MCP endpoint mocked.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import worker from '../worker/index.js'
-import { runCron } from '../worker/cron.js'
+import { runCron, seasonReset } from '../worker/cron.js'
 import { readinessFrom, extractToken } from '../worker/formtrack.js'
 import { encryptSecret, decryptSecret } from '../worker/crypto.js'
-import { offset, levelFor } from '../src/lib/engine/index.js'
+import { offset, levelFor, seasonFor, previousSeason, nextSeason } from '../src/lib/engine/index.js'
 
 const ORIGIN = { lat: -33.9, lng: 151.15 } // inner west Sydney
 const DAY = 86400000
@@ -15,7 +15,9 @@ const DAY = 86400000
 // ---- a D1 lookalike: prepare().bind().first()/all()/run() and batch() ----
 function fakeD1() {
   const db = new DatabaseSync(':memory:')
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'))
+  // Every migration, in order, as the live database gets them
+  const dir = new URL('../migrations/', import.meta.url)
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
   const stmt = (sql, args = []) => ({
     bind: (...a) => {
       if (a.some((v) => v === undefined)) throw new Error('D1_TYPE_ERROR: undefined bound')
@@ -328,5 +330,296 @@ describe('FormTrack week boundary', () => {
     expect(new Date(weekStart(Date.parse('2026-10-04T05:00:00Z'))).toISOString()).toBe('2026-09-27T14:00:00.000Z')
     // Monday 5 Oct is AEDT (+11)
     expect(new Date(weekStart(Date.parse('2026-10-05T03:00:00Z'))).toISOString()).toBe('2026-10-04T13:00:00.000Z')
+  })
+})
+
+describe('planned routes', () => {
+  const ring = [[151.15, -33.9], [151.155, -33.9], [151.155, -33.896], [151.15, -33.896], [151.15, -33.9]]
+
+  it('saves, lists, updates and deletes your routes', async () => {
+    const r = await call(A, 'POST', '/api/routes', { name: ' Park loop ', mode: 'run', ring })
+    expect(r.status).toBe(200)
+    expect(r.body.route).toMatchObject({ name: 'Park loop', mode: 'run', ring })
+    expect(r.body.route.distanceM).toBeGreaterThan(1500)
+    const id = r.body.route.id
+
+    const list = await call(A, 'GET', '/api/routes')
+    expect(list.body.routes.map((x) => x.id)).toEqual([id])
+
+    const up = await call(A, 'POST', '/api/routes', { id, name: 'Park loop, longer', mode: 'walk', ring })
+    expect(up.body.route).toMatchObject({ id, name: 'Park loop, longer', mode: 'walk' })
+    expect((await call(A, 'GET', '/api/routes')).body.routes).toHaveLength(1)
+
+    expect((await call(A, 'DELETE', `/api/routes/${id}`)).body).toEqual({ ok: true })
+    expect((await call(A, 'GET', '/api/routes')).body.routes).toEqual([])
+    expect((await call(A, 'DELETE', `/api/routes/${id}`)).status).toBe(404)
+  })
+
+  it('keeps routes private to the player who made them', async () => {
+    const { body } = await call(A, 'POST', '/api/routes', { name: 'Mine', ring })
+    expect((await call(B, 'GET', '/api/routes')).body.routes).toEqual([])
+    expect((await call(B, 'DELETE', `/api/routes/${body.route.id}`)).status).toBe(404)
+    expect((await call(B, 'POST', '/api/routes', { id: body.route.id, name: 'Taken', ring })).status).toBe(404)
+    expect((await call(A, 'GET', '/api/routes')).body.routes[0].name).toBe('Mine')
+  })
+
+  it('refuses routes it cannot use', async () => {
+    expect((await call(A, 'POST', '/api/routes', { ring: [[151.15, -33.9]] })).status).toBe(400)
+    expect((await call(A, 'POST', '/api/routes', { ring: [[999, 0], [0, 0]] })).status).toBe(400)
+    expect((await call(A, 'POST', '/api/routes', { ring, mode: 'swim' })).body.error).toMatch(/Mode/)
+    expect((await call(A, 'POST', '/api/routes', { ring: 'nope' })).status).toBe(400)
+  })
+})
+
+describe('quests, explored map and weekly recap', () => {
+  it('keeps the hexes each run passed through and serves the explored set', async () => {
+    const r = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    expect(r.status).toBe(200)
+    const row = env.DB.db.prepare('SELECT visited FROM activities WHERE id = ?').get(r.body.activity.id)
+    const visited = JSON.parse(row.visited)
+    expect(visited.length).toBeGreaterThan(10)
+    expect(r.body.activity).not.toHaveProperty('visited') // never in the activity shape
+    const all = await call(A, 'GET', '/api/explored')
+    expect(all.body).toMatchObject({ total: visited.length, capped: false })
+    expect(new Set(all.body.cells)).toEqual(new Set(visited))
+    expect((await call(A, 'GET', '/api/explored?mode=walk')).body.cells).toEqual([])
+    expect((await call(A, 'GET', '/api/explored?mode=swim')).status).toBe(400)
+    // Someone else sees nothing of yours
+    expect((await call(B, 'GET', '/api/explored')).body.total).toBe(0)
+    // Deleting the activity takes its explored hexes with it
+    await call(A, 'DELETE', `/api/activities/${r.body.activity.id}`)
+    expect((await call(A, 'GET', '/api/explored')).body.total).toBe(0)
+  })
+
+  it('works out explored hexes for older activities from their tracks', async () => {
+    const r = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    env.DB.db.exec('UPDATE activities SET visited = NULL')
+    expect((await call(A, 'GET', '/api/explored')).body.total).toBeGreaterThan(10)
+    expect(env.DB.db.prepare('SELECT visited FROM activities WHERE id = ?').get(r.body.activity.id).visited).toBeTruthy()
+  })
+
+  it('logs lost ground and serves three quests with progress', async () => {
+    await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const big = await call(B, 'POST', '/api/activities', { mode: 'run', source: 'watch', points: rectRun({ w: 1500, h: 1000, start: offset(ORIGIN, -300, -300) }) })
+    const a = (await call(A, 'GET', '/api/me')).body.user
+    const losses = env.DB.db.prepare('SELECT COUNT(*) AS n FROM hex_losses WHERE user_id = ?').get(a.id).n
+    expect(losses).toBe(big.body.diff.taken.length)
+    const q = await call(A, 'GET', '/api/quests')
+    expect(q.status).toBe(200)
+    expect(q.body.week.key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(q.body.quests).toHaveLength(3)
+    for (const x of q.body.quests) {
+      expect(x).toHaveProperty('title')
+      expect(x.progress).toBeLessThanOrEqual(x.target)
+      expect(x.title).not.toMatch(/[–—]/)
+    }
+    expect((await call(A, 'GET', '/api/quests')).body.quests).toEqual(q.body.quests)
+  })
+
+  it('serves the weekly recap for this week and a past week', async () => {
+    await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const r = await call(A, 'GET', '/api/week')
+    expect(r.status).toBe(200)
+    expect(r.body.recap).toMatchObject({ outings: 1, loops: 1, week: { current: true } })
+    expect(r.body.recap.hexes.taken).toBeGreaterThan(10)
+    expect(r.body.recap.visited.length).toBeGreaterThan(10)
+    expect(r.body.recap.best.text).toMatch(/new hexes on your map\.$/)
+    const past = await call(A, 'GET', `/api/week?w=${r.body.recap.week.previous}`)
+    expect(past.body.recap).toMatchObject({ outings: 0, week: { current: false } })
+    expect((await call(A, 'GET', '/api/week?w=soon')).status).toBe(400)
+    expect((await call(A, 'GET', '/api/week?w=2099-01-05')).status).toBe(400)
+  })
+
+  it('sends one "your week is ready" notice on Monday to people who got out', async () => {
+    const monday = Date.parse('2026-11-02T00:30:00Z') // Mon 11:30am in Sydney
+    const lastWeek = Date.parse('2026-10-28T20:00:00Z')
+    await call(A, 'POST', '/api/activities', { mode: 'run', startedAt: lastWeek, points: rectRun({ t0: lastWeek }) })
+    await call(B, 'GET', '/api/me')
+    expect((await runCron(env, monday - 2 * DAY)).weekly).toBe(0) // Saturday: nothing
+    expect((await runCron(env, monday)).weekly).toBe(1)
+    await runCron(env, monday + 3600000)
+    const notes = (await call(A, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')
+    expect(notes.map((n) => n.text)).toEqual(['Your week in Foothold is ready. Want a look?'])
+    expect((await call(B, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')).toHaveLength(0)
+  })
+})
+
+describe('seasons, hot spots and crests', () => {
+  const bbox = '151.13,-33.92,151.17,-33.88'
+  const fight = async () => {
+    await call(A, 'PUT', '/api/me', { name: 'Ava', crest: 'wave' })
+    await call(B, 'PUT', '/api/me', { name: 'Ben', crest: 'bolt' })
+    const a = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const b = await call(B, 'POST', '/api/activities', { mode: 'run', source: 'watch', points: rectRun({ w: 1500, h: 1000, start: offset(ORIGIN, -300, -300) }) })
+    return { a: a.body, b: b.body }
+  }
+
+  it('saves a crest, refuses made up ones, and shows it next to names', async () => {
+    const r = await call(A, 'PUT', '/api/me', { crest: 'peak' })
+    expect(r.body.user.crest).toBe('peak')
+    expect((await call(A, 'PUT', '/api/me', { crest: 'logo' })).status).toBe(400)
+    expect((await call(A, 'PUT', '/api/me', { crest: null })).body.user.crest).toBeNull()
+    const { b } = await fight()
+    expect(b.battles[0]).toMatchObject({ attackerCrest: 'bolt', defenderCrest: 'wave' })
+    const lb = await call(A, 'GET', `/api/leaderboard?scope=local&lat=${ORIGIN.lat}&lng=${ORIGIN.lng}`)
+    expect(lb.body.rows.map((x) => x.crest)).toEqual(['bolt', 'wave'])
+    expect((await call(A, 'GET', '/api/feed')).body.items.map((i) => i.userCrest).sort()).toEqual(['bolt', 'wave'])
+    const t = await call(A, 'GET', `/api/territory?mode=run&bbox=${bbox}`)
+    expect(t.body.cells.find((c) => !c.mine).ownerCrest).toBe('bolt')
+    expect((await call(A, 'GET', '/api/battles')).body.live[0].defenderCrest).toBe('wave')
+  })
+
+  it('counts flips on hexes that change hands, for the hot spots map', async () => {
+    const { b } = await fight()
+    const t = await call(B, 'GET', `/api/territory?mode=run&bbox=${bbox}`)
+    const taken = new Set(b.diff.taken.map((x) => x.h3))
+    const hot = t.body.cells.filter((c) => c.heat > 0)
+    expect(hot.length).toBe(taken.size)
+    expect(hot.every((c) => taken.has(c.h3) && c.flips === 1 && c.lastFlip > 0)).toBe(true)
+    expect(t.body.cells.filter((c) => !taken.has(c.h3)).every((c) => c.heat === 0 && c.flips === 0)).toBe(true)
+  })
+
+  it('ranks the season board by ground gained, and keeps the all time board', async () => {
+    const { a, b } = await fight()
+    const q = `scope=local&lat=${ORIGIN.lat}&lng=${ORIGIN.lng}`
+    const season = await call(A, 'GET', `/api/leaderboard?board=season&${q}`)
+    expect(season.status).toBe(200)
+    expect(season.body.season).toMatchObject({ id: seasonFor(Date.now()).id })
+    expect(season.body.season.daysLeft).toBeGreaterThan(0)
+    const gained = Object.fromEntries(season.body.rows.map((r) => [r.name, r.gained]))
+    expect(gained).toEqual({ Ava: a.activity.claimed + a.activity.taken, Ben: b.activity.claimed + b.activity.taken })
+    const all = await call(A, 'GET', `/api/leaderboard?${q}`)
+    expect(all.body.rows[0].hexes).toBeGreaterThan(0)
+    expect(all.body.season.id).toBe(season.body.season.id)
+    expect((await call(A, 'GET', '/api/leaderboard?board=season&scope=world')).body.rows.length).toBe(2)
+    expect((await call(C, 'GET', '/api/leaderboard?board=season&scope=club')).body.rows).toEqual([expect.objectContaining({ me: true, gained: 0 })])
+    expect((await call(A, 'GET', '/api/leaderboard?board=weekly')).status).toBe(400)
+  })
+
+  it("sums up last season once, then remembers it's been seen", async () => {
+    await fight()
+    const cur = seasonFor(Date.now())
+    // Move every activity into last season
+    env.DB.db.exec(`UPDATE activities SET started_at = ${previousSeason(cur).endsAt - 86400000}`)
+    const r = await call(A, 'GET', '/api/season')
+    expect(r.body.season.id).toBe(cur.id)
+    expect(r.body.previous).toMatchObject({ rank: 2, players: 2, season: { id: previousSeason(cur).id } })
+    expect(r.body.previous.badge.name).toBeTruthy()
+    // Early in a season it shows; this test may run late in one, so check the rule rather than the date
+    const early = Date.now() - cur.startsAt < 21 * DAY
+    expect(r.body.showSummary).toBe(early)
+    await call(A, 'PUT', '/api/me', { seasonSeen: cur.id })
+    expect((await call(A, 'GET', '/api/season')).body.showSummary).toBe(false)
+    expect((await call(A, 'GET', '/api/me')).body.user.seasonSeen).toBe(cur.id)
+    expect((await call(A, 'PUT', '/api/me', { seasonSeen: 'soon' })).status).toBe(400)
+    expect((await call(C, 'GET', '/api/season')).body).toMatchObject({ previous: null, showSummary: false })
+  })
+
+  it('softens held ground once at the start of a season, in the hourly cron', async () => {
+    await fight()
+    const before = new Map(env.DB.db.prepare('SELECT h3, strength, wild_at FROM cells').all().map((r) => [r.h3, r]))
+    // The first run only notes the season under way
+    expect(await seasonReset(env)).toBe(0)
+    expect(env.DB.db.prepare('SELECT season_id FROM season_resets').all().map((r) => r.season_id)).toEqual([seasonFor(Date.now()).id])
+    const next = nextSeason(seasonFor(Date.now()))
+    const at = next.startsAt + 3600000
+    const out = await runCron(env, at)
+    expect(out.softened).toBe(before.size)
+    for (const r of env.DB.db.prepare('SELECT h3, strength, wild_at, season_reset FROM cells').all()) {
+      const was = before.get(r.h3)
+      expect(r.season_reset).toBe(next.id)
+      expect(r.strength).toBeLessThan(was.strength)
+      expect(r.strength).toBeGreaterThanOrEqual(Math.min(was.strength, 10) - 1e-9)
+      expect(r.wild_at).toBeLessThanOrEqual(was.wild_at)
+    }
+    // Running again the same season changes nothing
+    const snap = JSON.stringify(env.DB.db.prepare('SELECT h3, strength FROM cells ORDER BY h3').all())
+    expect((await runCron(env, at + 3600000)).softened).toBe(0)
+    expect(JSON.stringify(env.DB.db.prepare('SELECT h3, strength FROM cells ORDER BY h3').all())).toBe(snap)
+  })
+})
+
+describe('personal bests and strongholds', () => {
+  const regattaRun = async (device, hoursAgo, opts = {}) => {
+    const { LOOPS, decode } = await import('../src/lib/api/areas/penrith.js')
+    const { routeTrack } = await import('../src/lib/tracks.js')
+    const route = decode(LOOPS.find((l) => l.id === 'regatta').line)
+    const points = routeTrack(route, { kmh: 11, seed: 5, startAt: Date.now() - hoursAgo * 3600000, ...opts })
+    return call(device, 'POST', '/api/activities', { mode: 'run', source: 'watch', startedAt: points[0].t, points })
+  }
+
+  it('seeds the Penrith strongholds', async () => {
+    const r = await call(A, 'GET', '/api/strongholds?mode=run')
+    expect(r.status).toBe(200)
+    expect(r.body.strongholds.map((s) => s.id).sort()).toEqual(['cranebrook', 'jamison-park', 'jordan-springs-lake', 'nepean-river', 'penrith-weir', 'regatta', 'wianamatta-trails'])
+    expect(r.body.strongholds[0].holder).toBeNull()
+    const none = await call(A, 'GET', '/api/strongholds?bbox=151,-34,151.2,-33.8')
+    expect(none.body.strongholds).toEqual([])
+  })
+
+  it('records bests and an effort on save, and the crown goes to most efforts', async () => {
+    await call(A, 'PUT', '/api/me', { name: 'Ana' })
+    await call(B, 'PUT', '/api/me', { name: 'Tom' })
+    const a1 = await regattaRun(A, 30)
+    expect(a1.status).toBe(200)
+    expect(a1.body.activity.bests['5k']).toBeGreaterThan(1500)
+    expect(a1.body.prs.map((p) => p.key)).toEqual(['400m', '1k', 'mile', '5k'])
+    expect(a1.body.strongholds).toHaveLength(1)
+    expect(a1.body.strongholds[0]).toMatchObject({ id: 'regatta', efforts: 1, holds: true, toCrown: 0 })
+    expect(a1.body.strongholds[0].message).toMatch(/^You ran the Regatta Centre lap in \d+:\d\d\. That's your first effort in 90 days\. You hold the crown\.$/)
+
+    // Tom runs it the other way round: level on one, his is the latest, so he takes it
+    const b1 = await regattaRun(B, 20, { reverse: true })
+    expect(b1.body.strongholds[0]).toMatchObject({ efforts: 1, holds: true, tookFrom: 'Ana' })
+    const b2 = await regattaRun(B, 10, { reverse: true, seed: 8 })
+    expect(b2.body.strongholds[0]).toMatchObject({ efforts: 2, holds: true, tookFrom: null })
+    const notes = await call(A, 'GET', '/api/notifications')
+    expect(notes.body.items.some((n) => n.kind === 'stronghold' && n.text === 'Tom took the crown on the Regatta Centre lap. Run it again to win it back?')).toBe(true)
+
+    // Ana runs again: level on two, and hers is the latest, so it's hers
+    const a2 = await regattaRun(A, 2, { kmh: 9 })
+    expect(a2.body.strongholds[0]).toMatchObject({ efforts: 2, holds: true, tookFrom: 'Tom' })
+    expect(a2.body.prs).toEqual([]) // slower this time
+
+    const list = await call(A, 'GET', '/api/strongholds?mode=run')
+    const reg = list.body.strongholds.find((s) => s.id === 'regatta')
+    expect(reg.holder).toMatchObject({ name: 'Ana', efforts: 2, me: true })
+    expect(reg.mine).toMatchObject({ efforts: 2, holds: true })
+    expect(typeof reg.line).toBe('string')
+
+    const det = await call(B, 'GET', '/api/strongholds/regatta?mode=run')
+    expect(det.body.byEfforts.map((u) => [u.name, u.efforts])).toEqual([['Ana', 2], ['Tom', 2]])
+    expect(det.body.byTime).toHaveLength(2)
+    expect(det.body.recent).toHaveLength(2)
+    expect(det.body.stronghold.mine).toMatchObject({ efforts: 2, holds: false, toCrown: 1 })
+    expect((await call(B, 'GET', '/api/strongholds/nowhere')).status).toBe(404)
+    // The walk map has its own crowns
+    expect((await call(A, 'GET', '/api/strongholds/regatta?mode=walk')).body.byEfforts).toEqual([])
+
+    const bests = await call(A, 'GET', '/api/bests?mode=run')
+    expect(bests.body.bests.map((b) => b.key)).toEqual(['400m', '1k', 'mile', '5k'])
+    expect(bests.body.bests[0].activityId).toBe(a1.body.activity.id)
+    const mine = await call(A, 'GET', '/api/strongholds/efforts')
+    expect(mine.body.efforts).toHaveLength(2)
+
+    // Deleting the record-setting run rebuilds records from what's left
+    await call(A, 'DELETE', `/api/activities/${a1.body.activity.id}`)
+    const after = await call(A, 'GET', '/api/bests?mode=run')
+    expect(after.body.bests.every((b) => b.activityId === a2.body.activity.id)).toBe(true)
+    expect((await call(A, 'GET', '/api/strongholds/efforts')).body.efforts).toHaveLength(1)
+  })
+
+  it('a run elsewhere gets bests but no stronghold', async () => {
+    const r = await call(C, 'POST', '/api/activities', { mode: 'run', points: rectRun({ w: 800, h: 600 }) })
+    expect(r.body.strongholds).toEqual([])
+    expect(r.body.activity.bests['1k']).toBeGreaterThan(0)
+    expect(r.body.prs.length).toBeGreaterThan(0)
+  })
+})
+
+describe('import allowance', () => {
+  it('lets a watch history import go past the daily recording limit', async () => {
+    const { LIMITS } = await import('../worker/db.js')
+    expect(LIMITS.import.max).toBeGreaterThan(LIMITS.activity.max)
   })
 })

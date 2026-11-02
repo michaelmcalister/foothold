@@ -1,17 +1,30 @@
 <script setup>
-// Your numbers: ground held, where you are on the ladder, your weeks,
-// and every activity.
+// Your numbers: ground held, where you are on the ladder, this week's
+// quests and recap, your weeks, your personal bests, and every activity.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh } from '../../lib/store.js'
 import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
-import { LEVELS } from '../../lib/engine/index.js'
+import { LEVELS, weekOf, prevWeek, clock } from '../../lib/engine/index.js'
+import QuestList from '../../components/QuestList.vue'
 
 const activities = ref([])
+const quests = ref([])
+const bests = ref([])
+const lastWeek = prevWeek(weekOf()).key
 async function load() {
   await refresh()
-  activities.value = (await api.activities({ limit: 100 })).activities
+  const [acts, b, qs] = await Promise.all([
+    api.activities({ limit: 100 }),
+    api.bests({ mode: store.mode }).catch(() => ({ bests: [] })),
+    api.quests().catch(() => ({ quests: [] })),
+  ])
+  activities.value = acts.activities
+  bests.value = b.bests
+  quests.value = qs.quests
 }
+const bestValue = (b) => (b.kind === 'dist' ? `${km(b.value, 1)} km` : clock(b.value))
+const bestDate = (t) => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
 onMounted(load)
 watch(() => store.mode, load)
 
@@ -35,6 +48,10 @@ const ladderPct = computed(() => {
       </div>
       <RouterLink class="btn quiet small" :to="{ name: 'settings' }">Settings</RouterLink>
     </header>
+    <nav class="links" aria-label="Friends">
+      <RouterLink class="btn quiet small" :to="{ name: 'leagues' }">Private leagues</RouterLink>
+      <RouterLink class="btn quiet small" :to="{ name: 'rivals' }">Your rivals</RouterLink>
+    </nav>
 
     <div class="stat-row">
       <div class="stat"><span class="big-num">{{ s.hexes || 0 }}</span><span class="label">hexes held</span></div>
@@ -55,6 +72,16 @@ const ladderPct = computed(() => {
       <p v-if="s.next" class="small muted">{{ s.toNext }} more hexes to reach {{ s.next.name }}.</p>
     </section>
 
+    <section v-if="quests.length" aria-labelledby="quests" class="questsec">
+      <h2 id="quests">This week’s quests</h2>
+      <p class="small muted">Three for this week, sized to how you’ve been going. Miss one and nothing is lost: new ones arrive on Monday.</p>
+      <QuestList :quests="quests" />
+      <div class="weeklinks">
+        <RouterLink class="btn quiet small" :to="{ name: 'week' }">Your week so far</RouterLink>
+        <RouterLink class="btn quiet small" :to="{ name: 'week', query: { w: lastWeek } }">Last week</RouterLink>
+      </div>
+    </section>
+
     <section aria-labelledby="weeks">
       <h2 id="weeks">Your weeks</h2>
       <div class="bars" role="img" :aria-label="`Kilometres per week for the last ${weeks.length} weeks. This week ${weeks[weeks.length - 1] || 0} km.`">
@@ -64,6 +91,27 @@ const ladderPct = computed(() => {
       </div>
       <p class="small muted">Last 12 weeks, this week on the right. {{ s.totalKm || 0 }} km in total on the {{ store.mode }} map.</p>
     </section>
+
+    <section aria-labelledby="bests">
+      <h2 id="bests">Personal bests</h2>
+      <p v-if="!bests.length" class="small muted">Your fastest 1K, 5K and more show up here after your first {{ store.mode }}.</p>
+      <ul v-else class="rows plain">
+        <li v-for="b in bests" :key="b.key">
+          <RouterLink class="act" :to="{ name: 'activity', params: { id: b.activityId } }">
+            <div>
+              <strong>{{ b.label }}</strong>
+              <p class="small muted">{{ bestDate(b.at) }}</p>
+            </div>
+            <span class="best">{{ bestValue(b) }}</span>
+          </RouterLink>
+        </li>
+      </ul>
+    </section>
+
+    <RouterLink class="shlink" :to="{ name: 'strongholds' }">
+      <span class="crownbadge" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z" fill="currentColor" /></svg></span>
+      <span><strong>Strongholds</strong><span class="small muted">Landmark loops and who holds their crowns</span></span>
+    </RouterLink>
 
     <section aria-labelledby="acts">
       <h2 id="acts">Activities</h2>
@@ -89,6 +137,7 @@ const ladderPct = computed(() => {
 
 <style scoped>
 .head { grid-template-columns: 1fr auto; align-items: start; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
 .ladder { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .ladder li { display: grid; gap: 4px; justify-items: start; }
 .ladder .hexdot { width: 24px; height: 21px; background: var(--soft); }
@@ -102,6 +151,13 @@ const ladderPct = computed(() => {
 .bar span { display: block; width: 100%; background: #AFC0F7; border-radius: 4px 4px 0 0; min-height: 3px; }
 .bar.now span { background: var(--you); }
 .plain { list-style: none; margin: 0; padding: 0; }
+.questsec { display: grid; gap: 12px; }
+.questsec h2, .questsec p { margin: 0; }
+.weeklinks { display: flex; gap: 10px; flex-wrap: wrap; }
 .act { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.best { font-weight: 800; font-stretch: 108%; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.shlink { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; text-decoration: none; color: inherit; background: #fff; border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.shlink > span:last-child { display: grid; gap: 2px; }
+.shlink .crownbadge { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; }
 .chip.claimed { background: rgba(46, 85, 230, 0.12); color: var(--you); }
 </style>

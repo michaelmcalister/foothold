@@ -68,7 +68,7 @@ const tabs = [
 
     <nav v-if="!full && !needsSignIn" class="tabs" aria-label="Main">
       <template v-for="t in tabs" :key="t.name">
-        <RouterLink v-if="t.name === 'record'" :to="{ name: 'record' }" class="rec" aria-label="Record a run, walk or ride">
+        <RouterLink v-if="t.name === 'record'" :to="{ name: 'record' }" class="rec-btn" aria-label="Record a run, walk or ride">
           <svg viewBox="0 0 120 120" width="62" height="62" aria-hidden="true">
             <polygon points="112,60 86,105.03 34,105.03 8,60 34,14.97 86,14.97" fill="#2E55E6" stroke="#2E55E6" stroke-width="6" stroke-linejoin="round" />
             <circle cx="60" cy="60" r="16" fill="#F3F5EF" />
@@ -119,7 +119,7 @@ const tabs = [
   color: var(--ink-60); text-decoration: none; font-size: 0.72rem; font-weight: 650;
 }
 .tab.on { color: var(--you); }
-.rec { justify-self: center; margin-top: -26px; filter: drop-shadow(0 6px 10px rgba(46, 85, 230, 0.35)); border-radius: 50%; }
+.rec-btn { justify-self: center; margin-top: -26px; filter: drop-shadow(0 6px 10px rgba(46, 85, 230, 0.35)); border-radius: 50%; }
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--bar-h) + 18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   z-index: 50; background: var(--ink); color: var(--on-ink); padding: 12px 18px; border-radius: 12px;

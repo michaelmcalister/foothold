@@ -40,6 +40,7 @@ export function userOut(row) {
     id: row.id,
     name: row.name,
     colour: row.colour,
+    crest: row.crest || null,
     units: prefs.units || 'metric',
     mode: row.mode,
     zones: parse(row.zones, []),
@@ -48,18 +49,19 @@ export function userOut(row) {
     onboarded: !!prefs.onboarded,
     goal: prefs.goal ?? null,
     homeCentre: prefs.homeCentre ?? null,
+    seasonSeen: prefs.seasonSeen ?? null,
     formtrack: { linked: !!row.formtrack_token_enc, linkedAt: row.formtrack_linked_at || null },
   }
 }
 
-/** id -> { name, colour } for a set of user ids */
+/** id -> { name, colour, crest } for a set of user ids */
 export async function players(env, ids) {
   const out = new Map()
   const list = [...new Set(ids)].filter(Boolean)
   for (let i = 0; i < list.length; i += 90) {
     const part = list.slice(i, i + 90)
-    const rows = (await env.DB.prepare(`SELECT id, name, colour FROM users WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all()).results
-    for (const r of rows) out.set(r.id, { name: r.name, colour: r.colour })
+    const rows = (await env.DB.prepare(`SELECT id, name, colour, crest FROM users WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all()).results
+    for (const r of rows) out.set(r.id, { name: r.name, colour: r.colour, crest: r.crest || null })
   }
   return out
 }
@@ -122,8 +124,10 @@ export function activityOut(row, viewerId, kudosGiven = false) {
     rejected: !!row.rejected,
     rejectReason: row.reject_reason || null,
     kudos: row.kudos ?? 0,
+    comments: row.comments ?? 0,
     kudosGiven: !!kudosGiven,
     mine: row.user_id === viewerId,
+    bests: parse(row.bests, null), // personal best efforts found in it (engine/bests.js)
   }
   const appeal = parse(row.appeal, null)
   if (appeal) a.appeal = appeal
@@ -136,8 +140,9 @@ export function activityOut(row, viewerId, kudosGiven = false) {
 
 // Columns for activity lists, without the heavy track JSON
 export const ACTIVITY_COLS = `a.id, a.user_id, a.mode, a.source, a.started_at, a.distance_m, a.duration_s, a.moving_s, a.pace_s_per_km, a.elev_gain_m,
-  a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox,
-  (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos`
+  a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox, a.bests,
+  (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos,
+  (SELECT COUNT(*) FROM comments c WHERE c.activity_id = a.id) AS comments`
 
 // ---- cells ----
 
@@ -149,7 +154,10 @@ export function wildAt(cell) {
 }
 
 export function rowToCell(r) {
-  return { h3: r.h3, owner: r.owner, strength: r.strength, visits: r.visits, lastVisit: r.last_visit, claimedAt: r.claimed_at, private: r.private ? true : undefined }
+  const c = { h3: r.h3, owner: r.owner, strength: r.strength, visits: r.visits, lastVisit: r.last_visit, claimedAt: r.claimed_at, private: r.private ? true : undefined }
+  if (r.flips) Object.assign(c, { flips: r.flips, lastFlip: r.last_flip ?? undefined, recentFlips: r.recent_flips || 0 })
+  if (r.season_reset) c.seasonReset = r.season_reset
+  return c
 }
 
 /** Live cells in [w, s, e, n] for one mode, as a Map for the engine */
@@ -172,11 +180,13 @@ export async function cellsByIds(env, mode, ids) {
 export function upsertCell(env, mode, c) {
   const { lat, lng } = cellCentre(c.h3)
   return env.DB.prepare(
-    `INSERT INTO cells (mode, h3, owner, strength, visits, last_visit, claimed_at, private, lat, lng, wild_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO cells (mode, h3, owner, strength, visits, last_visit, claimed_at, private, lat, lng, wild_at, flips, last_flip, recent_flips)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (mode, h3) DO UPDATE SET owner = excluded.owner, strength = excluded.strength, visits = excluded.visits,
-       last_visit = excluded.last_visit, claimed_at = excluded.claimed_at, private = excluded.private, wild_at = excluded.wild_at`,
-  ).bind(mode, c.h3, c.owner, c.strength, c.visits || 1, c.lastVisit ?? c.claimedAt, c.claimedAt ?? c.lastVisit, c.private ? 1 : 0, lat, lng, wildAt(c))
+       last_visit = excluded.last_visit, claimed_at = excluded.claimed_at, private = excluded.private, wild_at = excluded.wild_at,
+       flips = excluded.flips, last_flip = excluded.last_flip, recent_flips = excluded.recent_flips`,
+  ).bind(mode, c.h3, c.owner, c.strength, c.visits || 1, c.lastVisit ?? c.claimedAt, c.claimedAt ?? c.lastVisit, c.private ? 1 : 0, lat, lng, wildAt(c),
+    c.flips || 0, c.lastFlip ?? null, c.recentFlips || 0)
 }
 
 /** Run statements in batches D1 is comfortable with */
@@ -214,10 +224,15 @@ export function notify(env, userId, kind, text, { at = Date.now(), dayKey = null
 // Fixed-window counters, per player per window. Light: they only stop floods.
 export const LIMITS = {
   write: { max: 60, sec: 60 }, // any POST, PUT or DELETE
-  activity: { max: 40, sec: 86400 },
+  activity: { max: 40, sec: 86400 }, // recorded on the phone
+  import: { max: 400, sec: 86400 }, // from a watch or a Strava export, which can be years of runs at once
   feedback: { max: 10, sec: 86400 },
   club: { max: 5, sec: 86400 },
   formtrack: { max: 10, sec: 3600 },
+  comment: { max: 30, sec: 3600 },
+  report: { max: 20, sec: 86400 },
+  league: { max: 10, sec: 86400 },
+  leagueJoin: { max: 20, sec: 3600 },
 }
 
 /** Count one use. Fails open if the table is missing so a hiccup can't lock everyone out. */

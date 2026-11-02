@@ -4,6 +4,7 @@
 // fades it, and a rival only takes it with a claim stronger than what's there.
 
 import { polygonToCells, latLngToCell, cellToLatLng, cellsToMultiPolygon } from 'h3-js'
+import { flipped } from './hotspots.js'
 
 export const RES = 10
 export const MAX_STRENGTH = 100
@@ -59,7 +60,8 @@ export function cellsForLoops(loops) {
 }
 
 // Apply one activity's claim to the map.
-//   cells: Map of h3 -> { h3, owner, strength, visits, lastVisit, claimedAt }
+//   cells: Map of h3 -> { h3, owner, strength, visits, lastVisit, claimedAt,
+//          flips?, lastFlip?, recentFlips? } (flips: times it changed hands)
 //          for this activity's mode only (each mode is its own map)
 //   targets: h3 ids from cellsForLoops
 //   who: user id; gain: from effortGain
@@ -73,8 +75,9 @@ export function applyClaim(cells, targets, who, gain, { now = Date.now(), isPriv
     const cur = currentStrength(prev, now)
     const priv = isPrivate(h3)
     if (!prev || cur === 0 || !prev.owner) {
-      // Wild ground: yours
-      updated.set(h3, { h3, owner: who, strength: gain, visits: 1, lastVisit: now, claimedAt: now, private: priv || undefined })
+      // Wild ground: yours. Its history of changing hands stays with it.
+      const hist = prev?.flips ? { flips: prev.flips, lastFlip: prev.lastFlip, recentFlips: prev.recentFlips || 0 } : {}
+      updated.set(h3, { h3, owner: who, strength: gain, visits: 1, lastVisit: now, claimedAt: now, private: priv || undefined, ...hist })
       diff.claimed.push(h3)
     } else if (prev.owner === who) {
       // Your ground: stronger, with diminishing returns per visit
@@ -84,7 +87,7 @@ export function applyClaim(cells, targets, who, gain, { now = Date.now(), isPriv
       diff.reinforced.push(h3)
     } else if (gain >= cur) {
       // A rival's ground, and this effort beats their hold
-      updated.set(h3, { h3, owner: who, strength: Math.max(10, gain - cur / 2), visits: 1, lastVisit: now, claimedAt: now, prevOwner: prev.owner })
+      updated.set(h3, { h3, owner: who, strength: Math.max(10, gain - cur / 2), visits: 1, lastVisit: now, claimedAt: now, prevOwner: prev.owner, ...flipped(prev, now) })
       diff.taken.push({ h3, from: prev.owner })
     } else {
       // Not enough to take it: their hold weakens instead

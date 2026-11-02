@@ -1,6 +1,7 @@
 <script setup>
 // After an activity: what you claimed, what you took and from whom, any
-// battles that started, a level-up, and a gentle check on this week's load.
+// battles that started, a level-up, Coach's notes on the run, new personal
+// bests, strongholds you ran, and a gentle check on this week's load.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -8,8 +9,10 @@ import { api } from '../../lib/api/index.js'
 import { store, toast } from '../../lib/store.js'
 import { lastResult } from '../../lib/lastResult.js'
 import { km, pace, duration, speedKmh, plural } from '../../lib/format.js'
-import { loadMessage, levelFor } from '../../lib/engine/index.js'
+import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
+import CoachNotes from '../../components/CoachNotes.vue'
+import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +22,8 @@ const cells = ref([])
 const appealing = ref(false)
 const appealNote = ref('')
 const appealSent = ref(false)
+const plan = ref(null)
+const recent = ref([])
 
 const a = computed(() => res.value?.activity)
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
@@ -38,7 +43,9 @@ const levelUp = computed(() => {
   const after = levelFor(res.value.hexesAfter).level
   return after && after.id !== before?.id ? after : null
 })
-const loadNote = computed(() => res.value?.load ? loadMessage(res.value.load) : null)
+const notes = computed(() => a.value ? debrief({ activity: a.value, track: track.value, planned: plannedFor(plan.value, a.value), recent: recent.value, result: res.value }) : [])
+// Coach's notes cover this week's load once the run is in, so the pre-run check steps aside.
+const loadNote = computed(() => res.value?.load && !notes.value.some((n) => n.kind === 'load') ? loadMessage(res.value.load) : null)
 
 const headline = computed(() => {
   if (!a.value) return ''
@@ -49,6 +56,8 @@ const headline = computed(() => {
 })
 
 onMounted(async () => {
+  api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
+  api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
   if (!res.value) {
     try {
       const r = await api.activity(route.params.id)
@@ -105,6 +114,8 @@ async function sendAppeal() {
         <p v-else-if="a.reinforced" class="muted">{{ plural(a.reinforced, 'hex', 'hexes') }} you already held got stronger.</p>
       </header>
 
+      <CoachNotes :notes="notes" />
+
       <div class="stat-row">
         <div class="stat"><span class="big-num">{{ km(a.distanceM) }}</span><span class="label">km</span></div>
         <div class="stat"><span class="big-num">{{ duration(a.movingS) }}</span><span class="label">Moving time</span></div>
@@ -113,6 +124,18 @@ async function sendAppeal() {
           <span class="label">{{ a.mode === 'ride' ? 'km/h' : 'Pace /km' }}</span>
         </div>
       </div>
+
+      <div v-if="res.prs?.length" class="notice good prs">
+        <strong>{{ res.prs.length === 1 ? 'A new personal best.' : `${res.prs.length} new personal bests.` }}</strong>
+        <ul><li v-for="p in res.prs" :key="p.key">{{ bestMessage(p) }}.</li></ul>
+      </div>
+
+      <RouterLink v-for="s in res.strongholds || []" :key="s.id" class="notice shnote" :class="{ held: s.holds }" :to="{ name: 'strongholds', params: { id: s.id } }">
+        <span class="crownbadge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z" fill="currentColor" /></svg>
+        </span>
+        <span>{{ s.message }} <span class="see">See the leaderboard</span></span>
+      </RouterLink>
 
       <div v-if="levelUp" class="notice good">
         <strong>You've reached {{ levelUp.name }}.</strong> {{ res.hexesAfter }} hexes held on the {{ a.mode }} map.
@@ -158,4 +181,9 @@ async function sendAppeal() {
 .done { display: grid; gap: 10px; }
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 .appeal { display: grid; gap: 10px; justify-items: start; }
+.prs ul { list-style: none; padding: 0; }
+.shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: #E8EDFC; color: var(--ink); }
+.shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
+.shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }
+.shnote .see { display: block; margin-top: 4px; color: var(--you); font-weight: 650; font-size: 0.9rem; }
 </style>

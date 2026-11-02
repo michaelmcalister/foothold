@@ -106,8 +106,9 @@ export function parseGpx(text) {
     const time = el.querySelector('time')?.textContent
     const ele = el.querySelector('ele')?.textContent
     const hr = el.getElementsByTagNameNS('*', 'hr')[0]?.textContent
+    const cad = el.getElementsByTagNameNS('*', 'cad')[0]?.textContent
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
-    pts.push({ lat, lng, t: time ? Date.parse(time) : null, alt: ele ? parseFloat(ele) : undefined, hr: hr ? parseInt(hr, 10) : undefined })
+    pts.push({ lat, lng, t: time ? Date.parse(time) : null, alt: ele ? parseFloat(ele) : undefined, hr: hr ? parseInt(hr, 10) : undefined, cad: cad ? parseInt(cad, 10) : undefined })
   }
   if (!pts.length) throw new Error('No GPS points found in that file.')
   if (pts.some((p) => !Number.isFinite(p.t))) throw new Error('That file has no timestamps, so we can’t check pace. Export the activity with times included.')
