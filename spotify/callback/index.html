@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- Spotify sends people back here after they connect. Hand the result to the
+     app (Settings finishes the sign-in) and go back to it. -->
+<html lang="en-AU">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Connecting Spotify</title>
+<style>body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 600 1rem system-ui, sans-serif; background: #F3F5EF; color: #16302A; }</style>
+</head>
+<body>
+<p>Connecting Spotify…</p>
+<script>
+  var q = new URLSearchParams(location.search)
+  try {
+    sessionStorage.setItem('fh-spotify-return', JSON.stringify({ code: q.get('code'), state: q.get('state'), error: q.get('error') }))
+  } catch (e) {}
+  var base = location.pathname.replace(/spotify\/callback\/?(index\.html)?$/, '')
+  location.replace(base + '#/app/settings')
+</script>
+</body>
+</html>
