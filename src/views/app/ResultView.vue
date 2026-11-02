@@ -3,6 +3,7 @@
 // battles that started, a level-up, Coach's notes on the run, new personal
 // bests, strongholds you ran, and a gentle check on this week's load.
 // A fresh result plays its sounds in turn: claim, take, crown, best, level.
+// A run with a story mission shows how the mission went and its closing line.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -15,6 +16,7 @@ import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
+import { resultFor, missionHeadline } from '../../lib/missions/index.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,6 +30,7 @@ const plan = ref(null)
 const recent = ref([])
 
 const a = computed(() => res.value?.activity)
+const mission = computed(() => resultFor(route.params.id))
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
 const newHexes = computed(() => (res.value?.diff?.claimed.length || 0) + (res.value?.diff?.taken.length || 0))
 const takenBy = computed(() => {
@@ -119,6 +122,11 @@ async function sendAppeal() {
         <p v-else-if="a.reinforced" class="muted">{{ plural(a.reinforced, 'hex', 'hexes') }} you already held got stronger.</p>
       </header>
 
+      <div v-if="mission" class="notice mission">
+        <strong>{{ missionHeadline(mission) }}</strong>
+        <p v-if="mission.closing">{{ mission.closing }}</p>
+      </div>
+
       <CoachNotes :notes="notes" />
 
       <div class="stat-row">
@@ -187,6 +195,8 @@ async function sendAppeal() {
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 .appeal { display: grid; gap: 10px; justify-items: start; }
 .prs ul { list-style: none; padding: 0; }
+.mission { background: #E8EDFC; color: var(--ink); display: grid; gap: 4px; }
+.mission p { margin: 0; }
 .shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: #E8EDFC; color: var(--ink); }
 .shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
 .shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }

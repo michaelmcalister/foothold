@@ -3,7 +3,8 @@
 // the map, and how far you are from closing your loop. Also imports GPX, TCX
 // and FIT files (one or many) from a watch or app, and (in the practice map)
 // simulates a loop. A route from the planner shows dashed, with how far off
-// it you are.
+// it you are. A story mission can ride along: pick one before starting and
+// a strip shows its chapter and surge timer during the run.
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -14,7 +15,10 @@ import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack } from '../../lib/tracks.js'
 import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
-import { beginRun, finishRun, endRun } from '../../lib/audio/runAudio.js'
+import { beginRun, finishRun, endRun, missionLive } from '../../lib/audio/runAudio.js'
+import { saveResult } from '../../lib/missions/index.js'
+import MissionPicker from '../../components/MissionPicker.vue'
+import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
 import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
@@ -29,6 +33,7 @@ const saving = ref(false)
 const error = ref(null)
 const fileInput = ref(null)
 const progress = ref(null)
+const missionId = ref(null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
@@ -58,7 +63,7 @@ function begin() {
   error.value = null
   start(mode.value)
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
-  beginRun(mode.value, { onError: (msg) => toast(msg) })
+  beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' ? null : missionId.value })
 }
 const audioLine = computed(() => {
   const parts = []
@@ -67,12 +72,13 @@ const audioLine = computed(() => {
   return parts.join('. ') || 'Music and voice off'
 })
 
-async function save(payload, label = 'Saving') {
+async function save(payload, label = 'Saving', missionSummary = null) {
   saving.value = label
   error.value = null
   try {
     const res = await api.postActivity(payload)
     setLastResult(res)
+    if (missionSummary) saveResult(res.activity.id, missionSummary)
     await refresh()
     router.replace({ name: 'result', params: { id: res.activity.id } })
   } catch (e) {
@@ -85,12 +91,12 @@ async function save(payload, label = 'Saving') {
 async function finish() {
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   const out = stop()
-  finishRun(totals)
+  const missionSummary = finishRun(totals)
   if (out.points.length < 10) {
     toast('That was too short to save. Nothing was recorded.')
     return
   }
-  await save({ ...out, source: 'phone' })
+  await save({ ...out, source: 'phone' }, 'Saving', missionSummary)
 }
 
 function cancel() {
@@ -199,6 +205,7 @@ onBeforeUnmount(() => {
           Keep Foothold open on screen while you {{ mode }}. Browsers pause GPS when the phone locks.
           Close a loop of at least 400 m and everything inside is yours.
         </p>
+        <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
         <div v-if="rec.error || error" class="notice bad">{{ rec.error || error }}</div>
         <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
         <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
@@ -215,6 +222,7 @@ onBeforeUnmount(() => {
           <div class="spinner" aria-hidden="true"></div>
           <span>Finding GPS<template v-if="rec.accuracy"> (±{{ rec.accuracy }} m)</template></span>
         </div>
+        <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
         <div class="live">
           <div class="stat"><span class="big-num">{{ duration(rec.elapsedS) }}</span><span class="label">Time</span></div>
           <div class="stat"><span class="big-num">{{ km(rec.distanceM) }}</span><span class="label">km</span></div>

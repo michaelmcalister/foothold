@@ -142,6 +142,35 @@ export const EFFECTS = {
       return t + 0.5
     },
   },
+  // Missions: a surge starting (a quick rising call), a surge done (a bright
+  // landing) and a new chapter (a soft two bell turn of the page)
+  surge: {
+    dur: 0.6,
+    build(ctx, out, t) {
+      ;['D5', 'A5', 'D6'].forEach((n, i) => blip(ctx, out, t + i * 0.08, N(n), { peak: 0.14 + i * 0.02, decay: i === 2 ? 0.25 : 0.07 }))
+      kick(ctx, out, t, { peak: 0.12 })
+      noise(ctx, out, t + 0.16, { attack: 0.04, decay: 0.3, peak: 0.03, filter: { type: 'highpass', freq: 6000 } })
+      return t + 0.55
+    },
+  },
+  surgeDone: {
+    dur: 0.8,
+    build(ctx, out, t) {
+      pluck(ctx, out, t, N('A5'), { peak: 0.14, decay: 0.3 })
+      pluck(ctx, out, t + 0.1, N('F#5'), { peak: 0.12, decay: 0.3 })
+      bell(ctx, out, t + 0.2, N('D6'), { peak: 0.14, decay: 0.55 })
+      tone(ctx, out, t + 0.2, { freq: N('D4'), type: 'triangle', attack: 0.01, decay: 0.5, peak: 0.1 })
+      return t + 0.75
+    },
+  },
+  chapter: {
+    dur: 0.7,
+    build(ctx, out, t) {
+      bell(ctx, out, t, N('F#5'), { peak: 0.12, decay: 0.5 })
+      bell(ctx, out, t + 0.2, N('B5'), { peak: 0.12, decay: 0.6 })
+      return t + 0.7
+    },
+  },
   kudos: {
     dur: 0.12,
     build(ctx, out, t) {
