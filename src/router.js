@@ -22,6 +22,7 @@ export const router = createRouter({
         { path: 'you', name: 'you', component: () => import('./views/app/YouView.vue') },
         { path: 'settings', name: 'settings', component: () => import('./views/app/SettingsView.vue') },
         { path: 'notifications', name: 'notifications', component: () => import('./views/app/NotificationsView.vue') },
+        { path: 'strongholds/:id?', name: 'strongholds', component: () => import('./views/app/StrongholdsView.vue') },
         { path: 'clubs', name: 'clubs', component: () => import('./views/app/ClubsView.vue') },
         { path: 'welcome', name: 'onboarding', component: () => import('./views/app/OnboardingView.vue'), meta: { full: true } },
       ],

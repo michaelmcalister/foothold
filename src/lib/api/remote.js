@@ -58,10 +58,20 @@ export const remote = {
   unlinkFormtrack: () => call('DELETE', '/api/integrations/formtrack'),
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
+  bests: ({ mode = 'run' } = {}) => call('GET', '/api/bests' + q({ mode })),
+  strongholds: ({ mode = 'run', bbox } = {}) => call('GET', '/api/strongholds' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
+  stronghold: (id, { mode = 'run' } = {}) => call('GET', `/api/strongholds/${encodeURIComponent(id)}` + q({ mode })),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,
   cellsMap: async () => null,
-  exportData: () => call('GET', '/api/me'),
+  exportData: async () => {
+    const [me, run, walk, ride, mine] = await Promise.all([
+      call('GET', '/api/me'),
+      ...['run', 'walk', 'ride'].map((mode) => call('GET', '/api/bests' + q({ mode }))),
+      call('GET', '/api/strongholds/efforts'),
+    ])
+    return { ...me, bests: { run: run.bests, walk: walk.bests, ride: ride.bests }, efforts: mine.efforts }
+  },
   reset: async () => ({ ok: true }),
 }

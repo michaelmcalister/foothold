@@ -124,6 +124,7 @@ export function activityOut(row, viewerId, kudosGiven = false) {
     kudos: row.kudos ?? 0,
     kudosGiven: !!kudosGiven,
     mine: row.user_id === viewerId,
+    bests: parse(row.bests, null), // personal best efforts found in it (engine/bests.js)
   }
   const appeal = parse(row.appeal, null)
   if (appeal) a.appeal = appeal
@@ -136,7 +137,7 @@ export function activityOut(row, viewerId, kudosGiven = false) {
 
 // Columns for activity lists, without the heavy track JSON
 export const ACTIVITY_COLS = `a.id, a.user_id, a.mode, a.source, a.started_at, a.distance_m, a.duration_s, a.moving_s, a.pace_s_per_km, a.elev_gain_m,
-  a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox,
+  a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox, a.bests,
   (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos`
 
 // ---- cells ----

@@ -29,8 +29,19 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             distanceM, durationS, movingS, paceSPerKm, elevGainM,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
-            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos }
+            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos,
+            bests: { [key]: seconds, longest?: metres } | null }
 Cell      { h3, owner, ownerName, ownerColour, mine, strength, daysToWild }
+Best      { key, label, kind: 'time'|'dist', value, activityId, at }
+            (value is seconds, or metres for kind 'dist'; keys: run and walk
+            400m, 1k, mile, 5k, 10k, half, marathon; ride 10k, 20k, 40k, longest)
+PR        { key, label, kind, value, prev }   (prev null on a first record)
+Stronghold { id, name, mode, line (encoded polyline), start: {lat,lng},
+            centre: {lat,lng}, distanceM,
+            holder: { userId, name, colour, efforts, me } | null,
+            mine: { efforts, bestS, holds, toCrown } }
+StrongholdRun { id, name, elapsedS, efforts, holds, toCrown, tookFrom,
+            holderName, message }
 Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
@@ -43,7 +54,7 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | GET | /api/me | | `{ user }` |
 | PUT | /api/me | `{ name?, colour?, mode?, zones? }` | `{ user }` |
-| POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |
+| POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load, prs: PR[], strongholds: StrongholdRun[] }` |
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
 | GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
 | POST | /api/activities/:id/appeal | `{ note }` | `{ activity }` |
@@ -65,7 +76,21 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | POST | /api/integrations/formtrack | `{ token }` (a FormTrack personal token, `ftk_...`) | `{ linked: true, summary }` |
 | DELETE | /api/integrations/formtrack | | `{ linked: false }` |
 | GET | /api/integrations/formtrack/summary | | `{ today, readiness, strengthThisWeek }` |
+| GET | /api/bests | `?mode=run` | `{ bests: Best[] }` (your records on that map, in distance order) |
+| GET | /api/strongholds | `?mode=run&bbox=w,s,e,n` | `{ strongholds: Stronghold[] }` (no bbox: around your last activity) |
+| GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
+| GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
+
+## Personal bests and strongholds
+
+Both are worked out when an activity is saved (rules in `docs/ENGINE.md`).
+Deleting an activity removes its stronghold efforts and rebuilds your
+records from the activities left. Personal bests and efforts are your data:
+they are in "Download my data" and go when your activities do. Server
+tables: `personal_bests`, `stronghold_efforts` (`USER_DATA` in
+`worker/strongholds.js`), from `migrations/0006_strongholds.sql`, which also
+seeds the seven Penrith loops.
 
 ## FormTrack link
 

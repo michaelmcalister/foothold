@@ -1,13 +1,16 @@
 <script setup>
 // Home: the territory map with your ground, rivals' ground and wild
 // ground, a strip of your numbers, and the one question worth asking today.
+// Strongholds show as crowns; tap one for its holder and leaderboards.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
+import StrongholdCard from '../../components/StrongholdCard.vue'
 import { api } from '../../lib/api/index.js'
 import { store, locate } from '../../lib/store.js'
 import { plural } from '../../lib/format.js'
 import { todaysNudge } from '../../lib/nudge.js'
+import { decodePolyline } from '../../lib/engine/index.js'
 
 const router = useRouter()
 const cells = ref([])
@@ -16,21 +19,39 @@ const bbox = ref(null)
 const nudge = ref(null)
 const suggestion = ref(null)
 const suggesting = ref(false)
+const strongholds = ref([])
+const pickedSh = ref(null)
 let t = 0
 
 async function load() {
   if (!bbox.value) return
   const pad = 0.02
   const [w, s, e, n] = bbox.value
-  const { cells: c } = await api.territory({ mode: store.mode, bbox: [w - pad, s - pad, e + pad, n + pad] })
+  const box = [w - pad, s - pad, e + pad, n + pad]
+  const [{ cells: c }, sh] = await Promise.all([
+    api.territory({ mode: store.mode, bbox: box }),
+    api.strongholds({ mode: store.mode, bbox: box }).catch(() => null),
+  ])
   cells.value = c
+  if (sh) strongholds.value = sh.strongholds
+}
+const shPicked = computed(() => strongholds.value.find((s) => s.id === pickedSh.value) || null)
+const shRoute = computed(() => (shPicked.value ? decodePolyline(shPicked.value.line) : null))
+function pickStronghold(id) {
+  picked.value = null
+  suggestion.value = null
+  pickedSh.value = id
+}
+function pickCell(c) {
+  pickedSh.value = null
+  picked.value = c
 }
 function onMoved({ bbox: b }) {
   bbox.value = b
   clearTimeout(t)
   t = setTimeout(load, 250)
 }
-watch(() => store.mode, () => { picked.value = null; suggestion.value = null; load() })
+watch(() => store.mode, () => { picked.value = null; suggestion.value = null; pickedSh.value = null; load() })
 
 onMounted(async () => {
   nudge.value = await todaysNudge()
@@ -64,8 +85,11 @@ async function suggest() {
       :zones="store.user?.zones || []"
       :me="store.located ? store.centre : null"
       :suggestion="suggestion?.ring || null"
+      :strongholds="strongholds"
+      :stronghold-route="shRoute"
       @moved="onMoved"
-      @cell="picked = $event"
+      @cell="pickCell"
+      @stronghold="pickStronghold"
     />
 
     <div class="strip" aria-live="polite">
@@ -87,8 +111,15 @@ async function suggest() {
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
 
-    <div class="sheet">
-      <template v-if="picked">
+    <div class="sheet" :class="{ tall: shPicked }">
+      <template v-if="shPicked">
+        <div class="shtop">
+          <RouterLink class="small" :to="{ name: 'strongholds', params: { id: shPicked.id } }">All strongholds</RouterLink>
+          <button class="close" type="button" aria-label="Close" @click="pickedSh = null">×</button>
+        </div>
+        <StrongholdCard :id="shPicked.id" :mode="store.mode" />
+      </template>
+      <template v-else-if="picked">
         <div class="pick">
           <span class="hexdot" :style="{ background: picked.colour }" aria-hidden="true"></span>
           <div>
@@ -153,6 +184,9 @@ async function suggest() {
   box-shadow: 0 10px 30px -14px rgba(22, 48, 42, 0.55);
   max-width: 520px; margin: 0 auto;
 }
+.sheet.tall { max-height: 62%; overflow-y: auto; overscroll-behavior: contain; }
+.shtop { display: flex; justify-content: space-between; align-items: center; }
+.shtop a { color: var(--you); font-weight: 650; }
 .nudge { display: grid; gap: 2px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
