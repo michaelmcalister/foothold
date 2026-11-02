@@ -3,12 +3,14 @@
 // ground, a strip of your numbers, this week's quests (folded away until
 // asked for), the Explored view, and the one question worth asking today.
 // A "Hot spots" switch shades contested ground, and once a season the
-// sheet sums up how the last season went.
+// sheet sums up how the last season went. Strongholds show as crowns; tap
+// one for its holder and leaderboards.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import QuestList from '../../components/QuestList.vue'
 import Crest from '../../components/Crest.vue'
+import StrongholdCard from '../../components/StrongholdCard.vue'
 import { exploredShare } from '../../lib/engine/explore.js'
 import { freshlyDone } from '../../lib/questSeen.js'
 import { api } from '../../lib/api/index.js'
@@ -16,6 +18,7 @@ import { store, locate } from '../../lib/store.js'
 import { plural } from '../../lib/format.js'
 import { todaysNudge } from '../../lib/nudge.js'
 import { hotAreas } from '../../lib/engine/hotspots.js'
+import { decodePolyline } from '../../lib/engine/index.js'
 
 const router = useRouter()
 const cells = ref([])
@@ -27,6 +30,8 @@ const suggesting = ref(false)
 const tmap = ref(null)
 const hot = ref(false)
 const seasonInfo = ref(null)
+const strongholds = ref([])
+const pickedSh = ref(null)
 let t = 0
 
 // This week's quests, folded by default; the choice is remembered on this device
@@ -64,15 +69,31 @@ async function load() {
   if (!bbox.value) return
   const pad = 0.02
   const [w, s, e, n] = bbox.value
-  const { cells: c } = await api.territory({ mode: store.mode, bbox: [w - pad, s - pad, e + pad, n + pad] })
+  const box = [w - pad, s - pad, e + pad, n + pad]
+  const [{ cells: c }, sh] = await Promise.all([
+    api.territory({ mode: store.mode, bbox: box }),
+    api.strongholds({ mode: store.mode, bbox: box }).catch(() => null),
+  ])
   cells.value = c
+  if (sh) strongholds.value = sh.strongholds
+}
+const shPicked = computed(() => strongholds.value.find((s) => s.id === pickedSh.value) || null)
+const shRoute = computed(() => (shPicked.value ? decodePolyline(shPicked.value.line) : null))
+function pickStronghold(id) {
+  picked.value = null
+  suggestion.value = null
+  pickedSh.value = id
+}
+function pickCell(c) {
+  pickedSh.value = null
+  picked.value = c
 }
 function onMoved({ bbox: b }) {
   bbox.value = b
   clearTimeout(t)
   t = setTimeout(load, 250)
 }
-watch(() => store.mode, () => { picked.value = null; suggestion.value = null; load() })
+watch(() => store.mode, () => { picked.value = null; suggestion.value = null; pickedSh.value = null; load() })
 
 onMounted(async () => {
   loadQuests()
@@ -131,8 +152,11 @@ async function suggest() {
       :me="store.located ? store.centre : null"
       :suggestion="suggestion?.ring || null"
       :explored="exploring ? explored || [] : null"
+      :strongholds="strongholds"
+      :stronghold-route="shRoute"
       @moved="onMoved"
-      @cell="picked = $event"
+      @cell="pickCell"
+      @stronghold="pickStronghold"
     />
 
     <div class="topstack">
@@ -178,8 +202,15 @@ async function suggest() {
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
 
-    <div class="sheet">
-      <template v-if="picked">
+    <div class="sheet" :class="{ tall: shPicked }">
+      <template v-if="shPicked">
+        <div class="shtop">
+          <RouterLink class="small" :to="{ name: 'strongholds', params: { id: shPicked.id } }">All strongholds</RouterLink>
+          <button class="close" type="button" aria-label="Close" @click="pickedSh = null">×</button>
+        </div>
+        <StrongholdCard :id="shPicked.id" :mode="store.mode" />
+      </template>
+      <template v-else-if="picked">
         <div class="pick">
           <Crest :crest="picked.mine ? store.user.crest : picked.crest || null" :colour="picked.colour" :id="picked.mine ? store.user.id : picked.owner" :size="24" />
           <div>
@@ -283,6 +314,9 @@ async function suggest() {
   box-shadow: 0 10px 30px -14px rgba(22, 48, 42, 0.55);
   max-width: 520px; margin: 0 auto;
 }
+.sheet.tall { max-height: 62%; overflow-y: auto; overscroll-behavior: contain; }
+.shtop { display: flex; justify-content: space-between; align-items: center; }
+.shtop a { color: var(--you); font-weight: 650; }
 .nudge { display: grid; gap: 2px; }
 .planlink { justify-self: center; color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; padding: 10px; margin: -8px 0 -6px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

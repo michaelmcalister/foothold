@@ -16,6 +16,7 @@ import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
+import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -191,6 +192,9 @@ async function postActivity(env, user, body, ctx) {
     packTrack(res.track), packTrack(res.publicTrack), now)]
 
   for (const c of res.updated.values()) stmts.push(upsertCell(env, mode, c))
+  // Personal bests and stronghold efforts (worker/strongholds.js)
+  const extra = await afterActivity(env, user, { id, mode, res, now })
+  stmts.push(...extra.stmts)
   for (const b of res.battles) {
     b.mode = mode
     stmts.push(upsertBattle(env, b))
@@ -224,6 +228,8 @@ async function postActivity(env, user, body, ctx) {
   const row = await env.DB.prepare(`SELECT ${ACTIVITY_COLS} FROM activities a WHERE a.id = ?`).bind(id).first()
   return {
     activity: activityOut(row, user.id),
+    prs: extra.prs,
+    strongholds: extra.strongholds,
     diff,
     battles: await decorateBattles(env, res.battles, now),
     hexesBefore,
@@ -531,6 +537,7 @@ async function route(req, env, url, user, ctx) {
         env.DB.prepare('DELETE FROM kudos WHERE activity_id = ?').bind(id),
         env.DB.prepare('DELETE FROM activities WHERE id = ? AND user_id = ?').bind(id, user.id),
       ])
+      await afterDelete(env, user, { id, mode: row.mode })
       return json({ ok: true })
     }
     if (sub === '/appeal' && m === 'POST') {
@@ -583,6 +590,11 @@ async function route(req, env, url, user, ctx) {
   if (path === '/api/explored' && m === 'GET') return json(await explored(env, user, url))
   if (path === '/api/quests' && m === 'GET') return json(await quests(env, user, now))
   if (path === '/api/week' && m === 'GET') return json(await week(env, user, url, now))
+  // Personal bests and strongholds
+  if (path === '/api/bests' || path.startsWith('/api/strongholds')) {
+    const out = await strongholdRoutes(env, user, url, m, now)
+    if (out) return json(out)
+  }
 
   // Clubs
   if (path === '/api/clubs' && m === 'GET') {

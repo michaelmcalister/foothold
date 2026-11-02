@@ -65,10 +65,21 @@ export const remote = {
   explored: ({ mode } = {}) => call('GET', '/api/explored' + q({ mode })),
   quests: () => call('GET', '/api/quests'),
   week: ({ w } = {}) => call('GET', '/api/week' + q({ w })),
+  bests: ({ mode = 'run' } = {}) => call('GET', '/api/bests' + q({ mode })),
+  strongholds: ({ mode = 'run', bbox } = {}) => call('GET', '/api/strongholds' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
+  stronghold: (id, { mode = 'run' } = {}) => call('GET', `/api/strongholds/${encodeURIComponent(id)}` + q({ mode })),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,
   cellsMap: async () => null,
-  exportData: async () => ({ ...(await call('GET', '/api/me')), routes: (await call('GET', '/api/routes')).routes }),
+  exportData: async () => {
+    const [me, routes, run, walk, ride, mine] = await Promise.all([
+      call('GET', '/api/me'),
+      call('GET', '/api/routes'),
+      ...['run', 'walk', 'ride'].map((mode) => call('GET', '/api/bests' + q({ mode }))),
+      call('GET', '/api/strongholds/efforts'),
+    ])
+    return { ...me, routes: routes.routes, bests: { run: run.bests, walk: walk.bests, ride: ride.bests }, efforts: mine.efforts }
+  },
   reset: async () => ({ ok: true }),
 }

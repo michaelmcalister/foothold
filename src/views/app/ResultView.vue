@@ -1,6 +1,7 @@
 <script setup>
 // After an activity: what you claimed, what you took and from whom, any
-// battles that started, a level-up, and a gentle check on this week's load.
+// battles that started, a level-up, new personal bests, strongholds you ran,
+// and a gentle check on this week's load.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -8,7 +9,7 @@ import { api } from '../../lib/api/index.js'
 import { store, toast } from '../../lib/store.js'
 import { lastResult } from '../../lib/lastResult.js'
 import { km, pace, duration, speedKmh, plural } from '../../lib/format.js'
-import { loadMessage, levelFor } from '../../lib/engine/index.js'
+import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
 
 const route = useRoute()
@@ -114,6 +115,18 @@ async function sendAppeal() {
         </div>
       </div>
 
+      <div v-if="res.prs?.length" class="notice good prs">
+        <strong>{{ res.prs.length === 1 ? 'A new personal best.' : `${res.prs.length} new personal bests.` }}</strong>
+        <ul><li v-for="p in res.prs" :key="p.key">{{ bestMessage(p) }}.</li></ul>
+      </div>
+
+      <RouterLink v-for="s in res.strongholds || []" :key="s.id" class="notice shnote" :class="{ held: s.holds }" :to="{ name: 'strongholds', params: { id: s.id } }">
+        <span class="crownbadge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z" fill="currentColor" /></svg>
+        </span>
+        <span>{{ s.message }} <span class="see">See the leaderboard</span></span>
+      </RouterLink>
+
       <div v-if="levelUp" class="notice good">
         <strong>You've reached {{ levelUp.name }}.</strong> {{ res.hexesAfter }} hexes held on the {{ a.mode }} map.
       </div>
@@ -158,4 +171,9 @@ async function sendAppeal() {
 .done { display: grid; gap: 10px; }
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 .appeal { display: grid; gap: 10px; justify-items: start; }
+.prs ul { list-style: none; padding: 0; }
+.shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: #E8EDFC; color: var(--ink); }
+.shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
+.shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }
+.shnote .see { display: block; margin-top: 4px; color: var(--you); font-weight: 650; font-size: 0.9rem; }
 </style>

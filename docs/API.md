@@ -29,9 +29,20 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             distanceM, durationS, movingS, paceSPerKm, elevGainM,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
-            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos }
+            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos,
+            bests: { [key]: seconds, longest?: metres } | null }
 Cell      { h3, owner, ownerName, ownerColour, ownerCrest, mine, strength, daysToWild,
             flips, heat, lastFlip }   (flips: times taken; heat: recent flips, 0 after 30 quiet days)
+Best      { key, label, kind: 'time'|'dist', value, activityId, at }
+            (value is seconds, or metres for kind 'dist'; keys: run and walk
+            400m, 1k, mile, 5k, 10k, half, marathon; ride 10k, 20k, 40k, longest)
+PR        { key, label, kind, value, prev }   (prev null on a first record)
+Stronghold { id, name, mode, line (encoded polyline), start: {lat,lng},
+            centre: {lat,lng}, distanceM,
+            holder: { userId, name, colour, efforts, me } | null,
+            mine: { efforts, bestS, holds, toCrown } }
+StrongholdRun { id, name, elapsedS, efforts, holds, toCrown, tookFrom,
+            holderName, message }
 Battle    { id, attacker, defender, attackerName, defenderName, attackerColour, defenderColour,
             attackerCrest, defenderCrest, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
@@ -87,10 +98,24 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/routes | | `{ routes: Route[] }` (yours, newest first, max 200) |
 | POST | /api/routes | `{ id?, name, mode, ring }` (2 to 2000 points; with `id`, updates that route) | `{ route }` |
 | DELETE | /api/routes/:id | | `{ ok }` |
+| GET | /api/bests | `?mode=run` | `{ bests: Best[] }` (your records on that map, in distance order) |
+| GET | /api/strongholds | `?mode=run&bbox=w,s,e,n` | `{ strongholds: Stronghold[] }` (no bbox: around your last activity) |
+| GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
+| GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
 | GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
 | GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
+
+## Personal bests and strongholds
+
+Both are worked out when an activity is saved (rules in `docs/ENGINE.md`).
+Deleting an activity removes its stronghold efforts and rebuilds your
+records from the activities left. Personal bests and efforts are your data:
+they are in "Download my data" and go when your activities do. Server
+tables: `personal_bests`, `stronghold_efforts` (`USER_DATA` in
+`worker/strongholds.js`), from `migrations/0006_strongholds.sql`, which also
+seeds the seven Penrith loops.
 
 ## FormTrack link
 

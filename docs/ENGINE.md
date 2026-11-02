@@ -79,6 +79,29 @@ nearby group hexes into H3 resolution 8 areas (about 0.7 km²). Code:
 
 Foothold (1 hex), Outpost (60), Stronghold (250), Fortress (800), per map.
 
+## Personal bests
+
+Every saved run or walk is searched for its fastest continuous 400 m, 1K,
+1 mile, 5K, 10K, half marathon and marathon; rides for 10, 20 and 40 km and
+the longest ride. Times are elapsed, start to finish, with the start
+interpolated inside a GPS fix. The track is split wherever the GPS jumped or
+a part was cut out by anti-cheat, so no effort spans a gap, and any effort
+averaging over the mode's sustained speed ceiling is ignored. Runs, walks and
+rides each keep their own records. (`engine/bests.js`)
+
+## Strongholds
+
+A stronghold is a named closed route. The route is checked every 25 m; an
+activity completes it when the track passes within 30 m of at least 90% of
+those check points, in order, either way round. On a loop you can join and
+leave anywhere, as long as you run a full lap. One effort per activity per
+stronghold, timed from the first check point to the last.
+
+The crown goes to whoever has the most efforts in the last **90 days**. A
+draw goes to the most recent effort, so matching the holder's count takes it.
+There is also a fastest time board (all time). Each map has its own crowns.
+(`engine/strongholds.js`)
+
 ## Anti-cheat
 
 Speed ceilings per mode (sustained over 30 seconds and in bursts), GPS jumps,

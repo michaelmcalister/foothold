@@ -538,3 +538,81 @@ describe('seasons, hot spots and crests', () => {
     expect(JSON.stringify(env.DB.db.prepare('SELECT h3, strength FROM cells ORDER BY h3').all())).toBe(snap)
   })
 })
+
+describe('personal bests and strongholds', () => {
+  const regattaRun = async (device, hoursAgo, opts = {}) => {
+    const { LOOPS, decode } = await import('../src/lib/api/areas/penrith.js')
+    const { routeTrack } = await import('../src/lib/tracks.js')
+    const route = decode(LOOPS.find((l) => l.id === 'regatta').line)
+    const points = routeTrack(route, { kmh: 11, seed: 5, startAt: Date.now() - hoursAgo * 3600000, ...opts })
+    return call(device, 'POST', '/api/activities', { mode: 'run', source: 'watch', startedAt: points[0].t, points })
+  }
+
+  it('seeds the Penrith strongholds', async () => {
+    const r = await call(A, 'GET', '/api/strongholds?mode=run')
+    expect(r.status).toBe(200)
+    expect(r.body.strongholds.map((s) => s.id).sort()).toEqual(['cranebrook', 'jamison-park', 'jordan-springs-lake', 'nepean-river', 'penrith-weir', 'regatta', 'wianamatta-trails'])
+    expect(r.body.strongholds[0].holder).toBeNull()
+    const none = await call(A, 'GET', '/api/strongholds?bbox=151,-34,151.2,-33.8')
+    expect(none.body.strongholds).toEqual([])
+  })
+
+  it('records bests and an effort on save, and the crown goes to most efforts', async () => {
+    await call(A, 'PUT', '/api/me', { name: 'Ana' })
+    await call(B, 'PUT', '/api/me', { name: 'Tom' })
+    const a1 = await regattaRun(A, 30)
+    expect(a1.status).toBe(200)
+    expect(a1.body.activity.bests['5k']).toBeGreaterThan(1500)
+    expect(a1.body.prs.map((p) => p.key)).toEqual(['400m', '1k', 'mile', '5k'])
+    expect(a1.body.strongholds).toHaveLength(1)
+    expect(a1.body.strongholds[0]).toMatchObject({ id: 'regatta', efforts: 1, holds: true, toCrown: 0 })
+    expect(a1.body.strongholds[0].message).toMatch(/^You ran the Regatta Centre lap in \d+:\d\d\. That's your first effort in 90 days\. You hold the crown\.$/)
+
+    // Tom runs it the other way round: level on one, his is the latest, so he takes it
+    const b1 = await regattaRun(B, 20, { reverse: true })
+    expect(b1.body.strongholds[0]).toMatchObject({ efforts: 1, holds: true, tookFrom: 'Ana' })
+    const b2 = await regattaRun(B, 10, { reverse: true, seed: 8 })
+    expect(b2.body.strongholds[0]).toMatchObject({ efforts: 2, holds: true, tookFrom: null })
+    const notes = await call(A, 'GET', '/api/notifications')
+    expect(notes.body.items.some((n) => n.kind === 'stronghold' && n.text === 'Tom took the crown on the Regatta Centre lap. Run it again to win it back?')).toBe(true)
+
+    // Ana runs again: level on two, and hers is the latest, so it's hers
+    const a2 = await regattaRun(A, 2, { kmh: 9 })
+    expect(a2.body.strongholds[0]).toMatchObject({ efforts: 2, holds: true, tookFrom: 'Tom' })
+    expect(a2.body.prs).toEqual([]) // slower this time
+
+    const list = await call(A, 'GET', '/api/strongholds?mode=run')
+    const reg = list.body.strongholds.find((s) => s.id === 'regatta')
+    expect(reg.holder).toMatchObject({ name: 'Ana', efforts: 2, me: true })
+    expect(reg.mine).toMatchObject({ efforts: 2, holds: true })
+    expect(typeof reg.line).toBe('string')
+
+    const det = await call(B, 'GET', '/api/strongholds/regatta?mode=run')
+    expect(det.body.byEfforts.map((u) => [u.name, u.efforts])).toEqual([['Ana', 2], ['Tom', 2]])
+    expect(det.body.byTime).toHaveLength(2)
+    expect(det.body.recent).toHaveLength(2)
+    expect(det.body.stronghold.mine).toMatchObject({ efforts: 2, holds: false, toCrown: 1 })
+    expect((await call(B, 'GET', '/api/strongholds/nowhere')).status).toBe(404)
+    // The walk map has its own crowns
+    expect((await call(A, 'GET', '/api/strongholds/regatta?mode=walk')).body.byEfforts).toEqual([])
+
+    const bests = await call(A, 'GET', '/api/bests?mode=run')
+    expect(bests.body.bests.map((b) => b.key)).toEqual(['400m', '1k', 'mile', '5k'])
+    expect(bests.body.bests[0].activityId).toBe(a1.body.activity.id)
+    const mine = await call(A, 'GET', '/api/strongholds/efforts')
+    expect(mine.body.efforts).toHaveLength(2)
+
+    // Deleting the record-setting run rebuilds records from what's left
+    await call(A, 'DELETE', `/api/activities/${a1.body.activity.id}`)
+    const after = await call(A, 'GET', '/api/bests?mode=run')
+    expect(after.body.bests.every((b) => b.activityId === a2.body.activity.id)).toBe(true)
+    expect((await call(A, 'GET', '/api/strongholds/efforts')).body.efforts).toHaveLength(1)
+  })
+
+  it('a run elsewhere gets bests but no stronghold', async () => {
+    const r = await call(C, 'POST', '/api/activities', { mode: 'run', points: rectRun({ w: 800, h: 600 }) })
+    expect(r.body.strongholds).toEqual([])
+    expect(r.body.activity.bests['1k']).toBeGreaterThan(0)
+    expect(r.body.prs.length).toBeGreaterThan(0)
+  })
+})

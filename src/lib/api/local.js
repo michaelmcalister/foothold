@@ -10,6 +10,7 @@ import {
   findLoops, summarise, offset, distance, cellCentre, hexIsPrivate,
   visitedCells, mergeExplored, weekOf, weekFor, prevWeek, isWeekKey, weeklyQuests, weekRecap, MODES,
   seasonFor, seasonOut, seasonById, previousSeason, seasonGains, seasonSummary, showSummary, softReset, heatOf,
+  bestEfforts, mergeBests, rebuildBests, bestsList, prepareStronghold, strongholdsRun, standings, crownStatus, crownMessage,
 } from '../engine/index.js'
 import { isCrest } from '../crests.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
@@ -17,7 +18,7 @@ import { cleanRoute, MAX_ROUTES } from '../planner.js'
 
 const DAY = 86400000
 const ME_DEFAULT_COLOUR = '#2E55E6'
-const WORLD_VERSION = 4 // bump to re-seed the practice rivals after a change
+const WORLD_VERSION = 5 // bump to re-seed the practice rivals after a change
 
 export const RIVALS = [
   { id: 'r-sam', name: 'Sam', colour: '#E8A817', crest: 'sun' },
@@ -51,6 +52,8 @@ async function state() {
     routes: await kv.get('routes', []),
     visited: await kv.get('visited', {}), // activity id -> { at, mode, cells } (hexes the track passed through)
     losses: await kv.get('losses', []), // hexes rivals took from you: [{ h3, mode, at, by }]
+    efforts: await kv.get('efforts', []), // stronghold efforts, everyone's (practice rivals too)
+    bests: await kv.get('bests', {}), // your personal bests: { mode: { key: { value, activityId, at } } }
   }
   if (!S.user) {
     S.user = {
@@ -83,6 +86,8 @@ const save = {
   routes: () => kv.set('routes', S.routes),
   visited: () => kv.set('visited', S.visited),
   losses: () => kv.set('losses', S.losses.slice(-3000)),
+  efforts: () => kv.set('efforts', S.efforts),
+  bests: () => kv.set('bests', S.bests),
 }
 
 function player(id) {
@@ -146,6 +151,28 @@ async function areaFor(centre) {
   return { ...AREA, loops: new Map(LOOPS.map((l) => [l.id, { ...l, route: decode(l.line) }])) }
 }
 
+// Strongholds: the area pack's named loops, ready for matching
+let shCache = null
+async function strongholdsFor(centre) {
+  if (!centre) return []
+  if (shCache && distance(shCache.centre, centre) < 1) return shCache.list
+  const area = await areaFor(centre)
+  const list = area ? [...area.loops.values()].map((l) => ({ ...prepareStronghold({ id: l.id, name: l.name, route: l.route }), line: l.line })) : []
+  shCache = { centre, list }
+  return list
+}
+const worldStrongholds = () => (S.world?.area ? strongholdsFor(S.world.centre) : [])
+
+function recordEfforts(activity, track, shs) {
+  if (activity.rejected) return []
+  const found = strongholdsRun(track, shs)
+  for (const f of found) {
+    S.efforts.push({ id: uid(), strongholdId: f.strongholdId, userId: activity.userId, activityId: activity.id, mode: activity.mode, at: f.startedAt, elapsedS: f.elapsedS })
+  }
+  return found
+}
+const effortsOn = (id, mode) => S.efforts.filter((e) => e.strongholdId === id && e.mode === mode)
+
 // A rival running one of their regular loops in an area pack
 function areaRun(area, rivalId, loopId, startedAt, rand) {
   const loop = area.loops.get(loopId)
@@ -197,6 +224,9 @@ export async function ensureWorld(where) {
   sims.sort((a, b) => a.startedAt - b.startedAt)
   S.cells.run = new Map([...S.cells.run].filter(([, c]) => c.owner === S.user.id))
   S.activities = S.activities.filter((a) => a.userId === S.user.id)
+  S.efforts = S.efforts.filter((e) => e.userId === S.user.id)
+  shCache = null
+  const shs = area ? await strongholdsFor(centre) : []
   for (const s of sims) {
     const points = s.points || loopTrack({ centre: s.centre, perimeterKm: s.perimeterKm, kmh: s.kmh, startAt: s.startedAt, seed: s.seed, stretch: s.stretch, rotate: s.rotate })
     const res = processActivity({ id: 'sim-' + (s.seed ?? uid().slice(0, 8)), userId: s.userId, mode: 'run', points, source: 'watch', startedAt: s.startedAt }, { cells: S.cells.run, zones: [], battles: [], now: s.startedAt })
@@ -204,6 +234,7 @@ export async function ensureWorld(where) {
     for (const [h, c] of res.updated) S.cells.run.set(h, c)
     logLosses(res.diff, 'run', s.userId, s.startedAt)
     res.activity.kudos = Math.floor(rand() * 9)
+    if (s.points) recordEfforts(res.activity, res.track, shs)
     S.activities.push(res.activity)
   }
   S.clubs = (area?.clubs || [
@@ -215,7 +246,7 @@ export async function ensureWorld(where) {
     return old ? { ...c, members: [...new Set([...c.members, ...old.members])] } : c
   })
   S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null, seasonReset: seasonFor(now).id }
-  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses()])
+  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses(), save.efforts()])
   return S.world
 }
 
@@ -258,6 +289,13 @@ async function tick() {
       for (const [h, c] of res.updated) S.cells.run.set(h, c)
       res.activity.title = run.loopName
       res.activity.kudos = Math.floor(rand() * 6)
+      const shs = await worldStrongholds()
+      const before = new Map(shs.map((sh) => [sh.id, standings(effortsOn(sh.id, 'run'), now).holder?.userId]))
+      for (const f of recordEfforts(res.activity, res.track, shs)) {
+        if (before.get(f.strongholdId) === S.user.id && standings(effortsOn(f.strongholdId, 'run'), now).holder?.userId === who) {
+          notify('stronghold', `${player(who).name} took the crown on the ${f.name}. Run it again to win it back?`, now)
+        }
+      }
       S.activities.push(res.activity)
       const fromMe = logLosses(res.diff, 'run', who, now)
       if (fromMe) notify('battle', `${player(who).name} ran the ${run.loopName} and took ${fromMe} of your hexes. Run it back?`, now)
@@ -299,7 +337,7 @@ async function tick() {
     S.world.weekNotice = wk.key
   }
   await save.world()
-  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses()])
+  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses(), save.efforts()])
 }
 
 // A new season softens everyone's ground, the same as the server's hourly
@@ -319,6 +357,16 @@ async function seasonTick(now) {
 }
 
 // ---- API (docs/API.md) ----
+function strongholdOut(sh, mode, now) {
+  const st = crownStatus(effortsOn(sh.id, mode), S.user.id, now)
+  const me = st.byTime.find((u) => u.userId === S.user.id)
+  return {
+    id: sh.id, name: sh.name, mode, line: sh.line, start: sh.start, distanceM: sh.distanceM,
+    centre: { lat: (sh.bbox[1] + sh.bbox[3]) / 2, lng: (sh.bbox[0] + sh.bbox[2]) / 2 },
+    holder: st.holder ? { userId: st.holder.userId, name: player(st.holder.userId).name, colour: player(st.holder.userId).colour, efforts: st.holder.efforts, me: st.holds } : null,
+    mine: { efforts: st.mine, bestS: me?.bestS ?? null, holds: st.holds, toCrown: st.toCrown },
+  }
+}
 function decorate(b, now = Date.now()) {
   return {
     ...b,
@@ -365,6 +413,24 @@ export const local = {
     )
     for (const [h, c] of res.updated) cells.set(h, c)
     res.activity.kudos = 0
+    // Personal bests and strongholds
+    let prs = []
+    if (!res.activity.rejected) {
+      res.activity.bests = bestEfforts(res.track, mode)
+      const merged = mergeBests(S.bests[mode], res.activity.bests, mode, { activityId: res.activity.id, at: res.activity.startedAt })
+      S.bests = { ...S.bests, [mode]: merged.records }
+      prs = merged.improved
+    }
+    const shs = await worldStrongholds()
+    const before = new Map(shs.map((sh) => [sh.id, standings(effortsOn(sh.id, mode), now).holder]))
+    const strongholds = recordEfforts(res.activity, res.track, shs).map((f) => {
+      const st = crownStatus(effortsOn(f.strongholdId, mode), S.user.id, now)
+      const prev = before.get(f.strongholdId)
+      const tookFrom = st.holds && prev && prev.userId !== S.user.id ? player(prev.userId).name : null
+      const holderName = st.holder ? player(st.holder.userId).name : null
+      const out = { id: f.strongholdId, name: f.name, elapsedS: f.elapsedS, efforts: st.mine, holds: st.holds, toCrown: st.toCrown, tookFrom, holderName }
+      return { ...out, message: crownMessage(out) }
+    })
     S.activities.unshift(res.activity)
     await kv.set(`track:${res.activity.id}`, res.track)
     if (!res.activity.rejected) S.visited[res.activity.id] = { at: res.activity.startedAt, mode, cells: visitedCells(res.track) }
@@ -378,8 +444,10 @@ export const local = {
       if (b.startedAt === now) notify('battle', `You took ${b.hexes.length} hexes from ${player(b.defender).name}. A one-week battle has started. Can you hold them?`, now)
     }
     const hexesAfter = [...cells.values()].filter((c) => c.owner === S.user.id && !isWild(c, now)).length
-    await Promise.all([save.activities(), save.cells(mode), save.battles(), save.notifications(), save.visited()])
+    await Promise.all([save.activities(), save.cells(mode), save.battles(), save.notifications(), save.visited(), save.efforts(), save.bests()])
     return {
+      prs,
+      strongholds,
       activity: res.activity,
       diff: res.diff,
       battles: res.battles.map((b) => decorate(b, now)),
@@ -415,10 +483,13 @@ export const local = {
 
   async deleteActivity(id) {
     await state()
+    const gone = S.activities.find((a) => a.id === id)
     S.activities = S.activities.filter((a) => a.id !== id)
     delete S.visited[id]
+    S.efforts = S.efforts.filter((e) => e.activityId !== id)
+    if (gone?.bests) S.bests = { ...S.bests, [gone.mode]: rebuildBests(S.activities.filter((a) => a.userId === S.user.id && a.mode === gone.mode), gone.mode) }
     await kv.del(`track:${id}`)
-    await Promise.all([save.activities(), save.visited()])
+    await Promise.all([save.activities(), save.visited(), save.efforts(), save.bests()])
     return { ok: true }
   },
 
@@ -663,6 +734,34 @@ export const local = {
     return { recap: weekRecap(await weekInput(week, now)) }
   },
 
+  async bests({ mode = 'run' } = {}) {
+    await state()
+    return { bests: bestsList(S.bests[mode], mode) }
+  },
+
+  async strongholds({ mode = 'run' } = {}) {
+    await state()
+    const now = Date.now()
+    const shs = await worldStrongholds()
+    return { strongholds: shs.map((sh) => strongholdOut(sh, mode, now)) }
+  },
+
+  async stronghold(id, { mode = 'run' } = {}) {
+    await state()
+    const now = Date.now()
+    const sh = (await worldStrongholds()).find((x) => x.id === id)
+    if (!sh) throw new Error('That stronghold is gone.')
+    const st = standings(effortsOn(id, mode), now)
+    const row = (u) => ({ userId: u.userId, name: player(u.userId).name, colour: player(u.userId).colour, me: u.userId === S.user.id })
+    return {
+      stronghold: strongholdOut(sh, mode, now),
+      byEfforts: st.byEfforts.slice(0, 20).map((u) => ({ ...row(u), efforts: u.efforts, last: u.last })),
+      byTime: st.byTime.slice(0, 20).map((u) => ({ ...row(u), bestS: u.bestS, at: u.bestAt })),
+      recent: effortsOn(id, mode).filter((e) => e.userId === S.user.id).sort((a, b) => b.at - a.at).slice(0, 10)
+        .map((e) => ({ activityId: e.activityId, at: e.at, elapsedS: e.elapsedS })),
+    }
+  },
+
   async feedback({ kind, text }) {
     await state()
     S.feedback.push({ kind, text: String(text).slice(0, 2000), at: Date.now() })
@@ -715,6 +814,7 @@ export const local = {
     const mine = S.activities.filter((a) => a.userId === S.user.id)
     const visited = Object.fromEntries(mine.filter((a) => S.visited[a.id]).map((a) => [a.id, S.visited[a.id]]))
     return { user: S.user, activities: mine, plan: S.plan, routes: S.routes, visited, losses: S.losses }
+    return { user: S.user, activities: S.activities.filter((a) => a.userId === S.user.id), plan: S.plan, bests: Object.fromEntries(['run', 'walk', 'ride'].map((m) => [m, bestsList(S.bests[m], m)])), efforts: S.efforts.filter((e) => e.userId === S.user.id) }
   },
   async reset() {
     await kv.clearAll()
