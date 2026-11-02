@@ -1,6 +1,6 @@
 <script setup>
 // One activity in full: route, ground claimed, splits per kilometre,
-// anything that was left out and why, plus GPX export.
+// Coach's notes, anything that was left out and why, plus GPX export.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -10,13 +10,20 @@ import { km, pace, duration, dateLong, speedKmh, MODE_LABEL } from '../../lib/fo
 import { distance } from '../../lib/engine/index.js'
 import { toGpx } from '../../lib/tracks.js'
 import { toISO } from '../../lib/coach/dates.js'
+import { debrief, plannedFor } from '../../lib/coach/debrief.js'
+import CoachNotes from '../../components/CoachNotes.vue'
 
 const route = useRoute()
 const router = useRouter()
 const a = ref(null)
 const track = ref([])
+const plan = ref(null)
+const recent = ref([])
+const notes = computed(() => a.value ? debrief({ activity: a.value, track: track.value, planned: plannedFor(plan.value, a.value), recent: recent.value, now: a.value.startedAt + 6 * 3600000 }) : [])
 
 onMounted(async () => {
+  api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
+  api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
   try {
     const r = await api.activity(route.params.id)
     a.value = r.activity
@@ -81,6 +88,8 @@ async function remove() {
       <div class="stat"><span class="big-num">{{ (a.claimed || 0) + (a.taken || 0) }}</span><span class="label">hexes claimed</span></div>
       <div class="stat"><span class="big-num">{{ a.taken || 0 }}</span><span class="label">taken from rivals</span></div>
     </div>
+
+    <CoachNotes :notes="notes" />
 
     <div v-if="a.rejected" class="notice bad">{{ a.rejectReason }}</div>
     <div v-else-if="a.flags?.length" class="notice">

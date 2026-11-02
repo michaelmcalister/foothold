@@ -1,7 +1,7 @@
 <script setup>
 // After an activity: what you claimed, what you took and from whom, any
-// battles that started, a level-up, new personal bests, strongholds you ran,
-// and a gentle check on this week's load.
+// battles that started, a level-up, Coach's notes on the run, new personal
+// bests, strongholds you ran, and a gentle check on this week's load.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -11,6 +11,8 @@ import { lastResult } from '../../lib/lastResult.js'
 import { km, pace, duration, speedKmh, plural } from '../../lib/format.js'
 import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
+import CoachNotes from '../../components/CoachNotes.vue'
+import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,8 @@ const cells = ref([])
 const appealing = ref(false)
 const appealNote = ref('')
 const appealSent = ref(false)
+const plan = ref(null)
+const recent = ref([])
 
 const a = computed(() => res.value?.activity)
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
@@ -39,7 +43,9 @@ const levelUp = computed(() => {
   const after = levelFor(res.value.hexesAfter).level
   return after && after.id !== before?.id ? after : null
 })
-const loadNote = computed(() => res.value?.load ? loadMessage(res.value.load) : null)
+const notes = computed(() => a.value ? debrief({ activity: a.value, track: track.value, planned: plannedFor(plan.value, a.value), recent: recent.value, result: res.value }) : [])
+// Coach's notes cover this week's load once the run is in, so the pre-run check steps aside.
+const loadNote = computed(() => res.value?.load && !notes.value.some((n) => n.kind === 'load') ? loadMessage(res.value.load) : null)
 
 const headline = computed(() => {
   if (!a.value) return ''
@@ -50,6 +56,8 @@ const headline = computed(() => {
 })
 
 onMounted(async () => {
+  api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
+  api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
   if (!res.value) {
     try {
       const r = await api.activity(route.params.id)
@@ -105,6 +113,8 @@ async function sendAppeal() {
         </p>
         <p v-else-if="a.reinforced" class="muted">{{ plural(a.reinforced, 'hex', 'hexes') }} you already held got stronger.</p>
       </header>
+
+      <CoachNotes :notes="notes" />
 
       <div class="stat-row">
         <div class="stat"><span class="big-num">{{ km(a.distanceM) }}</span><span class="label">km</span></div>
