@@ -1,9 +1,10 @@
 // Hourly jobs: end battles whose week is up (the winner holds more of the
-// contested hexes), and a once-a-day "fading soon" reminder for anyone with
-// hexes about to go wild.
+// contested hexes), a once-a-day "fading soon" reminder for anyone with
+// hexes about to go wild, and on Mondays the "your week is ready" notice.
 
 import { battleScore } from '../src/lib/engine/index.js'
 import { batched, cellsByIds, notify, players, rowToBattle } from './db.js'
+import { weekReadyNotices } from './weekly.js'
 
 const DAY = 86400000
 
@@ -61,7 +62,8 @@ export async function fadingNotices(env, now = Date.now()) {
 export async function runCron(env, now = Date.now()) {
   const ended = await endBattles(env, now).catch((e) => (console.error('cron battles', e?.message), 0))
   const fading = await fadingNotices(env, now).catch((e) => (console.error('cron fading', e?.message), 0))
+  const weekly = await weekReadyNotices(env, now).catch((e) => (console.error('cron week', e?.message), 0))
   // Old rate limit windows are no use to anyone
   await env.DB.prepare('DELETE FROM rate_limits WHERE win < ?').bind(Math.floor(now / 1000) - 2 * 86400).run().catch(() => {})
-  return { ended, fading }
+  return { ended, fading, weekly }
 }

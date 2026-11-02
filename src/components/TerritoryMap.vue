@@ -2,13 +2,15 @@
 // The live territory map: OpenFreeMap streets underneath, hexes on top
 // (yours in cobalt, rivals in their colours, faded by strength), plus an
 // optional track, closed loops, a suggested loop and the player's dot.
+// With `explored` set, everywhere your tracks haven't been is dimmed (fog of war).
 import { ref, watch, onMounted, onBeforeUnmount, shallowRef } from 'vue'
 import { Map as MLMap, LngLatBounds, setWorkerUrl } from 'maplibre-gl'
 // MapLibre 6 runs its tile work in a module worker; let Vite bundle it.
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 setWorkerUrl(mapWorkerUrl)
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { cellToBoundary } from 'h3-js'
+import { cellToBoundary, cellToLatLng } from 'h3-js'
+import { fogMask } from '../lib/engine/explore.js'
 
 const props = defineProps({
   centre: { type: Object, required: true },
@@ -23,6 +25,7 @@ const props = defineProps({
   follow: { type: Boolean, default: false },
   fit: { type: Boolean, default: false }, // fit to track/loops when they load
   interactive: { type: Boolean, default: true },
+  explored: { type: Array, default: null }, // h3 ids you've been through; null keeps the normal map
 })
 const emit = defineEmits(['cell', 'moved', 'ready'])
 
@@ -75,10 +78,13 @@ function syncAll() {
   setData('suggest', props.suggestion ? rings([props.suggestion]) : empty)
   setData('zones', rings(props.zones.map(circle)))
   setData('me', props.me ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [props.me.lng, props.me.lat] } } : empty)
+  setData('fog', props.explored ? fogMask(props.explored, props.centre) : empty)
 }
 
 function fitTo() {
-  const pts = [...props.track.map((p) => [p.lng, p.lat]), ...props.loops.flat(), ...(props.suggestion || [])]
+  let pts = [...props.track.map((p) => [p.lng, p.lat]), ...props.loops.flat(), ...(props.suggestion || [])]
+  // Nothing else to fit: fit the hexes (the weekly recap's map)
+  if (pts.length < 2) pts = props.cells.map((c) => cellToLatLng(c.h3)).map(([lat, lng]) => [lng, lat])
   if (pts.length < 2 || !map.value) return
   const b = pts.reduce((bb, p) => bb.extend(p), new LngLatBounds(pts[0], pts[0]))
   map.value.fitBounds(b, { padding: 48, duration: 0, maxZoom: 16 })
@@ -121,6 +127,8 @@ onMounted(async () => {
     m.addSource('suggest', { type: 'geojson', data: empty })
     m.addSource('zones', { type: 'geojson', data: empty })
     m.addSource('me', { type: 'geojson', data: empty })
+    m.addSource('fog', { type: 'geojson', data: empty })
+    m.addLayer({ id: 'fog', type: 'fill', source: 'fog', paint: { 'fill-color': '#16302A', 'fill-opacity': 0.42 } })
     m.addLayer({
       id: 'cells-fill', type: 'fill', source: 'cells',
       paint: {
@@ -160,7 +168,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => map.value?.remove())
 
-watch(() => [props.cells, props.highlight], () => setData('cells', cellFeatures(props.cells, props.highlight)))
+watch(() => [props.cells, props.highlight], () => {
+  setData('cells', cellFeatures(props.cells, props.highlight))
+  if (props.fit && !props.track.length && !props.loops.length) fitTo()
+})
+watch(() => props.explored, (ids) => setData('fog', ids ? fogMask(ids, props.centre) : empty))
 watch(() => props.track, () => {
   setData('track', props.track.length > 1 ? line(props.track) : empty)
 }, { deep: false })

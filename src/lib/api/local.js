@@ -8,6 +8,7 @@ import {
   processActivity, currentStrength, isWild, daysUntilWild, levelFor, HEX_KM2,
   weeklyKm, loadCheck, applyClaim, openBattles, battleScore, cellsForLoops, effortGain,
   findLoops, summarise, offset, distance, cellCentre, hexIsPrivate,
+  visitedCells, mergeExplored, weekOf, weekFor, prevWeek, isWeekKey, weeklyQuests, weekRecap, MODES,
 } from '../engine/index.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
@@ -46,6 +47,8 @@ async function state() {
     world: await kv.get('world', null),
     feedback: await kv.get('feedback', []),
     routes: await kv.get('routes', []),
+    visited: await kv.get('visited', {}), // activity id -> { at, mode, cells } (hexes the track passed through)
+    losses: await kv.get('losses', []), // hexes rivals took from you: [{ h3, mode, at, by }]
   }
   if (!S.user) {
     S.user = {
@@ -75,6 +78,8 @@ const save = {
   world: () => kv.set('world', S.world),
   feedback: () => kv.set('feedback', S.feedback),
   routes: () => kv.set('routes', S.routes),
+  visited: () => kv.set('visited', S.visited),
+  losses: () => kv.set('losses', S.losses.slice(-3000)),
 }
 
 function player(id) {
@@ -84,6 +89,46 @@ function player(id) {
 
 function notify(kind, text, at = Date.now()) {
   S.notifications.unshift({ id: uid(), at, kind, text, read: false })
+}
+
+// Remember hexes a rival took from you, for quests and the weekly recap
+function logLosses(diff, mode, by, at) {
+  let n = 0
+  for (const t of diff?.taken || []) {
+    if (t.from !== S.user.id) continue
+    S.losses.push({ h3: t.h3, mode, at, by })
+    n++
+  }
+  return n
+}
+
+// Older activities from before explored hexes were kept: work them out once from their tracks
+async function ensureVisited() {
+  let changed = false
+  for (const a of S.activities) {
+    if (a.userId !== S.user.id || a.rejected || S.visited[a.id]) continue
+    const track = (await kv.get(`track:${a.id}`, null)) || []
+    S.visited[a.id] = { at: a.startedAt, mode: a.mode, cells: visitedCells(track) }
+    changed = true
+  }
+  if (changed) await save.visited()
+}
+
+// Plain data for the quest and recap rules (engine/quests.js, engine/weekly.js)
+async function weekInput(week, now) {
+  await ensureVisited()
+  const mineIds = new Set(S.activities.filter((a) => a.userId === S.user.id).map((a) => a.id))
+  const cells = []
+  for (const mode of MODES) for (const c of S.cells[mode].values()) if (c.owner === S.user.id) cells.push({ ...c, mode })
+  return {
+    userId: S.user.id,
+    week,
+    now,
+    activities: S.activities.filter((a) => a.userId === S.user.id),
+    visits: Object.entries(S.visited).filter(([id]) => mineIds.has(id)).map(([id, v]) => ({ id, ...v })),
+    cells,
+    losses: S.losses,
+  }
 }
 
 // ---- demo world ----
@@ -154,6 +199,7 @@ export async function ensureWorld(where) {
     const res = processActivity({ id: 'sim-' + (s.seed ?? uid().slice(0, 8)), userId: s.userId, mode: 'run', points, source: 'watch', startedAt: s.startedAt }, { cells: S.cells.run, zones: [], battles: [], now: s.startedAt })
     if (s.loopName) res.activity.title = s.loopName
     for (const [h, c] of res.updated) S.cells.run.set(h, c)
+    logLosses(res.diff, 'run', s.userId, s.startedAt)
     res.activity.kudos = Math.floor(rand() * 9)
     S.activities.push(res.activity)
   }
@@ -166,7 +212,7 @@ export async function ensureWorld(where) {
     return old ? { ...c, members: [...new Set([...c.members, ...old.members])] } : c
   })
   S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null }
-  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world()])
+  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses()])
   return S.world
 }
 
@@ -188,6 +234,7 @@ async function tick() {
     const gain = 30 + Math.round(rand() * 25)
     const { diff, updated } = applyClaim(cells, back, b.defender, gain, { now })
     for (const [h, c] of updated) cells.set(h, c)
+    logLosses(diff, b.mode || 'run', b.defender, now)
     b.lastResponse = now
     if (diff.taken.length) {
       const who = player(b.defender).name
@@ -208,7 +255,7 @@ async function tick() {
       res.activity.title = run.loopName
       res.activity.kudos = Math.floor(rand() * 6)
       S.activities.push(res.activity)
-      const fromMe = res.diff.taken.filter((t) => t.from === S.user.id).length
+      const fromMe = logLosses(res.diff, 'run', who, now)
       if (fromMe) notify('battle', `${player(who).name} ran the ${run.loopName} and took ${fromMe} of your hexes. Run it back?`, now)
       changed = true
     }
@@ -237,8 +284,18 @@ async function tick() {
     }
     S.world.fadeNoticeDay = today
   }
+  // A new week: last week's recap is ready (only if there is something in it)
+  const wk = weekOf(now)
+  if (S.world.weekNotice !== wk.key) {
+    const pw = prevWeek(wk)
+    if (S.world.weekNotice && S.activities.some((a) => a.userId === S.user.id && !a.rejected && a.startedAt >= pw.start && a.startedAt < pw.end)) {
+      notify('week', 'Your week in Foothold is ready. Want a look?', now)
+      changed = true
+    }
+    S.world.weekNotice = wk.key
+  }
   await save.world()
-  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities()])
+  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses()])
 }
 
 // ---- API (docs/API.md) ----
@@ -286,6 +343,7 @@ export const local = {
     res.activity.kudos = 0
     S.activities.unshift(res.activity)
     await kv.set(`track:${res.activity.id}`, res.track)
+    if (!res.activity.rejected) S.visited[res.activity.id] = { at: res.activity.startedAt, mode, cells: visitedCells(res.track) }
     for (const b of res.battles) {
       b.mode = mode
       const i = S.battles.findIndex((x) => x.id === b.id)
@@ -296,7 +354,7 @@ export const local = {
       if (b.startedAt === now) notify('battle', `You took ${b.hexes.length} hexes from ${player(b.defender).name}. A one-week battle has started. Can you hold them?`, now)
     }
     const hexesAfter = [...cells.values()].filter((c) => c.owner === S.user.id && !isWild(c, now)).length
-    await Promise.all([save.activities(), save.cells(mode), save.battles(), save.notifications()])
+    await Promise.all([save.activities(), save.cells(mode), save.battles(), save.notifications(), save.visited()])
     return {
       activity: res.activity,
       diff: res.diff,
@@ -334,8 +392,9 @@ export const local = {
   async deleteActivity(id) {
     await state()
     S.activities = S.activities.filter((a) => a.id !== id)
+    delete S.visited[id]
     await kv.del(`track:${id}`)
-    await save.activities()
+    await Promise.all([save.activities(), save.visited()])
     return { ok: true }
   },
 
@@ -529,6 +588,30 @@ export const local = {
     return null
   },
 
+  async explored({ mode } = {}) {
+    await state()
+    await ensureVisited()
+    const mine = new Set(S.activities.filter((a) => a.userId === S.user.id && !a.rejected).map((a) => a.id))
+    const visits = Object.entries(S.visited).filter(([id]) => mine.has(id)).map(([, v]) => v)
+    return mergeExplored(visits, { mode: mode || null })
+  },
+
+  async quests() {
+    await state()
+    const now = Date.now()
+    const week = weekOf(now)
+    return { week, quests: weeklyQuests(await weekInput(week, now)) }
+  },
+
+  async week({ w } = {}) {
+    await state()
+    const now = Date.now()
+    if (w != null && w !== '' && !isWeekKey(w)) throw new Error('Pick a week as YYYY-MM-DD.')
+    const week = w ? weekFor(w) : weekOf(now)
+    if (week.start > now) throw new Error("That week hasn't started yet.")
+    return { recap: weekRecap(await weekInput(week, now)) }
+  },
+
   async feedback({ kind, text }) {
     await state()
     S.feedback.push({ kind, text: String(text).slice(0, 2000), at: Date.now() })
@@ -578,7 +661,9 @@ export const local = {
   },
   async exportData() {
     await state()
-    return { user: S.user, activities: S.activities.filter((a) => a.userId === S.user.id), plan: S.plan, routes: S.routes }
+    const mine = S.activities.filter((a) => a.userId === S.user.id)
+    const visited = Object.fromEntries(mine.filter((a) => S.visited[a.id]).map((a) => [a.id, S.visited[a.id]]))
+    return { user: S.user, activities: mine, plan: S.plan, routes: S.routes, visited, losses: S.losses }
   },
   async reset() {
     await kv.clearAll()

@@ -14,6 +14,7 @@ import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
+import { weekStatements, explored, quests, week } from './weekly.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -190,6 +191,7 @@ async function postActivity(env, user, body, ctx) {
     b.mode = mode
     stmts.push(upsertBattle(env, b))
   }
+  stmts.push(...weekStatements(env, user.id, id, mode, res, now)) // visited hexes, lost ground (worker/weekly.js)
 
   // Tell each player who lost ground, as a question they can answer with a run
   const diff = res.diff || { claimed: [], reinforced: [], taken: [], held: [] }
@@ -513,6 +515,11 @@ async function route(req, env, url, user, ctx) {
     return json({ rivals: [...swaps].map(([id, n]) => ({ userId: id, name: names.get(id)?.name || 'Someone', colour: names.get(id)?.colour || '#888888', swaps: n })).sort((a, b) => b.swaps - a.swaps) })
   }
   if (path === '/api/feed' && m === 'GET') return json(await feed(env, user))
+
+  // Quests, the explored map and the weekly recap (worker/weekly.js)
+  if (path === '/api/explored' && m === 'GET') return json(await explored(env, user, url))
+  if (path === '/api/quests' && m === 'GET') return json(await quests(env, user, now))
+  if (path === '/api/week' && m === 'GET') return json(await week(env, user, url, now))
 
   // Clubs
   if (path === '/api/clubs' && m === 'GET') {

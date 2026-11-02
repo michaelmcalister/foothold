@@ -1,5 +1,5 @@
 // Worker tests: every route against a fake D1 (Node's built-in SQLite with
-// every file in migrations/ applied in order), with FormTrack's MCP endpoint mocked.
+// every migration applied), with FormTrack's MCP endpoint mocked.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
@@ -15,6 +15,7 @@ const DAY = 86400000
 // ---- a D1 lookalike: prepare().bind().first()/all()/run() and batch() ----
 function fakeD1() {
   const db = new DatabaseSync(':memory:')
+  // Every migration, in order, as the live database gets them
   const dir = new URL('../migrations/', import.meta.url)
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
   const stmt = (sql, args = []) => ({
@@ -367,5 +368,78 @@ describe('planned routes', () => {
     expect((await call(A, 'POST', '/api/routes', { ring: [[999, 0], [0, 0]] })).status).toBe(400)
     expect((await call(A, 'POST', '/api/routes', { ring, mode: 'swim' })).body.error).toMatch(/Mode/)
     expect((await call(A, 'POST', '/api/routes', { ring: 'nope' })).status).toBe(400)
+  })
+})
+
+describe('quests, explored map and weekly recap', () => {
+  it('keeps the hexes each run passed through and serves the explored set', async () => {
+    const r = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    expect(r.status).toBe(200)
+    const row = env.DB.db.prepare('SELECT visited FROM activities WHERE id = ?').get(r.body.activity.id)
+    const visited = JSON.parse(row.visited)
+    expect(visited.length).toBeGreaterThan(10)
+    expect(r.body.activity).not.toHaveProperty('visited') // never in the activity shape
+    const all = await call(A, 'GET', '/api/explored')
+    expect(all.body).toMatchObject({ total: visited.length, capped: false })
+    expect(new Set(all.body.cells)).toEqual(new Set(visited))
+    expect((await call(A, 'GET', '/api/explored?mode=walk')).body.cells).toEqual([])
+    expect((await call(A, 'GET', '/api/explored?mode=swim')).status).toBe(400)
+    // Someone else sees nothing of yours
+    expect((await call(B, 'GET', '/api/explored')).body.total).toBe(0)
+    // Deleting the activity takes its explored hexes with it
+    await call(A, 'DELETE', `/api/activities/${r.body.activity.id}`)
+    expect((await call(A, 'GET', '/api/explored')).body.total).toBe(0)
+  })
+
+  it('works out explored hexes for older activities from their tracks', async () => {
+    const r = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    env.DB.db.exec('UPDATE activities SET visited = NULL')
+    expect((await call(A, 'GET', '/api/explored')).body.total).toBeGreaterThan(10)
+    expect(env.DB.db.prepare('SELECT visited FROM activities WHERE id = ?').get(r.body.activity.id).visited).toBeTruthy()
+  })
+
+  it('logs lost ground and serves three quests with progress', async () => {
+    await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const big = await call(B, 'POST', '/api/activities', { mode: 'run', source: 'watch', points: rectRun({ w: 1500, h: 1000, start: offset(ORIGIN, -300, -300) }) })
+    const a = (await call(A, 'GET', '/api/me')).body.user
+    const losses = env.DB.db.prepare('SELECT COUNT(*) AS n FROM hex_losses WHERE user_id = ?').get(a.id).n
+    expect(losses).toBe(big.body.diff.taken.length)
+    const q = await call(A, 'GET', '/api/quests')
+    expect(q.status).toBe(200)
+    expect(q.body.week.key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(q.body.quests).toHaveLength(3)
+    for (const x of q.body.quests) {
+      expect(x).toHaveProperty('title')
+      expect(x.progress).toBeLessThanOrEqual(x.target)
+      expect(x.title).not.toMatch(/[–—]/)
+    }
+    expect((await call(A, 'GET', '/api/quests')).body.quests).toEqual(q.body.quests)
+  })
+
+  it('serves the weekly recap for this week and a past week', async () => {
+    await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const r = await call(A, 'GET', '/api/week')
+    expect(r.status).toBe(200)
+    expect(r.body.recap).toMatchObject({ outings: 1, loops: 1, week: { current: true } })
+    expect(r.body.recap.hexes.taken).toBeGreaterThan(10)
+    expect(r.body.recap.visited.length).toBeGreaterThan(10)
+    expect(r.body.recap.best.text).toMatch(/new hexes on your map\.$/)
+    const past = await call(A, 'GET', `/api/week?w=${r.body.recap.week.previous}`)
+    expect(past.body.recap).toMatchObject({ outings: 0, week: { current: false } })
+    expect((await call(A, 'GET', '/api/week?w=soon')).status).toBe(400)
+    expect((await call(A, 'GET', '/api/week?w=2099-01-05')).status).toBe(400)
+  })
+
+  it('sends one "your week is ready" notice on Monday to people who got out', async () => {
+    const monday = Date.parse('2026-11-02T00:30:00Z') // Mon 11:30am in Sydney
+    const lastWeek = Date.parse('2026-10-28T20:00:00Z')
+    await call(A, 'POST', '/api/activities', { mode: 'run', startedAt: lastWeek, points: rectRun({ t0: lastWeek }) })
+    await call(B, 'GET', '/api/me')
+    expect((await runCron(env, monday - 2 * DAY)).weekly).toBe(0) // Saturday: nothing
+    expect((await runCron(env, monday)).weekly).toBe(1)
+    await runCron(env, monday + 3600000)
+    const notes = (await call(A, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')
+    expect(notes.map((n) => n.text)).toEqual(['Your week in Foothold is ready. Want a look?'])
+    expect((await call(B, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')).toHaveLength(0)
   })
 })

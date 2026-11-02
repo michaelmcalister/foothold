@@ -61,6 +61,9 @@ export const remote = {
   routes: () => call('GET', '/api/routes'),
   saveRoute: (body) => call('POST', '/api/routes', body),
   deleteRoute: (id) => call('DELETE', `/api/routes/${encodeURIComponent(id)}`),
+  explored: ({ mode } = {}) => call('GET', '/api/explored' + q({ mode })),
+  quests: () => call('GET', '/api/quests'),
+  week: ({ w } = {}) => call('GET', '/api/week' + q({ w })),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,

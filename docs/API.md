@@ -36,6 +36,15 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
             score: { attacker, defender, leader } }
 Route     { id, name, mode, ring: [[lng, lat], ...], distanceM, createdAt, updatedAt }
             (a planned route; a closed loop's ring ends where it starts; private to its owner)
+Week      { key: 'YYYY-MM-DD' (its Monday), start, end }   Monday to Sunday, Sydney time
+Quest     { id, kind: 'take'|'loops'|'outings'|'explore'|'newground'|'hold'|'takeback'|'raid',
+            title, detail, target, count, progress, done, pending }
+            (pending: a hold quest still waiting for the week to end)
+Recap     { week: { key, start, end, current, previous }, distanceM, movingS, outings,
+            byMode, loops, hexes: { taken, fromRivals, held, lost, lostToRivals, faded },
+            explored, quests: Quest[], questsDone, biggestLoop: { activityId, hexes, mode,
+            startedAt, distanceM } | null, best: { activityId, text } | null,
+            last: { key, distanceM, movingS, outings }, compare, visited: [h3] (max 3000) }
 ```
 
 ## Routes
@@ -71,6 +80,9 @@ Route     { id, name, mode, ring: [[lng, lat], ...], distanceM, createdAt, updat
 | POST | /api/routes | `{ id?, name, mode, ring }` (2 to 2000 points; with `id`, updates that route) | `{ route }` |
 | DELETE | /api/routes/:id | | `{ ok }` |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
+| GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
+| GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
+| GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
 
 ## FormTrack link
 
@@ -94,3 +106,15 @@ each is wild, yours or a rival's you would take or only weaken. The server
 checks routes with the same `cleanRoute` the app uses. Routes need
 `migrations/0005_routes.sql`, and they are included in Download my data.
 
+## Quests, explored map and weekly recap
+
+Rules live in `src/lib/engine/quests.js`, `explore.js`, `weekly.js` and
+`weeks.js`, shared by both adapters. Quests are picked from a seeded pool
+(same player and week, same quests) and sized from the four weeks before.
+Progress is worked out each time from activities, the hexes each one passed
+through (`activities.visited` on the server) and the log of hexes rivals took
+(`hex_losses`), never stored counters. Missing a quest costs nothing.
+Held hexes in a past week's recap come from today's map, so they count
+ground held then and still held now. On Monday (Sydney) the cron, and the
+practice map's tick, send "Your week in Foothold is ready. Want a look?"
+(kind `week`) to anyone who got out the week before.
