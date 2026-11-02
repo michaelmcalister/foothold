@@ -91,8 +91,3 @@ export function sortRivals(list) {
   return list.slice().sort((a, b) => (b.tookFromThem + b.tookFromYou) - (a.tookFromThem + a.tookFromYou) || b.swaps - a.swaps || String(a.name).localeCompare(String(b.name)))
 }
 
-/** A simple crest: their first letter on a hex in their colour */
-export function crestFor(name, colour) {
-  const letter = (String(name || '').trim().match(/[A-Za-z0-9]/)?.[0] || '?').toUpperCase()
-  return { letter, colour: colour || '#888888' }
-}

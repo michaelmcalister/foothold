@@ -3,7 +3,7 @@
 import { uid, players, rowToBattle, notify } from './db.js'
 import { checkText } from '../src/lib/social/filter.js'
 import {
-  MAX_MEMBERS, MAX_LEAGUES, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, crestFor,
+  MAX_MEMBERS, MAX_LEAGUES, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals,
 } from '../src/lib/social/leagues.js'
 import { MODES } from '../src/lib/engine/index.js'
 
@@ -116,7 +116,7 @@ async function rivals(ctx) {
       userId: id,
       name: p.name,
       colour: p.colour,
-      crest: crestFor(p.name, p.colour),
+      crest: p.crest || null, // their chosen emblem (src/lib/crests.js); null picks a default from their id
       swaps: s.swaps,
       tookFromThem: s.tookFromThem,
       tookFromYou: s.tookFromYou,

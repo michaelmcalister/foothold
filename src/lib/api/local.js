@@ -16,7 +16,7 @@ import { isCrest } from '../crests.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
 import { checkText } from '../social/filter.js'
-import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, crestFor, groundOf } from '../social/leagues.js'
+import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, groundOf } from '../social/leagues.js'
 import { practiceCommentsFor } from '../social/practice.js'
 
 const DAY = 86400000
@@ -675,7 +675,7 @@ export const local = {
       const p = player(id)
       const last = S.activities.filter((a) => a.userId === id && !a.rejected).reduce((m, a) => Math.max(m, a.startedAt), 0)
       return {
-        userId: id, name: p.name, colour: p.colour, crest: crestFor(p.name, p.colour),
+        userId: id, name: p.name, colour: p.colour, crest: p.crest || null,
         swaps: r.swaps, tookFromThem: r.tookFromThem, tookFromYou: r.tookFromYou, record: r.record,
         battle: r.live ? decorate(r.live, now) : null, lastActive: last || null, hexes: publicHexes(id),
       }

@@ -148,7 +148,7 @@ describe('rivals', () => {
     const r = await call(A, 'GET', '/api/rivals')
     expect(r.status).toBe(200)
     const ben = r.body.rivals[0]
-    expect(ben).toMatchObject({ name: 'Ben', tookFromYou: second.diff.taken.length, tookFromThem: 0, crest: { letter: 'B' }, record: { won: 0, lost: 0, draws: 0 } })
+    expect(ben).toMatchObject({ name: 'Ben', tookFromYou: second.diff.taken.length, tookFromThem: 0, crest: null, record: { won: 0, lost: 0, draws: 0 } })
     expect(ben.swaps).toBeGreaterThan(0)
     expect(ben.battle).toMatchObject({ attackerName: 'Ben', defenderName: 'Ava' })
     expect(ben.battle.score).toBeTruthy()
@@ -222,8 +222,12 @@ describe('export and delete', () => {
     const { first } = await battleWorld()
     await call(B, 'POST', `/api/activities/${first.activity.id}/comments`, { text: 'Go Ava' })
     const lg = (await call(B, 'POST', '/api/leagues', { name: 'Ben crew' })).body.league
+    await call(B, 'POST', '/api/routes', { name: 'Park loop', ring: [[151.15, -33.9], [151.155, -33.9], [151.155, -33.896], [151.15, -33.9]] })
     const ex = await call(B, 'GET', '/api/me/export')
     expect(ex.body.user.name).toBe('Ben')
+    // Every feature's personal data comes along
+    expect(ex.body.routes.map((r) => r.name)).toEqual(['Park loop'])
+    for (const t of ['hex_losses', 'personal_bests', 'stronghold_efforts']) expect(Array.isArray(ex.body[t])).toBe(true)
     expect(ex.body.comments.map((c) => c.text)).toEqual(['Go Ava'])
     expect(ex.body.leagues[0]).toMatchObject({ name: 'Ben crew', code: lg.code })
     expect(ex.body.swaps.length).toBeGreaterThan(0)
@@ -233,5 +237,8 @@ describe('export and delete', () => {
     expect((await call(B, 'DELETE', '/api/me')).body).toEqual({ ok: true })
     for (const t of ['comments', 'leagues', 'league_members', 'swaps', 'battles']) expect(env.DB.db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n).toBe(0)
     expect(env.DB.db.prepare('SELECT COUNT(*) AS n FROM users').get().n).toBe(1)
+    const id = ex.body.user.id
+    for (const t of ['routes', 'hex_losses', 'personal_bests', 'stronghold_efforts']) expect(env.DB.db.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE user_id = ?`).get(id).n).toBe(0)
+    expect(env.DB.db.prepare('SELECT COUNT(*) AS n FROM hex_losses WHERE by_user = ?').get(id).n).toBe(0)
   })
 })

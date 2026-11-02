@@ -10,6 +10,10 @@ export const USER_TABLES = [
   { table: 'notifications', col: 'user_id' },
   { table: 'plans', col: 'user_id' },
   { table: 'feedback', col: 'user_id' },
+  { table: 'routes', col: 'user_id' }, // planned routes
+  { table: 'hex_losses', col: 'user_id' }, // ground rivals took from you (weekly recap)
+  { table: 'personal_bests', col: 'user_id' },
+  { table: 'stronghold_efforts', col: 'user_id' },
 ]
 
 export async function exportAccount(env, user) {
@@ -33,6 +37,7 @@ export async function deleteAccount(env, user) {
     p('DELETE FROM kudos WHERE activity_id IN (SELECT id FROM activities WHERE user_id = ?)', user.id),
     ...USER_TABLES.map(({ table, col }) => p(`DELETE FROM ${table} WHERE ${col} = ?`, user.id)),
     p('DELETE FROM battles WHERE attacker = ? OR defender = ?', user.id, user.id),
+    p('DELETE FROM hex_losses WHERE by_user = ?', user.id), // others' log of ground you took names you
     p('DELETE FROM cells WHERE owner = ?', user.id), // their ground goes wild
     p('DELETE FROM activities WHERE user_id = ?', user.id),
     p('DELETE FROM rate_limits WHERE key = ?', user.id),

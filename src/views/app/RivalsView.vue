@@ -1,5 +1,6 @@
 <script setup>
 // Your rivals: the people you swap ground with most, with a head-to-head card for each.
+import Crest from '../../components/Crest.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store } from '../../lib/store.js'
@@ -58,7 +59,7 @@ function nudge(r) {
     <ul v-else class="rows plain">
       <li v-for="r in rivals" :key="r.userId" class="rival">
         <button class="row" type="button" :aria-expanded="openId === r.userId" @click="toggle(r)">
-          <span class="crest" :style="{ background: r.crest?.colour || r.colour }" aria-hidden="true">{{ r.crest?.letter }}</span>
+          <Crest :crest="r.crest" :colour="r.colour" :id="r.userId" :size="36" />
           <span class="who">
             <strong>{{ r.name }}</strong>
             <span class="small muted">
@@ -74,13 +75,13 @@ function nudge(r) {
         <div v-if="open && open.userId === r.userId" class="card panel">
           <div class="h2h">
             <div class="side">
-              <span class="crest big" style="background: var(--you)" aria-hidden="true">{{ (store.user.name || 'You').trim().charAt(0).toUpperCase() || 'Y' }}</span>
+              <Crest :crest="store.user.crest" colour="#2E55E6" :id="store.user.id" :size="52" />
               <strong>You</strong>
               <span class="small muted">{{ plural(you.hexes, 'hex', 'hexes') }} held</span>
             </div>
             <span class="vs muted">vs</span>
             <div class="side">
-              <span class="crest big" :style="{ background: r.crest?.colour || r.colour }" aria-hidden="true">{{ r.crest?.letter }}</span>
+              <Crest :crest="r.crest" :colour="r.colour" :id="r.userId" :size="52" />
               <strong>{{ r.name }}</strong>
               <span class="small muted">{{ plural(r.hexes, 'hex', 'hexes') }} held</span>
             </div>
@@ -112,11 +113,6 @@ function nudge(r) {
 .row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; width: 100%; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 48px; }
 .who { display: grid; gap: 2px; min-width: 0; }
 .who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.crest {
-  width: 36px; height: 32px; display: inline-grid; place-items: center; color: #fff; font-weight: 850; font-stretch: 112%;
-  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); flex: none;
-}
-.crest.big { width: 52px; height: 46px; font-size: 1.3rem; }
 .swap { display: grid; justify-items: end; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .up { color: var(--you); }
 .down { color: var(--ink-60); }

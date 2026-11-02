@@ -44,7 +44,7 @@ Stronghold { id, name, mode, line (encoded polyline), start: {lat,lng},
 StrongholdRun { id, name, elapsedS, efforts, holds, toCrown, tookFrom,
             holderName, message }
 Comment   { id, userId, name, colour, text, at, mine, canDelete }
-Rival     { userId, name, colour, crest: { letter, colour }, swaps, tookFromThem, tookFromYou,
+Rival     { userId, name, colour, crest (emblem id or null), swaps, tookFromThem, tookFromYou,
             record: { won, lost, draws }, battle: Battle|null, lastActive, hexes }
 League    { id, name, code, members, mine, createdByMe, createdAt }
 Battle    { id, attacker, defender, attackerName, defenderName, attackerColour, defenderColour,
