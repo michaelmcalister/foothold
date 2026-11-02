@@ -13,6 +13,8 @@ import { encryptSecret, decryptSecret } from './crypto.js'
 import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
+import { socialRoute, swapStatements, activityCommentDeletes } from './social.js'
+import { exportAccount, deleteAccount } from './account.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -189,6 +191,7 @@ async function postActivity(env, user, body, ctx) {
     b.mode = mode
     stmts.push(upsertBattle(env, b))
   }
+  stmts.push(...swapStatements(env, { activityId: id, mode, taker: user.id, taken: res.diff?.taken, at: now }))
 
   // Tell each player who lost ground, as a question they can answer with a run
   const diff = res.diff || { claimed: [], reinforced: [], taken: [], held: [] }
@@ -385,8 +388,14 @@ async function route(req, env, url, user, ctx) {
     if (!r.ok) throw Object.assign(new Error(message), { status: 429, code: 'rate_limited', retryAfter: r.retryAfter })
   }
 
+  // Comments, rivals and leagues (worker/social.js)
+  const social = await socialRoute({ env, user, url, m, path, body, now, limit, decorateBattles })
+  if (social !== undefined) return json(social)
+
   // Profile
   if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
+  if (path === '/api/me/export' && m === 'GET') return json(await exportAccount(env, user))
+  if (path === '/api/me' && m === 'DELETE') return json(await deleteAccount(env, user))
   if (path === '/api/me' && m === 'PUT') {
     const sets = []
     const args = []
@@ -462,6 +471,7 @@ async function route(req, env, url, user, ctx) {
       // Ground already taken stays taken; only the record goes
       await env.DB.batch([
         env.DB.prepare('DELETE FROM kudos WHERE activity_id = ?').bind(id),
+        ...activityCommentDeletes(env, id),
         env.DB.prepare('DELETE FROM activities WHERE id = ? AND user_id = ?').bind(id, user.id),
       ])
       return json({ ok: true })
@@ -498,16 +508,6 @@ async function route(req, env, url, user, ctx) {
       live: await decorateBattles(env, all.filter((b) => !b.endedAt), now),
       past: await decorateBattles(env, all.filter((b) => b.endedAt).sort((a, b) => b.endedAt - a.endedAt).slice(0, 20), now),
     })
-  }
-  if (path === '/api/rivals' && m === 'GET') {
-    const rows = (await env.DB.prepare('SELECT attacker, defender, hexes FROM battles WHERE attacker = ? OR defender = ?').bind(user.id, user.id).all()).results
-    const swaps = new Map()
-    for (const r of rows) {
-      const other = r.attacker === user.id ? r.defender : r.attacker
-      swaps.set(other, (swaps.get(other) || 0) + parse(r.hexes, []).length)
-    }
-    const names = await players(env, [...swaps.keys()])
-    return json({ rivals: [...swaps].map(([id, n]) => ({ userId: id, name: names.get(id)?.name || 'Someone', colour: names.get(id)?.colour || '#888888', swaps: n })).sort((a, b) => b.swaps - a.swaps) })
   }
   if (path === '/api/feed' && m === 'GET') return json(await feed(env, user))
 

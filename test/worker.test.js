@@ -1,7 +1,7 @@
 // Worker tests: every route against a fake D1 (Node's built-in SQLite with
-// migrations/0001_init.sql applied), with FormTrack's MCP endpoint mocked.
+// every file in migrations/ applied in order), with FormTrack's MCP endpoint mocked.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import worker from '../worker/index.js'
 import { runCron } from '../worker/cron.js'
@@ -15,7 +15,8 @@ const DAY = 86400000
 // ---- a D1 lookalike: prepare().bind().first()/all()/run() and batch() ----
 function fakeD1() {
   const db = new DatabaseSync(':memory:')
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'))
+  const dir = new URL('../migrations/', import.meta.url)
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
   const stmt = (sql, args = []) => ({
     bind: (...a) => {
       if (a.some((v) => v === undefined)) throw new Error('D1_TYPE_ERROR: undefined bound')

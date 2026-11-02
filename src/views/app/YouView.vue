@@ -35,6 +35,10 @@ const ladderPct = computed(() => {
       </div>
       <RouterLink class="btn quiet small" :to="{ name: 'settings' }">Settings</RouterLink>
     </header>
+    <nav class="links" aria-label="Friends">
+      <RouterLink class="btn quiet small" :to="{ name: 'leagues' }">Private leagues</RouterLink>
+      <RouterLink class="btn quiet small" :to="{ name: 'rivals' }">Your rivals</RouterLink>
+    </nav>
 
     <div class="stat-row">
       <div class="stat"><span class="big-num">{{ s.hexes || 0 }}</span><span class="label">hexes held</span></div>
@@ -89,6 +93,7 @@ const ladderPct = computed(() => {
 
 <style scoped>
 .head { grid-template-columns: 1fr auto; align-items: start; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
 .ladder { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .ladder li { display: grid; gap: 4px; justify-items: start; }
 .ladder .hexdot { width: 24px; height: 21px; background: var(--soft); }

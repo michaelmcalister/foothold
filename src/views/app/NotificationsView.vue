@@ -12,7 +12,7 @@ onMounted(async () => {
   await api.readNotifications(items.value.filter((n) => !n.read).map((n) => n.id))
   refresh()
 })
-const target = (n) => (n.kind === 'battle' ? '/app/battles' : n.kind === 'coach' ? '/app/coach' : '/app')
+const target = (n) => (n.kind === 'battle' ? '/app/battles' : n.kind === 'coach' ? '/app/coach' : n.kind === 'comment' ? '/app/you' : '/app')
 </script>
 
 <template>

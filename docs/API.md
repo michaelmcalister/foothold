@@ -29,8 +29,12 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             distanceM, durationS, movingS, paceSPerKm, elevGainM,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
-            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos }
+            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos, comments }
 Cell      { h3, owner, ownerName, ownerColour, mine, strength, daysToWild }
+Comment   { id, userId, name, colour, text, at, mine, canDelete }
+Rival     { userId, name, colour, crest: { letter, colour }, swaps, tookFromThem, tookFromYou,
+            record: { won, lost, draws }, battle: Battle|null, lastActive, hexes }
+League    { id, name, code, members, mine, createdByMe, createdAt }
 Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
@@ -51,9 +55,18 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | GET | /api/stats | `?mode=run` | `{ hexes, km2, level, next, toNext, weekKm: number[5], streakWeeks, fadingSoon: number }` |
 | GET | /api/leaderboard | `?mode=run&scope=local|world|club&lat&lng` | `{ rows: [{ userId, name, colour, hexes, km2, me }] }` |
 | GET | /api/battles | | `{ live: Battle[], past: Battle[] }` |
-| GET | /api/rivals | | `{ rivals: [{ userId, name, colour, swaps }] }` |
+| GET | /api/rivals | `?mode=run` | `{ rivals: Rival[], you: { hexes }, days: 30 }` (up to 50, most ground swapped in the last 30 days first; `swaps` is all-time battle hexes as before; `hexes` counts public ground only) |
 | GET | /api/feed | | `{ items: [{ activity, userName, userColour }] }` |
 | POST | /api/activities/:id/kudos | | `{ kudos }` |
+| GET | /api/activities/:id/comments | | `{ comments: Comment[], count }` (oldest first; comments you reported are hidden from you) |
+| POST | /api/activities/:id/comments | `{ text }` | `{ comment, count }` |
+| DELETE | /api/activities/:id/comments/:cid | | `{ ok, count }` (the author, or the activity's owner) |
+| POST | /api/activities/:id/comments/:cid/report | `{ reason? }` | `{ ok }` (recorded once per person for the owner to review) |
+| GET | /api/leagues | | `{ leagues: League[], max: 5, maxMembers: 50 }` (the leagues you're in) |
+| POST | /api/leagues | `{ name }` (3 to 40 characters) | `{ league }` (you join it) |
+| POST | /api/leagues/join | `{ code }` (the code or the whole invite link) | `{ league, already? }` |
+| POST | /api/leagues/:id/leave | | `{ ok }` (the last one out closes it) |
+| GET | /api/leagues/:id | `?mode=run` | `{ league, table: [{ userId, name, colour, gained7d, hexes, me, rank }], members: [{ userId, name, colour, joinedAt, me, owner }], mode, days: 7 }` (members only) |
 | GET | /api/clubs | | `{ clubs: [{ id, name, members, hexes, mine }] }` |
 | POST | /api/clubs | `{ name }` | `{ club }` |
 | POST | /api/clubs/:id/join | | `{ club }` |
@@ -65,6 +78,8 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | POST | /api/integrations/formtrack | `{ token }` (a FormTrack personal token, `ftk_...`) | `{ linked: true, summary }` |
 | DELETE | /api/integrations/formtrack | | `{ linked: false }` |
 | GET | /api/integrations/formtrack/summary | | `{ today, readiness, strengthThisWeek }` |
+| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, comments, reports, leagues, swaps }` |
+| DELETE | /api/me | | `{ ok }` (removes the account and all of the above; held ground goes wild) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 
 ## FormTrack link
@@ -79,3 +94,21 @@ FormTrack exposes an MCP endpoint at `{FORMTRACK_URL}/mcp/{ftk_token}`
 The token is stored encrypted at rest (AES-GCM with the `TOKEN_KEY`
 secret) and never returned to the app. Writing runs back into FormTrack
 needs a small FormTrack change, see `docs/FORMTRACK.md`.
+
+## Comments, leagues and rivals
+
+- Comments are tidied (spaces squashed, invisible characters dropped),
+  1 to 280 characters, and checked by `src/lib/social/filter.js` on the
+  server: links, slurs and abuse get a 400 with `code` `link` or `unkind`.
+  Limits: 30 comments an hour, 20 reports a day. The activity's owner gets a
+  `comment` notification. Deleting an activity deletes its comments and
+  their reports.
+- Invite codes are 6 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`. The
+  invite link is `{app}/#/app/leagues/join/CODE`. Up to 5 leagues each and 50
+  members a league (`league_limit`, `league_full`). Joining is limited to 20
+  tries an hour so codes can't be guessed.
+- League tables and rival hex counts only count public ground: hexes inside
+  anyone's privacy zone are left out for everyone, including you.
+- `tookFromThem` and `tookFromYou` come from the `swaps` table, written with
+  each activity. The practice game (local.js) keeps the same records in the
+  browser, and its practice rivals leave the odd friendly comment.

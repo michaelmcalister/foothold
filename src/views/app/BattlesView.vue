@@ -54,6 +54,10 @@ async function kudos(item) {
         <button type="button" :aria-pressed="tab === 'leaders'" @click="tab = 'leaders'">Leaders</button>
         <button type="button" :aria-pressed="tab === 'feed'" @click="tab = 'feed'">Feed</button>
       </div>
+      <nav class="social" aria-label="People">
+        <RouterLink class="btn quiet small" :to="{ name: 'rivals' }">Your rivals</RouterLink>
+        <RouterLink class="btn quiet small" :to="{ name: 'leagues' }">Private leagues</RouterLink>
+      </nav>
     </header>
 
     <template v-if="tab === 'battles'">
@@ -136,6 +140,10 @@ async function kudos(item) {
               <template v-if="item.activity.claimed || item.activity.taken"> · {{ plural((item.activity.claimed || 0) + (item.activity.taken || 0), 'hex', 'hexes') }} claimed</template>
             </p>
           </div>
+          <RouterLink class="kudos talk" :to="{ name: 'activity', params: { id: item.activity.id } }" :aria-label="`${plural(item.activity.comments || 0, 'comment')}. Open to read or add one`">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
+            {{ item.activity.comments || 0 }}
+          </RouterLink>
           <button v-if="!item.mine" class="kudos" type="button" :aria-pressed="!!item.activity.kudosGiven" @click="kudos(item)">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 11v9H4v-9zm0 0 4-7c1.5 0 2.5 1 2.2 2.6L12.6 10H19a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
             {{ item.activity.kudos || 0 }}
@@ -160,7 +168,11 @@ async function kudos(item) {
 .rank { font-weight: 800; color: var(--ink-60); font-variant-numeric: tabular-nums; }
 .who { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; flex-wrap: wrap; }
 .n { font-weight: 800; font-variant-numeric: tabular-nums; }
-.feed { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.feed { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px 10px; align-items: center; }
+.feed > div { min-width: 0; }
+.feed > :nth-child(3):last-child { grid-column: 3 / 5; justify-self: end; }
+.social { display: flex; gap: 8px; flex-wrap: wrap; }
+.talk { text-decoration: none; }
 .kudos {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--soft); color: var(--ink);
   border-radius: 999px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; min-height: 40px;
