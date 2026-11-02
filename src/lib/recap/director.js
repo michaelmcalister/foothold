@@ -17,7 +17,7 @@ export function createDirector(driver, plan, { onShot = () => {}, onProgress = (
       let last = t0
       const frame = (now) => {
         if (token !== run) return resolve(false)
-        const t = Math.min(1, (now - t0) / ms)
+        const t = Math.min(1, Math.max(0, (now - t0) / ms)) // the first frame can be stamped a touch before t0
         // Half steady, half eased: a gentle start and finish without crawling
         const f = 0.5 * t + 0.5 * ease(t)
         try {

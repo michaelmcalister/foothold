@@ -72,7 +72,7 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
         const t0 = performance.now()
         cancelMove = resolve
         const frame = (now) => {
-          const f = Math.min(1, (now - t0) / ms)
+          const f = Math.min(1, Math.max(0, (now - t0) / ms))
           map.jumpTo(view({ ...c, heading: c.heading + 360 * f }))
           if (f < 1) raf = requestAnimationFrame(frame)
           else { cancelMove = null; resolve() }
