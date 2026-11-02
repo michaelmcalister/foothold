@@ -50,13 +50,16 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Spotify and the voice coach</h2>
       <p>If you connect Spotify, Foothold can see your playlists and start, pause and turn down music on your devices. The Spotify sign-in is kept on your phone, not on our servers, and we don't see your listening history. The voice coach's Australian voice is made by ElevenLabs: we send them only the words to say, like "2 kilometres, average pace 5 40 per k", never your name or account. If you pick the phone's own voice instead, it uses the voices built into your phone or browser. Some of these, like Google's online voices in Chrome, are made by the browser's maker, which then sees the words spoken (your distance and pace), not who you are to Foothold.</p>
 
+      <h2>Plans built with AI</h2>
+      <p>If you choose "Build it with AI" in the coach, what you type and a summary of your recent running (weekly distances, longest run, run count, estimated paces, your current goal and whether FormTrack is linked) go to Anthropic's Claude to set up your plan. We never send your name, email, account, routes or where you run. We ask before the first time, and remember your answer on your device. We don't keep what you typed on our servers, and it isn't used for anything else. Anthropic's commercial terms cover how it handles that data. The plan and its explanation are saved with your plan, like any other plan, and you can download or delete them. Plans built this way are labelled as built with AI and aren't medical advice.</p>
+
       <h2>Your choices</h2>
       <ul>
         <li>Download everything we hold about you from Settings.</li>
         <li>Delete an activity, or your whole account, at any time.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
-      <p class="small muted">Last updated 1 November 2026. This is a draft for review before launch.</p>
+      <p class="small muted">Last updated 3 November 2026. This is a draft for review before launch.</p>
     </main>
   </div>
 </template>

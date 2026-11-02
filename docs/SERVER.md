@@ -128,6 +128,21 @@ hour per address. Without the key, the app uses the phone's own voice.
    (Settings, Variables and secrets, Add, type Secret), or run
    `npx wrangler secret put ELEVENLABS_API_KEY`.
 
+## AI built plans (Claude)
+
+The coach can build a plan from the runner's own words through
+`POST /api/plan/ai`. Claude picks settings for the plan engine and writes the
+explanation; the engine still builds every week, so the safety rules hold.
+
+1. Apply migration `0007_ai.sql` (`npm run db:migrate`). It adds `ai_usage`.
+2. Create an Anthropic API key and add it as a Worker secret named
+   `ANTHROPIC_API_KEY` (`npx wrangler secret put ANTHROPIC_API_KEY`).
+3. Optional variables: `PLAN_MODEL` (default `claude-sonnet-5-5`) and
+   `AI_DAILY_CAP_AUD` (default 10). Over the cap, AI plans rest until the
+   next UTC day and the manual setup still works.
+
+Without the key, the "Build it with AI" option doesn't show.
+
 ## Developing locally
 
 ```bash
@@ -146,6 +161,7 @@ built-in SQLite as a stand-in for D1, so they need no Cloudflare account.
 
 ## Privacy notes
 
+- AI plan briefs are never logged or stored on the server; `ai_usage` holds only token counts and cost.
 - Tokens, request bodies and locations are never logged. Errors log only the
   method, path and error message.
 - FormTrack tokens are stored encrypted (AES-GCM) and never sent back to the app.

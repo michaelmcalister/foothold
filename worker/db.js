@@ -234,6 +234,9 @@ export const LIMITS = {
   report: { max: 20, sec: 86400 },
   league: { max: 10, sec: 86400 },
   leagueJoin: { max: 20, sec: 3600 },
+  aiPlanHour: { max: 5, sec: 3600 }, // AI plan builds per address
+  aiPlanDay: { max: 15, sec: 86400 },
+  aiPlanUser: { max: 15, sec: 86400 }, // per signed-in player
 }
 
 /** Count one use. Fails open if the table is missing so a hiccup can't lock everyone out. */

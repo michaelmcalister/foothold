@@ -16,6 +16,7 @@ import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { handleTts, ttsConfig } from './tts.js'
+import { handleAiPlan, aiConfig } from './aiplan.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
 import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
 import { socialRoute, swapStatements, activityCommentDeletes } from './social.js'
@@ -765,6 +766,8 @@ export async function handleApi(req, env, ctx) {
     if (env.SPOTIFY_CLIENT_ID) out.spotify = { clientId: String(env.SPOTIFY_CLIENT_ID) }
     const tts = ttsConfig(env) // the Australian voice coach (ElevenLabs), when its key is set
     if (tts) out.tts = tts
+    const ai = aiConfig(env) // AI built plans (Claude), when its key is set
+    if (ai) out.ai = ai
     res = json(out)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
@@ -772,6 +775,22 @@ export async function handleApi(req, env, ctx) {
   // Public, rate limited: the voice coach speaks on the practice map too
   if (url.pathname === '/api/tts' && req.method === 'POST') {
     res = await handleTts(req, env)
+    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+    return res
+  }
+  // Public, rate limited and spend capped: AI built plans work on the practice map too.
+  // A signed-in player is also limited per account.
+  if (url.pathname === '/api/plan/ai' && req.method === 'POST') {
+    let user = null
+    if (req.headers.get('authorization') || req.headers.get('x-device-id')) {
+      try { user = (await userFor(req, env)).user || null } catch { user = null }
+    }
+    try {
+      res = await handleAiPlan(req, env, { user })
+    } catch (e) {
+      console.error('ai plan route', e?.message) // never the request body
+      res = err('Something went wrong on our side. Try again in a moment.', 500)
+    }
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
   }

@@ -392,3 +392,96 @@ describe('today in the runner\'s time zone', () => {
     expect(toISO('2026-11-02')).toBe('2026-11-02')
   })
 })
+
+describe('generatePlan with chosen weekdays and things to avoid', () => {
+  const opts = [
+    { ...base, goal: '10k', raceDate: '2027-02-14', runDays: ['tue', 'thu', 'sat'], longRunDay: 'sat', daysPerWeek: 3 },
+    { ...base, goal: 'half', raceDate: '2027-03-14', runDays: ['mon', 'wed', 'thu', 'sat', 'sun'], longRunDay: 'sun', daysPerWeek: 5, avoid: ['intervals'] },
+    { ...base, goal: 'marathon', raceDate: '2027-06-13', currentWeeklyKm: 35, longestRecentKm: 14, runDays: ['tue', 'wed', 'fri', 'sat', 'sun'], daysPerWeek: 5, avoid: ['tempo'] },
+    { ...base, goal: '5k', raceDate: '2027-01-10', avoid: ['intervals', 'tempo', 'hills'] },
+    { ...base, goal: 'base', runDays: ['wed', 'sat'], longRunDay: 'sun' },
+    { ...base, goal: 'return', runDays: ['mon', 'tue', 'wed', 'fri', 'sat', 'sun'], includeStrength: true },
+  ]
+  const made = opts.map((o) => [o, generatePlan(o)])
+  const DAYKEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+  it('runs only on the chosen weekdays, with the long run on one of them', () => {
+    for (const [o, p] of made) {
+      if (!o.runDays) continue
+      for (const s of allSessions(p).filter((x) => isRun(x) && x.type !== 'race')) expect(o.runDays, `${o.goal} ${s.date}`).toContain(s.day)
+      for (const s of allSessions(p).filter((x) => x.type === 'long')) expect(s.day).toBe(p.settings.longRunDay)
+      expect(o.runDays).toContain(p.settings.longRunDay)
+    }
+    // Long run day not in the list: Sunday, then Saturday, then the last day
+    expect(made[4][1].settings.longRunDay).toBe('sat')
+    expect(made[4][1].settings.daysPerWeek).toBe(2)
+    // Return plans stay at 4 days at most, spread out, long day kept
+    const ret = made[5][1]
+    for (const w of ret.weeks) {
+      const days = w.sessions.filter(isRun).map((s) => s.day)
+      expect(days.length).toBeLessThanOrEqual(4)
+      expect(days).toContain('sun')
+    }
+  })
+
+  it('ignores weekdays that are not real or are too few, and keeps the old layout', () => {
+    const a = generatePlan({ ...base, goal: '10k', runDays: ['funday', 'sun'] })
+    const b = generatePlan({ ...base, goal: '10k' })
+    expect(allSessions(a).map((s) => s.date + s.type)).toEqual(allSessions(b).map((s) => s.date + s.type))
+    expect(a.settings.runDays).toBeUndefined()
+  })
+
+  it('leaves out avoided session types and swaps in allowed ones', () => {
+    const noIntervals = allSessions(made[1][1])
+    expect(noIntervals.some((s) => s.type === 'intervals')).toBe(false)
+    expect(noIntervals.some((s) => s.variant === 'progression')).toBe(true)
+    expect(allSessions(made[2][1]).some((s) => s.type === 'tempo')).toBe(false)
+    expect(allSessions(made[2][1]).some((s) => s.type === 'intervals')).toBe(true)
+    const neither = made[3][1]
+    expect(allSessions(neither).filter(isQuality)).toHaveLength(0)
+    for (const w of neither.weeks.filter((x) => !x.taper)) expect(w.sessions.some((s) => s.type === 'strides')).toBe(true)
+    expect(neither.notes.join(' ')).toMatch(/as you asked/)
+  })
+
+  it('still holds every safety rule', () => {
+    for (const [o, p] of made) {
+      const label = `${o.goal} ${o.runDays || ''} ${o.avoid || ''}`
+      let prev = null
+      for (const w of p.weeks) {
+        if (w.taper || o.goal === 'return') break // return plans ramp by time, checked below
+        if (w.deload) continue
+        if (prev != null) expect(w.targetKm, label).toBeLessThanOrEqual(prev * 1.1 + 0.15)
+        prev = w.targetKm
+      }
+      if (o.goal === 'return') {
+        // Same time based build as the default layout, just on the chosen days
+        const plain = generatePlan({ ...o, runDays: undefined, daysPerWeek: 4, longRunDay: 'sun' })
+        const mins = (q) => q.weeks.map((w) => w.sessions.filter(isRun).reduce((a, s) => a + s.durationMin, 0))
+        expect(mins(p)).toEqual(mins(plain))
+      }
+      if (o.goal !== 'return') p.weeks.forEach((w, i) => { if (!w.taper) expect(w.deload, label).toBe((i + 1) % 4 === 0) })
+      const q = allSessions(p).filter(isQuality).map((s) => s.date).sort()
+      for (let i = 1; i < q.length; i++) expect(diffDays(q[i - 1], q[i]), label).toBeGreaterThan(1)
+      for (const w of p.weeks) expect(w.sessions.filter(isQuality).length).toBeLessThanOrEqual(2)
+      let hard = 0, all = 0
+      for (const s of allSessions(p)) {
+        if (!isRun(s) || s.type === 'race') continue
+        all += s.distanceKm
+        if (isQuality(s)) {
+          const h = s.steps.find((x) => ['tempo', 'interval'].includes(x.kind))
+          hard += ((h.repeat || 1) * h.distanceM) / 1000
+        }
+        if (s.type === 'long') expect(s.distanceKm, label).toBeLessThanOrEqual(LONG_CAP_KM[o.goal])
+      }
+      expect(hard / all, label).toBeLessThanOrEqual(0.2)
+      if (o.raceDate) {
+        expect(allSessions(p).find((s) => s.type === 'race').date).toBe(o.raceDate)
+        expect(p.weeks.filter((w) => w.taper).length).toBe({ '5k': 1, '10k': 1, half: 2, marathon: 3 }[o.goal])
+      }
+      for (const s of allSessions(p)) {
+        expect(DAYKEYS).toContain(s.day)
+        expect(s.title + s.description).not.toMatch(/[—–]|--/)
+      }
+    }
+  })
+})
