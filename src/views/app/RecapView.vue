@@ -20,6 +20,7 @@ const router = useRouter()
 const el = ref(null)
 const activity = ref(null)
 const state = ref('loading') // loading | playing | done | empty | error
+const mapShown = ref(false) // the map fades in once it has drawn the opening view
 const shot = ref('flyin')
 const metres = ref(0)
 const hexCount = ref(0)
@@ -87,8 +88,11 @@ onMounted(async () => {
     driver = await makeDriver(plan.shots.wide)
     if (gone) { driver.destroy(); return }
     engine.value = driver.kind
+    await driver.ready()
+    if (gone) return
     direct()
     play()
+    mapShown.value = true
     // A refused Google key only shows up after the map starts. Swap to the street map.
     if (driver.kind === 'google') {
       setTimeout(async () => {
@@ -99,6 +103,8 @@ onMounted(async () => {
         const { createMapLibreDriver } = await import('../../lib/recap/maplibre.js')
         driver = await createMapLibreDriver(el.value, { start: plan.shots.wide, colour: colour.value })
         engine.value = driver.kind
+        await driver.ready()
+        if (gone) return
         direct()
         play()
       }, 3000)
@@ -117,7 +123,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="recap" :style="{ '--you': colour }">
-    <div ref="el" class="map" aria-hidden="true"></div>
+    <div ref="el" class="map" :class="{ shown: mapShown }" aria-hidden="true"></div>
 
     <header class="top">
       <button class="close" type="button" aria-label="Close recap" @click="back">
@@ -132,8 +138,17 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div v-if="state === 'loading'" class="middle"><p>Lining up the cameras</p></div>
-    <div v-else-if="state === 'empty'" class="middle card">
+    <Transition name="fade">
+      <div v-if="state === 'loading'" class="loading" role="status" aria-live="polite">
+        <svg class="hexload" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+          <polygon class="track" points="32,4 56,18 56,46 32,60 8,46 8,18" />
+          <polygon class="draw" points="32,4 56,18 56,46 32,60 8,46 8,18" pathLength="100" />
+        </svg>
+        <strong>Loading your flyover</strong>
+        <span>{{ route.params.id === 'demo' ? 'Lining up the cameras over the harbour' : 'Lining up the cameras over your loop' }}</span>
+      </div>
+    </Transition>
+    <div v-if="state === 'empty'" class="middle card">
       <p>This one is too short to fly over. Record a longer loop and try again.</p>
       <button class="btn" type="button" @click="back">Back</button>
     </div>
@@ -172,9 +187,26 @@ onBeforeUnmount(() => {
 .recap {
   position: fixed; inset: 0; z-index: 50; background: #16302A; color: #fff; overflow: hidden;
 }
-.map { position: absolute; inset: 0; }
+.map { position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s ease; }
+.map.shown { opacity: 1; }
+.loading {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 8px;
+  text-align: center; padding: 24px; background: #16302A;
+}
+.loading strong { font-weight: 800; font-stretch: 112%; font-size: 1.35rem; margin-top: 10px; }
+.loading span { opacity: 0.75; font-size: 0.95rem; max-width: 30ch; }
+.hexload polygon { fill: none; stroke-width: 4; stroke-linejoin: round; }
+.hexload .track { stroke: rgba(255, 255, 255, 0.14); }
+.hexload .draw { stroke: var(--you); stroke-dasharray: 30 70; animation: hexrun 1.4s linear infinite; }
+@keyframes hexrun { to { stroke-dashoffset: -100; } }
+.fade-leave-active { transition: opacity 0.6s ease; }
+.fade-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .hexload .draw { animation: none; stroke-dasharray: none; }
+  .map, .fade-leave-active { transition: none; }
+}
 .top {
-  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px;
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: center; gap: 12px;
   padding: calc(env(safe-area-inset-top) + 12px) 16px 28px;
   background: linear-gradient(rgba(22, 48, 42, 0.7), rgba(22, 48, 42, 0));
   pointer-events: none;

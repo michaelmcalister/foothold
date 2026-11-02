@@ -71,6 +71,23 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
   return {
     kind: 'google',
     get failed() { return failed },
+    // Resolves once Google has finished drawing the opening view (or after a
+    // few seconds regardless), so the recap starts on a picture, not a blank
+    ready(timeoutMs = 9000) {
+      return new Promise((resolve) => {
+        let done = false
+        const finish = () => {
+          if (done) return
+          done = true
+          clearTimeout(timer)
+          map.removeEventListener('gmp-steadychange', onSteady)
+          resolve()
+        }
+        const onSteady = (e) => { if (e.isSteady) finish() }
+        const timer = setTimeout(finish, timeoutMs)
+        map.addEventListener('gmp-steadychange', onSteady)
+      })
+    },
     setCamera(c) {
       map.center = centreOf(c)
       map.range = c.range

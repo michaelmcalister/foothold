@@ -49,6 +49,14 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
 
   return {
     kind: 'maplibre',
+    // Resolves when the street map has drawn the opening view (or after a few seconds)
+    ready(timeoutMs = 6000) {
+      if (map.loaded() && map.areTilesLoaded()) return Promise.resolve()
+      return new Promise((resolve) => {
+        const timer = setTimeout(resolve, timeoutMs)
+        map.once('idle', () => { clearTimeout(timer); resolve() })
+      })
+    },
     setCamera(c) { map.jumpTo(view(c)) },
     flyTo(c, ms) {
       stop()
