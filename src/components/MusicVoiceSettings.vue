@@ -1,12 +1,14 @@
 <script setup>
 // Settings for music and the voice coach during runs: connect Spotify and
 // pick a playlist, choose how often the voice gives updates and what it says,
-// how much encouragement, and what the music does while it talks.
+// how much encouragement, and what the music does while it talks. Also the
+// app's sound effects and the recap flyover music.
 import { ref, computed, onMounted } from 'vue'
 import { audio } from '../lib/audio/settings.js'
 import { australianVoices, voicesReady, speak, unlock, serverVoices } from '../lib/audio/voice.js'
 import * as spotify from '../lib/audio/spotify.js'
 import { toast } from '../lib/store.js'
+import { resume as wakeSound, playSequence } from '../lib/audio/sfx.js'
 
 const linked = ref(spotify.isLinked())
 const available = ref(false)
@@ -16,6 +18,7 @@ const error = ref('')
 const voiceList = ref([])
 const coachVoices = ref([]) // the Australian voices on the Foothold server
 const hasSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window
+const hasAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext)
 
 const contextChoice = computed({
   get: () => audio.spotifyContext,
@@ -66,6 +69,11 @@ async function testMusic() {
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }
 
+function sampleSounds() {
+  wakeSound() // inside the tap, so the phone allows it
+  playSequence([{ name: 'claim', hexes: 12 }, { name: 'take' }, { name: 'levelUp' }])
+}
+
 function testVoice() {
   unlock()
   // (the sample says 'Good on ya' so you can hear the accent)
@@ -75,7 +83,7 @@ function testVoice() {
 
 <template>
   <section class="panel stack" aria-labelledby="s-audio">
-    <h2 id="s-audio">Music and voice coach</h2>
+    <h2 id="s-audio">Music, voice and sounds</h2>
 
     <div class="stack">
       <h3>Spotify</h3>
@@ -175,6 +183,31 @@ function testVoice() {
         <button class="btn quiet" type="button" @click="testVoice">Hear a sample</button>
       </template>
     </div>
+
+    <div class="stack">
+      <h3>Sounds</h3>
+      <p v-if="!hasAudio" class="small muted">This browser can't play sounds, so they're off here.</p>
+      <template v-else>
+        <label class="check">
+          <input v-model="audio.sfx" type="checkbox" />
+          <span>Sound effects for claiming ground, level ups and the record buttons</span>
+        </label>
+        <div v-if="audio.sfx" class="field">
+          <label for="s-sfxvol">Effects volume: {{ Math.round(audio.sfxVolume * 100) }}%</label>
+          <input id="s-sfxvol" v-model.number="audio.sfxVolume" type="range" min="0.1" max="1" step="0.05" />
+        </div>
+        <label class="check">
+          <input v-model="audio.recapMusic" type="checkbox" />
+          <span>Music in run recaps</span>
+        </label>
+        <label v-if="audio.sfx" class="check">
+          <input v-model="audio.tapSound" type="checkbox" />
+          <span>A soft tick when I tap a button</span>
+        </label>
+        <button class="btn quiet" type="button" :disabled="!audio.sfx" @click="sampleSounds">Play a sample</button>
+        <p class="hint">Sounds follow your phone's media volume. Browsers can't tell when a phone is on silent, so switch them off here if you'd rather not hear them.</p>
+      </template>
+    </div>
   </section>
 </template>
 
@@ -182,7 +215,7 @@ function testVoice() {
 .stack { display: grid; gap: 12px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .check { display: flex; gap: 10px; align-items: center; }
-.check input { width: 20px; height: 20px; }
+.check input { width: 20px; height: 20px; flex: none; }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
 input[type='range'] { width: 100%; }
 </style>

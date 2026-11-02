@@ -2,6 +2,7 @@
 // After an activity: what you claimed, what you took and from whom, any
 // battles that started, a level-up, Coach's notes on the run, new personal
 // bests, strongholds you ran, and a gentle check on this week's load.
+// A fresh result plays its sounds in turn: claim, take, crown, best, level.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -13,6 +14,7 @@ import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
+import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +58,9 @@ const headline = computed(() => {
 })
 
 onMounted(async () => {
+  if (res.value?.activity && firstTime('result:' + res.value.activity.id)) {
+    playSequence(resultSounds(res.value, !!levelUp.value), { delay: 0.45 }) // after the coach's wrap-up line
+  }
   api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
   api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
   if (!res.value) {

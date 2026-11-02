@@ -1,4 +1,4 @@
-// Music and voice settings, kept on this device (they're about this phone's
+// Music, voice and sound settings, kept on this device (they're about this phone's
 // speaker and Spotify app, not your account).
 import { reactive, watch } from 'vue'
 
@@ -19,6 +19,10 @@ export const DEFAULTS = {
   spotifyContext: '', // playlist URI, or empty to resume what was playing
   spotifyContextName: '',
   shuffle: true,
+  sfx: true, // sound effects (claiming ground, level ups, the record buttons)
+  sfxVolume: 0.6, // 0 to 1
+  recapMusic: true, // music in the run recap flyover
+  tapSound: false, // a very soft tick on button taps
 }
 
 function load() {
