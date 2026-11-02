@@ -3,7 +3,10 @@
 // trail as it draws, reveals the hexes taken and orbits them, then shows an
 // overview and the numbers. Uses Google's photorealistic 3D map when a Maps
 // key is set up, otherwise the MapLibre street map with the same moves.
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+// A generative score (lib/audio/score.js) follows the shots; the speaker
+// button mutes it, and a "Tap for sound" chip shows if the phone hasn't
+// allowed sound yet.
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cellToBoundary } from 'h3-js'
 import { api } from '../../lib/api/index.js'
@@ -14,6 +17,9 @@ import { planRecap } from '../../lib/recap/plan.js'
 import { createDirector } from '../../lib/recap/director.js'
 import { mapsKey } from '../../lib/recap/config.js'
 import { demoRun } from '../../lib/recap/demo.js'
+import { audio } from '../../lib/audio/settings.js'
+import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
+import { createScore } from '../../lib/audio/score.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +35,9 @@ let driver = null
 let director = null
 let plan = null
 let gone = false
+const music = createScore()
+const hasAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext)
+let musicWanted = false // the map is up, so music should play once sound is allowed
 
 const colour = computed(() => store.user?.colour || '#2E55E6')
 const shots = computed(() => plan?.timeline || [])
@@ -58,10 +67,36 @@ async function makeDriver(start) {
   return createMapLibreDriver(el.value, { start, colour: colour.value })
 }
 
+// ---- music ----
+const blocked = computed(() => sound.state === 'suspended' || sound.state === 'interrupted')
+const needsTap = computed(() => hasAudio && audio.recapMusic && mapShown.value && blocked.value && state.value !== 'error')
+
+function startMusic() {
+  musicWanted = true
+  if (!audio.recapMusic || !hasAudio || state.value !== 'playing') return
+  wakeSound()
+  if (sound.state === 'running') music.start(shot.value) // otherwise it starts when sound is allowed
+}
+watch(() => sound.state, (st) => { if (st === 'running' && musicWanted && !music.playing && audio.recapMusic && state.value === 'playing') music.start(shot.value) })
+
+function toggleMusic() {
+  audio.recapMusic = !audio.recapMusic
+  if (audio.recapMusic) startMusic()
+  else music.stop({ fade: 0.3 })
+}
+function tapForSound() { wakeSound() }
+
 function direct() {
   director = createDirector(driver, plan, {
-    onShot: (id) => { shot.value = id; state.value = 'playing' },
-    onProgress: (p) => { metres.value = p.metres },
+    onShot: (id) => {
+      shot.value = id
+      state.value = 'playing'
+      if (musicWanted && audio.recapMusic && sound.state === 'running') music.setSection(id)
+    },
+    onProgress: (p) => {
+      metres.value = p.metres
+      if (p.shot === 'follow') music.setIntensity(0.3 + 0.7 * p.f) // busier as the trail draws
+    },
     onDone: () => { state.value = 'done' },
   })
 }
@@ -93,6 +128,7 @@ onMounted(async () => {
     direct()
     play()
     mapShown.value = true
+    startMusic()
     // A refused Google key only shows up after the map starts. Swap to the street map.
     if (driver.kind === 'google') {
       setTimeout(async () => {
@@ -116,6 +152,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   gone = true
+  music.stop({ fade: 0.3 })
   director?.stop()
   driver?.destroy()
 })
@@ -136,7 +173,21 @@ onBeforeUnmount(() => {
           <span>{{ dateLong(activity.startedAt) }}</span>
         </template>
       </div>
+      <button v-if="hasAudio" class="close speaker" type="button" :aria-label="audio.recapMusic ? 'Turn the music off' : 'Turn the music on'" @click="toggleMusic">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
+          <template v-if="audio.recapMusic">
+            <path d="M15.5 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </template>
+          <path v-else d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
+    <button v-if="needsTap" class="soundchip" type="button" @click="tapForSound">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" /></svg>
+      Tap for sound
+    </button>
 
     <Transition name="fade">
       <div v-if="state === 'loading'" class="loading" role="status" aria-live="polite">
@@ -215,6 +266,14 @@ onBeforeUnmount(() => {
   pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center;
   background: rgba(255, 255, 255, 0.16); color: #fff; backdrop-filter: blur(8px); cursor: pointer;
 }
+.speaker { margin-left: auto; }
+.soundchip {
+  position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 70px);
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 700; font-size: 0.88rem; color: #16302A;
+  background: #fff; border: 0; border-radius: 999px; padding: 8px 14px; min-height: 38px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.soundchip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .close:focus-visible, .shots button:focus-visible, .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .when { display: grid; line-height: 1.2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
 .when strong { font-weight: 800; font-stretch: 108%; }

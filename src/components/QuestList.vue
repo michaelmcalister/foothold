@@ -1,9 +1,10 @@
 <script setup>
 // This week's quests as a short list: a hex that fills as you go, the goal,
 // and how far along you are. A quest finished since you last looked gets a
-// small celebration once.
+// small celebration once, with a chime.
 import { ref, watch } from 'vue'
 import { freshlyDone, markCelebrated } from '../lib/questSeen.js'
+import { play } from '../lib/audio/sfx.js'
 
 const props = defineProps({
   quests: { type: Array, default: () => [] },
@@ -16,6 +17,7 @@ watch(() => props.quests, (qs) => {
   if (!ids.length) return
   fresh.value = new Set(ids)
   markCelebrated(ids)
+  setTimeout(() => play('quest', { wait: false }), 150) // in time with the pop
   setTimeout(() => { fresh.value = new Set() }, 2600)
 }, { immediate: true })
 

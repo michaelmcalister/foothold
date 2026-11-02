@@ -7,6 +7,7 @@ import Crest from '../../components/Crest.vue'
 import { api } from '../../lib/api/index.js'
 import { store, toast } from '../../lib/store.js'
 import { km, ago, plural } from '../../lib/format.js'
+import { play } from '../../lib/audio/sfx.js'
 
 const YOU = '#2E55E6'
 const tab = ref('battles')
@@ -55,6 +56,7 @@ function side(b) {
   }
 }
 async function kudos(item) {
+  if (!item.activity.kudosGiven) play('kudos', { wait: false })
   const r = await api.kudos(item.activity.id)
   item.activity.kudos = r.kudos
   item.activity.kudosGiven = r.given
