@@ -516,7 +516,9 @@ async function route(req, env, url, user, ctx) {
 
   // Activities
   if (path === '/api/activities' && m === 'POST') {
-    await limit('activity', "That's a lot of activities for one day. Try again tomorrow.")
+    // Imports get a bigger allowance: moving years of history across is normal
+    if (body?.source === 'import') await limit('import', "That's a lot of imports for one day. The rest can come across tomorrow.")
+    else await limit('activity', "That's a lot of activities for one day. Try again tomorrow.")
     return json(await postActivity(env, user, body, ctx))
   }
   if (path === '/api/activities' && m === 'GET') {

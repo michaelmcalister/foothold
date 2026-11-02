@@ -236,7 +236,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.rec { display: grid; grid-template-rows: 1fr auto; height: 100dvh; }
+.rec { display: grid; grid-template-rows: minmax(36dvh, 1fr) auto; height: 100dvh; overflow: hidden; }
 .maparea { position: relative; min-height: 0; }
 .maparea > :first-child { position: absolute; inset: 0; }
 .back {
@@ -262,6 +262,8 @@ onBeforeUnmount(() => {
 .panel-bottom {
   background: var(--paper); padding: 18px var(--pad) calc(18px + env(safe-area-inset-bottom));
   display: grid; gap: 14px; border-top: 1px solid var(--line);
+  /* Lots of options before a run: scroll them rather than squash the map */
+  max-height: 64dvh; overflow-y: auto; overscroll-behavior: contain;
 }
 .go { min-height: 58px; font-size: 1.15rem; }
 .alt { display: flex; gap: 10px; flex-wrap: wrap; }

@@ -616,3 +616,10 @@ describe('personal bests and strongholds', () => {
     expect(r.body.prs.length).toBeGreaterThan(0)
   })
 })
+
+describe('import allowance', () => {
+  it('lets a watch history import go past the daily recording limit', async () => {
+    const { LIMITS } = await import('../worker/db.js')
+    expect(LIMITS.import.max).toBeGreaterThan(LIMITS.activity.max)
+  })
+})

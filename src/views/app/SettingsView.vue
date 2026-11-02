@@ -8,6 +8,7 @@ import { store, refresh, toast, locate } from '../../lib/store.js'
 import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
 import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
+import { auth, logout } from '../../lib/auth.js'
 
 const router = useRouter()
 const name = ref(store.user.name)
@@ -85,6 +86,20 @@ async function exportData() {
   a.href = URL.createObjectURL(blob)
   a.download = 'foothold-data.json'
   a.click()
+}
+
+async function deleteAccount() {
+  if (!confirm('Delete your Foothold account? Your runs, plans, comments and leagues are removed for good, and your ground goes wild. This can’t be undone.')) return
+  try {
+    await api.deleteAccount()
+  } catch (e) {
+    toast(e.message)
+    return
+  }
+  try { localStorage.clear(); sessionStorage.clear() } catch { /* private mode */ }
+  if (auth.enabled) await logout()
+  location.hash = '#/'
+  location.reload()
 }
 
 async function startAgain() {
@@ -193,7 +208,8 @@ async function startAgain() {
       <p class="small"><RouterLink to="/privacy">How we handle your data</RouterLink></p>
       <div class="row">
         <button class="btn quiet" type="button" @click="exportData">Download my data</button>
-        <button class="btn quiet" type="button" @click="startAgain">Start again</button>
+        <button v-if="isLocal" class="btn quiet" type="button" @click="startAgain">Start again</button>
+        <button v-else class="btn quiet" type="button" @click="deleteAccount">Delete my account</button>
       </div>
     </section>
   </div>
