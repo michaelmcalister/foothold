@@ -4,13 +4,16 @@
 // asked for), the Explored view, and the one question worth asking today.
 // A "Hot spots" switch shades contested ground, and once a season the
 // sheet sums up how the last season went. Strongholds show as crowns; tap
-// one for its holder and leaderboards.
+// one for its holder and leaderboards. New players see the first week
+// journey in place of the nudge, and the strip shows the weekly streak.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import QuestList from '../../components/QuestList.vue'
 import Crest from '../../components/Crest.vue'
 import StrongholdCard from '../../components/StrongholdCard.vue'
+import FirstWeekCard from '../../components/FirstWeekCard.vue'
+import { loadJourney, freshSteps } from '../../lib/journey.js'
 import { exploredShare } from '../../lib/engine/explore.js'
 import { freshlyDone } from '../../lib/questSeen.js'
 import { api } from '../../lib/api/index.js'
@@ -51,6 +54,27 @@ async function loadQuests() {
   } catch { quests.value = [] }
 }
 watch(() => store.stats, loadQuests)
+
+// The first week journey (new players) and the weekly streak chip
+const journey = ref(null)
+const streak = ref(null)
+async function loadHabits() {
+  const [j, s] = await Promise.all([loadJourney().catch(() => null), api.streak().catch(() => null)])
+  journey.value = j
+  streak.value = s?.streak || null
+}
+watch(() => store.stats, loadHabits)
+// Shown while under way, and once more to celebrate the last step
+const showJourney = computed(() => journey.value && (journey.value.active || (journey.value.complete && freshSteps(journey.value).length)))
+async function seeFirstLoop() {
+  suggesting.value = true
+  try {
+    const { suggestLoopFor } = await import('../../lib/suggest.js')
+    suggestion.value = await suggestLoopFor(store.user?.homeCentre || store.centre, store.mode, { targetKm: journey.value.loopKm })
+  } finally {
+    suggesting.value = false
+  }
+}
 
 // Explored view: dims every hex your tracks haven't passed through
 const exploring = ref(false)
@@ -97,6 +121,7 @@ watch(() => store.mode, () => { picked.value = null; suggestion.value = null; pi
 
 onMounted(async () => {
   loadQuests()
+  loadHabits()
   nudge.value = await todaysNudge()
   seasonInfo.value = await api.season().catch(() => null)
 })
@@ -168,6 +193,10 @@ async function suggest() {
         <div class="stat">
           <span class="n">{{ level ? level.name : 'None yet' }}</span>
           <span class="l">{{ store.stats?.next ? `${store.stats.toNext} to ${store.stats.next.name}` : level ? 'Top of the ladder' : 'Close a loop to start' }}</span>
+        </div>
+        <div v-if="streak?.current" class="stat streakchip">
+          <span class="n">{{ streak.current }}<span v-if="streak.banked" class="tok" :aria-label="`${streak.banked} rest ${streak.banked === 1 ? 'week' : 'weeks'} banked`"><i v-for="k in streak.banked" :key="k"></i></span></span>
+          <span class="l">{{ streak.current === 1 ? 'week in a row' : 'weeks in a row' }}</span>
         </div>
         <div v-if="store.stats?.fadingSoon" class="stat warn">
           <span class="n">{{ store.stats.fadingSoon }}</span>
@@ -272,6 +301,13 @@ async function suggest() {
           <RouterLink class="btn quiet" :to="{ name: 'plan', query: { suggest: 1, km: suggestion.distanceKm } }">Edit in planner</RouterLink>
         </div>
       </template>
+      <template v-else-if="showJourney">
+        <FirstWeekCard :journey="journey" compact :finding="suggesting" @see-loop="seeFirstLoop" />
+        <div v-if="journey.current && journey.current.n > 1" class="actions">
+          <RouterLink class="btn" :to="{ name: 'record' }">Start a {{ store.mode }}</RouterLink>
+          <button class="btn quiet" type="button" :disabled="suggesting" @click="suggest">{{ suggesting ? 'Finding a loop' : 'Suggest a loop' }}</button>
+        </div>
+      </template>
       <template v-else>
         <div v-if="nudge" class="nudge">
           <strong>{{ nudge.title }}</strong>
@@ -303,6 +339,9 @@ async function suggest() {
 .strip .n { font-weight: 850; font-stretch: 112%; font-size: 1.15rem; line-height: 1.1; }
 .strip .l { font-size: 0.75rem; color: var(--ink-60); }
 .strip .warn .n { color: var(--warn); }
+.streakchip .n { display: inline-flex; align-items: center; gap: 6px; }
+.tok { display: inline-flex; gap: 2px; }
+.tok i { width: 9px; height: 8px; background: var(--you); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
 .locate {
   position: absolute; right: 12px; bottom: 150px; z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: var(--you);

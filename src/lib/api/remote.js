@@ -79,6 +79,7 @@ export const remote = {
   explored: ({ mode } = {}) => call('GET', '/api/explored' + q({ mode })),
   quests: () => call('GET', '/api/quests'),
   week: ({ w } = {}) => call('GET', '/api/week' + q({ w })),
+  streak: () => call('GET', '/api/streak'),
   bests: ({ mode = 'run' } = {}) => call('GET', '/api/bests' + q({ mode })),
   strongholds: ({ mode = 'run', bbox } = {}) => call('GET', '/api/strongholds' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
   stronghold: (id, { mode = 'run' } = {}) => call('GET', `/api/strongholds/${encodeURIComponent(id)}` + q({ mode })),

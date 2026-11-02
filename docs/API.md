@@ -76,7 +76,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | POST | /api/tts | `{ text, voice? }` (no sign-in needed; max 300 characters; voice is a key from `/api/config` `tts.voices`) | `audio/mpeg` (cached by voice and text; 503 when the voice isn't set up, 429 when an address asks for too many new lines) |
 | GET | /api/me | | `{ user }` |
-| PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen? }` | `{ user }` |
+| PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen?, foundingAt? }` (`foundingAt`: when the Founding foothold badge was earned; set once, never moved or cleared) | `{ user }` (user has `foundingAt`, null until earned) |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
 | GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
@@ -123,6 +123,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
 | GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
 | GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
+| GET | /api/streak | | `{ streak: { current, longest, banked, maxBanked: 3, active, thisWeek: { key, out }, startKey, lastRested, milestone, nextMilestone, weeks: [{ key, state: 'out'\|'rested'\|'missed'\|'now'\|'before', out }] } }` (weeks: the last 16, oldest first) |
 
 ## Personal bests and strongholds
 
@@ -168,6 +169,22 @@ Held hexes in a past week's recap come from today's map, so they count
 ground held then and still held now. On Monday (Sydney) the cron, and the
 practice map's tick, send "Your week in Foothold is ready. Want a look?"
 (kind `week`) to anyone who got out the week before.
+## Weekly streaks and the first week
+
+Rules live in `src/lib/engine/streaks.js` and `firstweek.js`, shared by both
+adapters. A streak counts Sydney weeks (Monday to Sunday) with at least one
+outing that wasn't rejected. Each finished week banks a rest week (up to 3);
+a quiet week spends one and the streak carries on, and only a quiet week with
+none banked ends it. This week is in progress, never missed. Worked out from
+activity start times on every call, so imports fill in old weeks; no table.
+The hourly cron (and the practice map's tick) only ever celebrates
+milestones: 4, 8, 12, 26 and 52 weeks (kind `streak`, once per streak and
+milestone). No reminders or warnings about streaks are sent.
+
+The first week journey is worked out in the app from `GET /api/activities`
+and the user's `createdAt`; once all three steps are done the app saves
+`foundingAt` with `PUT /api/me`.
+
 ## Comments, leagues and rivals
 
 - Comments are tidied (spaces squashed, invisible characters dropped),

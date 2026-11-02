@@ -1,25 +1,36 @@
 <script setup>
-// Your numbers: ground held, where you are on the ladder, this week's
-// quests and recap, your weeks, your personal bests, and every activity.
+// Your numbers: ground held, where you are on the ladder, the first week
+// journey (new players), your weekly streak and badges, this week's quests
+// and recap, your weeks, your personal bests, and every activity.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh } from '../../lib/store.js'
 import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { LEVELS, weekOf, prevWeek, clock } from '../../lib/engine/index.js'
 import QuestList from '../../components/QuestList.vue'
+import FirstWeekCard from '../../components/FirstWeekCard.vue'
+import StreakCard from '../../components/StreakCard.vue'
+import { loadJourney } from '../../lib/journey.js'
+import { FOUNDING_BADGE } from '../../lib/engine/firstweek.js'
 
 const activities = ref([])
 const quests = ref([])
 const bests = ref([])
+const journey = ref(null)
+const streak = ref(null)
 const lastWeek = prevWeek(weekOf()).key
 async function load() {
   await refresh()
-  const [acts, b, qs] = await Promise.all([
+  const [acts, b, qs, st, j] = await Promise.all([
     api.activities({ limit: 100 }),
     api.bests({ mode: store.mode }).catch(() => ({ bests: [] })),
     api.quests().catch(() => ({ quests: [] })),
+    api.streak().catch(() => null),
+    loadJourney().catch(() => null),
   ])
   activities.value = acts.activities
+  streak.value = st?.streak || null
+  journey.value = j
   bests.value = b.bests
   quests.value = qs.quests
 }
@@ -29,6 +40,9 @@ onMounted(load)
 watch(() => store.mode, load)
 
 const s = computed(() => store.stats || {})
+const inARow = computed(() => streak.value?.current ?? s.value.streakWeeks ?? 0)
+const badge = computed(() => (store.user?.foundingAt != null ? { ...FOUNDING_BADGE, at: store.user.foundingAt } : journey.value?.badge || null))
+const badgeDate = (t) => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 const weeks = computed(() => (s.value.weekKm12 || s.value.weekKm || []).slice().reverse())
 const maxWeek = computed(() => Math.max(5, ...weeks.value))
 const ladderPct = computed(() => {
@@ -56,8 +70,26 @@ const ladderPct = computed(() => {
     <div class="stat-row">
       <div class="stat"><span class="big-num">{{ s.hexes || 0 }}</span><span class="label">hexes held</span></div>
       <div class="stat"><span class="big-num">{{ s.km2 || 0 }}</span><span class="label">km² of ground</span></div>
-      <div class="stat"><span class="big-num">{{ s.streakWeeks || 0 }}</span><span class="label">{{ s.streakWeeks === 1 ? 'week' : 'weeks' }} in a row</span></div>
+      <div class="stat"><span class="big-num">{{ inARow }}</span><span class="label">{{ inARow === 1 ? 'week' : 'weeks' }} in a row</span></div>
     </div>
+
+    <FirstWeekCard v-if="journey?.active" :journey="journey" />
+
+    <StreakCard v-if="streak" :streak="streak" />
+
+    <section v-if="badge" aria-labelledby="badges" class="badges">
+      <h2 id="badges">Badges</h2>
+      <div class="badge">
+        <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+          <polygon points="12,1.5 21.5,7 21.5,17 12,22.5 2.5,17 2.5,7" fill="#16302A" />
+          <path d="M9 17V7.5M9 8h6.5l-1.6 2.2 1.6 2.2H9" fill="none" stroke="#F3F5EF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <div>
+          <strong>{{ badge.name }}</strong>
+          <p class="small muted">{{ badge.detail }} Earned {{ badgeDate(badge.at) }}.</p>
+        </div>
+      </div>
+    </section>
 
     <section aria-labelledby="ladder">
       <h2 id="ladder">The ladder</h2>
@@ -151,6 +183,9 @@ const ladderPct = computed(() => {
 .bar span { display: block; width: 100%; background: #AFC0F7; border-radius: 4px 4px 0 0; min-height: 3px; }
 .bar.now span { background: var(--you); }
 .plain { list-style: none; margin: 0; padding: 0; }
+.badges { display: grid; gap: 10px; }
+.badges h2, .badge p { margin: 0; }
+.badge { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; background: #fff; border-radius: var(--radius); padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .questsec { display: grid; gap: 12px; }
 .questsec h2, .questsec p { margin: 0; }
 .weeklinks { display: flex; gap: 10px; flex-wrap: wrap; }
