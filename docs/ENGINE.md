@@ -54,3 +54,18 @@ recordings earn more trust than phone recordings.
 The load check compares this week with the average of the four before. Over
 30% more gets a gentle question; over 50% suggests a shorter loop that still
 takes ground.
+
+## Explored ground
+
+Every hex your track passes through is explored, whether or not you closed a
+loop. Gaps between GPS points are filled in every 50 m; a jump of more than
+2 km is treated as a GPS gap. The map's Explored view dims everywhere else and
+shows how much of the ground within 5 km of you you've been through.
+
+## Weekly quests
+
+Each week (Monday to Sunday, Sydney time) brings three quests, sized from your
+last four weeks so they are within reach: take new hexes, close loops, get out
+a few times, explore new hexes, go somewhere new, hold ground all week, take
+back ground a rival took, or take ground from a rival. A hold quest is settled
+when the week ends. Missing a quest costs nothing; next week brings new ones.

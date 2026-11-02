@@ -5,6 +5,7 @@ import { ref, onMounted } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { refresh } from '../../lib/store.js'
 import { ago } from '../../lib/format.js'
+import { weekOf, prevWeek } from '../../lib/engine/weeks.js'
 
 const items = ref([])
 onMounted(async () => {
@@ -12,7 +13,8 @@ onMounted(async () => {
   await api.readNotifications(items.value.filter((n) => !n.read).map((n) => n.id))
   refresh()
 })
-const target = (n) => (n.kind === 'battle' ? '/app/battles' : n.kind === 'coach' ? '/app/coach' : '/app')
+// A "your week is ready" notice opens the week it was about: the one before it arrived
+const target = (n) => (n.kind === 'week' ? `/app/week?w=${prevWeek(weekOf(n.at)).key}` : n.kind === 'battle' ? '/app/battles' : n.kind === 'coach' ? '/app/coach' : '/app')
 </script>
 
 <template>

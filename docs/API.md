@@ -34,6 +34,15 @@ Cell      { h3, owner, ownerName, ownerColour, mine, strength, daysToWild }
 Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
+Week      { key: 'YYYY-MM-DD' (its Monday), start, end }   Monday to Sunday, Sydney time
+Quest     { id, kind: 'take'|'loops'|'outings'|'explore'|'newground'|'hold'|'takeback'|'raid',
+            title, detail, target, count, progress, done, pending }
+            (pending: a hold quest still waiting for the week to end)
+Recap     { week: { key, start, end, current, previous }, distanceM, movingS, outings,
+            byMode, loops, hexes: { taken, fromRivals, held, lost, lostToRivals, faded },
+            explored, quests: Quest[], questsDone, biggestLoop: { activityId, hexes, mode,
+            startedAt, distanceM } | null, best: { activityId, text } | null,
+            last: { key, distanceM, movingS, outings }, compare, visited: [h3] (max 3000) }
 ```
 
 ## Routes
@@ -66,6 +75,9 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | DELETE | /api/integrations/formtrack | | `{ linked: false }` |
 | GET | /api/integrations/formtrack/summary | | `{ today, readiness, strengthThisWeek }` |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
+| GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
+| GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
+| GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
 
 ## FormTrack link
 
@@ -79,3 +91,16 @@ FormTrack exposes an MCP endpoint at `{FORMTRACK_URL}/mcp/{ftk_token}`
 The token is stored encrypted at rest (AES-GCM with the `TOKEN_KEY`
 secret) and never returned to the app. Writing runs back into FormTrack
 needs a small FormTrack change, see `docs/FORMTRACK.md`.
+
+## Quests, explored map and weekly recap
+
+Rules live in `src/lib/engine/quests.js`, `explore.js`, `weekly.js` and
+`weeks.js`, shared by both adapters. Quests are picked from a seeded pool
+(same player and week, same quests) and sized from the four weeks before.
+Progress is worked out each time from activities, the hexes each one passed
+through (`activities.visited` on the server) and the log of hexes rivals took
+(`hex_losses`), never stored counters. Missing a quest costs nothing.
+Held hexes in a past week's recap come from today's map, so they count
+ground held then and still held now. On Monday (Sydney) the cron, and the
+practice map's tick, send "Your week in Foothold is ready. Want a look?"
+(kind `week`) to anyone who got out the week before.

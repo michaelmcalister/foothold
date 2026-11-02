@@ -1,16 +1,20 @@
 <script setup>
-// Your numbers: ground held, where you are on the ladder, your weeks,
-// and every activity.
+// Your numbers: ground held, where you are on the ladder, this week's
+// quests and recap, your weeks, and every activity.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh } from '../../lib/store.js'
 import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
-import { LEVELS } from '../../lib/engine/index.js'
+import { LEVELS, weekOf, prevWeek } from '../../lib/engine/index.js'
+import QuestList from '../../components/QuestList.vue'
 
 const activities = ref([])
+const quests = ref([])
+const lastWeek = prevWeek(weekOf()).key
 async function load() {
   await refresh()
   activities.value = (await api.activities({ limit: 100 })).activities
+  quests.value = (await api.quests().catch(() => ({ quests: [] }))).quests
 }
 onMounted(load)
 watch(() => store.mode, load)
@@ -53,6 +57,16 @@ const ladderPct = computed(() => {
       </ol>
       <div v-if="s.next" class="meter" :aria-label="`${s.toNext} hexes to ${s.next.name}`"><span :style="{ width: `${ladderPct}%` }"></span></div>
       <p v-if="s.next" class="small muted">{{ s.toNext }} more hexes to reach {{ s.next.name }}.</p>
+    </section>
+
+    <section v-if="quests.length" aria-labelledby="quests" class="questsec">
+      <h2 id="quests">This week’s quests</h2>
+      <p class="small muted">Three for this week, sized to how you’ve been going. Miss one and nothing is lost: new ones arrive on Monday.</p>
+      <QuestList :quests="quests" />
+      <div class="weeklinks">
+        <RouterLink class="btn quiet small" :to="{ name: 'week' }">Your week so far</RouterLink>
+        <RouterLink class="btn quiet small" :to="{ name: 'week', query: { w: lastWeek } }">Last week</RouterLink>
+      </div>
     </section>
 
     <section aria-labelledby="weeks">
@@ -102,6 +116,9 @@ const ladderPct = computed(() => {
 .bar span { display: block; width: 100%; background: #AFC0F7; border-radius: 4px 4px 0 0; min-height: 3px; }
 .bar.now span { background: var(--you); }
 .plain { list-style: none; margin: 0; padding: 0; }
+.questsec { display: grid; gap: 12px; }
+.questsec h2, .questsec p { margin: 0; }
+.weeklinks { display: flex; gap: 10px; flex-wrap: wrap; }
 .act { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
 .chip.claimed { background: rgba(46, 85, 230, 0.12); color: var(--you); }
 </style>

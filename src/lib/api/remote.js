@@ -58,6 +58,9 @@ export const remote = {
   unlinkFormtrack: () => call('DELETE', '/api/integrations/formtrack'),
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
+  explored: ({ mode } = {}) => call('GET', '/api/explored' + q({ mode })),
+  quests: () => call('GET', '/api/quests'),
+  week: ({ w } = {}) => call('GET', '/api/week' + q({ w })),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,
