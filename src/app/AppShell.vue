@@ -12,15 +12,17 @@ const route = useRoute()
 const router = useRouter()
 const full = computed(() => !!route.meta.full)
 
+// Screens anyone can open before setting up: onboarding itself and the demo recap
+const openWithoutSetup = (r) => r.name === 'onboarding' || (r.name === 'recap' && r.params.id === 'demo')
 const needsSignIn = computed(() => auth.enabled && !auth.loggedIn)
 
 onMounted(async () => {
   if (needsSignIn.value) return
   await boot()
-  if (!store.user.onboarded && route.name !== 'onboarding') router.replace({ name: 'onboarding' })
+  if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
 })
-watch(() => route.name, (n) => {
-  if (store.ready && !store.user?.onboarded && n !== 'onboarding') router.replace({ name: 'onboarding' })
+watch(() => route.name, () => {
+  if (store.ready && !store.user?.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
 })
 
 const tabs = [

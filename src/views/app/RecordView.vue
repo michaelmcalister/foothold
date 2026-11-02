@@ -124,6 +124,7 @@ onBeforeUnmount(() => {
         <div class="alt">
           <button class="btn quiet small" type="button" @click="fileInput.click()">Import a GPX file</button>
           <button v-if="isLocal" class="btn quiet small" type="button" @click="simulate">Practice loop (no GPS)</button>
+          <RouterLink class="btn quiet small" :to="{ name: 'recap', params: { id: 'demo' } }">Watch a demo recap</RouterLink>
           <input ref="fileInput" type="file" accept=".gpx,application/gpx+xml" hidden @change="onFile" />
         </div>
       </template>

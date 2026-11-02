@@ -13,6 +13,7 @@ import { findLoops, cellsForLoops } from '../../lib/engine/index.js'
 import { planRecap } from '../../lib/recap/plan.js'
 import { createDirector } from '../../lib/recap/director.js'
 import { mapsKey } from '../../lib/recap/config.js'
+import { demoRun } from '../../lib/recap/demo.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +35,7 @@ const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-re
 
 function back() {
   if (window.history.state?.back) router.back()
+  else if (route.params.id === 'demo') router.replace(store.user?.onboarded ? { name: 'record' } : { name: 'onboarding' })
   else router.replace({ name: 'activity', params: { id: route.params.id } })
 }
 
@@ -72,12 +74,13 @@ function play(from = 'flyin') {
 
 onMounted(async () => {
   try {
-    const r = await api.activity(route.params.id)
+    const isDemo = route.params.id === 'demo'
+    const r = isDemo ? demoRun() : await api.activity(route.params.id)
     activity.value = r.activity
     const track = r.track || []
     const loops = findLoops(track)
     const hexes = cellsForLoops(loops)
-    hexCount.value = r.activity?.claimed != null ? (r.activity.claimed || 0) + (r.activity.taken || 0) : hexes.length
+    hexCount.value = !isDemo && r.activity?.claimed != null ? (r.activity.claimed || 0) + (r.activity.taken || 0) : hexes.length
     plan = planRecap(track, { mode: r.activity?.mode, hexRings: hexes.map((h) => cellToBoundary(h, true)), aspect: (el.value?.clientWidth || 390) / (el.value?.clientHeight || 844) })
     if (!plan) { state.value = 'empty'; return }
     if (gone) return
@@ -121,8 +124,11 @@ onBeforeUnmount(() => {
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
       </button>
       <div v-if="activity" class="when">
-        <strong>Your {{ MODE_VERB[activity.mode] || 'run' }}</strong>
-        <span>{{ dateLong(activity.startedAt) }}</span>
+        <template v-if="activity.demo"><strong>Demo run</strong><span>Around Sydney Harbour</span></template>
+        <template v-else>
+          <strong>Your {{ MODE_VERB[activity.mode] || 'run' }}</strong>
+          <span>{{ dateLong(activity.startedAt) }}</span>
+        </template>
       </div>
     </header>
 
