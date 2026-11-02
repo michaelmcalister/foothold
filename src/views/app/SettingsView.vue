@@ -8,7 +8,7 @@ import { store, refresh, toast, locate } from '../../lib/store.js'
 import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
 import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
-import { auth, logout } from '../../lib/auth.js'
+import { auth, login, logout } from '../../lib/auth.js'
 
 const router = useRouter()
 const name = ref(store.user.name)
@@ -116,6 +116,22 @@ async function startAgain() {
       <button class="back" type="button" @click="router.back()">Back</button>
       <h1>Settings</h1>
     </header>
+
+    <section v-if="auth.enabled" class="panel stack" aria-labelledby="s-account">
+      <h2 id="s-account">Your account</h2>
+      <template v-if="auth.loggedIn">
+        <p class="small">Signed in<template v-if="auth.user?.email"> as <strong>{{ auth.user.email }}</strong></template>. Your runs are on the shared map.</p>
+        <button class="btn quiet" type="button" @click="logout()">Sign out</button>
+      </template>
+      <template v-else>
+        <p class="small muted">You're on the practice map: it runs on this phone with made-up rivals. Sign in to put your runs on the shared map with real people. Your practice runs stay here and don't move across.</p>
+        <div class="row">
+          <button class="btn" type="button" @click="login({ returnTo: '#/app' })">Sign in</button>
+          <button class="btn secondary" type="button" @click="login({ signup: true, returnTo: '#/app' })">Create an account</button>
+        </div>
+        <p class="hint">Already use FormTrack? Use the same account.</p>
+      </template>
+    </section>
 
     <section class="panel stack" aria-labelledby="s-you">
       <h2 id="s-you">You</h2>

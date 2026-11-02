@@ -758,6 +758,7 @@ export async function handleApi(req, env, ctx) {
     const out = cfg ? { auth0: { domain: cfg.domain, clientId: cfg.clientId, audience: cfg.audience } } : {}
     // Google Maps browser key for run recaps. It is a public key, locked to
     // this app's addresses in Google Cloud, so it is fine to hand to the app.
+    if (env.ALLOW_DEVICE_IDS === '1') out.devices = true // local development: the app may use device ids
     if (env.GOOGLE_MAPS_KEY) out.maps = { googleKey: String(env.GOOGLE_MAPS_KEY) }
     // Spotify app id for music during runs (public; sign-in uses PKCE, no secret)
     if (env.SPOTIFY_CLIENT_ID) out.spotify = { clientId: String(env.SPOTIFY_CLIENT_ID) }

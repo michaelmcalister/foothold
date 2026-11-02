@@ -2,10 +2,12 @@
 // Loads the Auth0 settings from /api/config (same pattern as FormTrack, and
 // the same Auth0 tenant, so one account signs in to both apps), finishes the
 // redirect back from Auth0, and hands access tokens to the API client.
-// In the practice map (no server) none of this runs.
+// Signed in, the app plays on the shared server; signed out, it opens the
+// practice map in the browser. Builds with no server skip all of this.
 
 import { reactive } from 'vue'
 import { setTokenGetter } from './api/remote.js'
+import { useServer } from './api/index.js'
 
 export const auth = reactive({ ready: false, enabled: false, loggedIn: false, user: null, error: '' })
 let client = null
@@ -19,7 +21,8 @@ export async function initAuth() {
   try {
     const conf = await fetch(API + '/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
     const cfg = conf.auth0
-    if (!cfg) return
+    // No sign-in set up: use the server only when it takes device ids (local development)
+    if (!cfg) { useServer(!!conf.devices); return }
     auth.enabled = true
     const { createAuth0Client } = await import('@auth0/auth0-spa-js')
     client = await createAuth0Client({
@@ -42,14 +45,15 @@ export async function initAuth() {
     auth.loggedIn = await client.isAuthenticated()
     if (auth.loggedIn) auth.user = await client.getUser()
     setTokenGetter(async () => (auth.loggedIn ? client.getTokenSilently().catch(() => null) : null))
+    useServer(auth.loggedIn)
   } finally {
     auth.ready = true
   }
 }
 
-export function login({ signup = false } = {}) {
+export function login({ signup = false, returnTo } = {}) {
   return client?.loginWithRedirect({
-    appState: { returnTo: location.hash || '#/app' },
+    appState: { returnTo: returnTo || (location.hash || '#/app').replace(/[?&]signin=1/, '') },
     authorizationParams: signup ? { screen_hint: 'signup' } : {},
   })
 }

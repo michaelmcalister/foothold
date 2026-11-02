@@ -103,9 +103,12 @@ describe('users', () => {
     expect(r.body.user).toMatchObject({ name: 'Michael', colour: '#112233', mode: 'walk' })
   })
   it('serves /api/config without sign-in', async () => {
+    expect((await call(null, 'GET', '/api/config')).body).toEqual({ devices: true }) // tests run with device ids on
+    env.ALLOW_DEVICE_IDS = '0'
     expect((await call(null, 'GET', '/api/config')).body).toEqual({})
+    env.ALLOW_DEVICE_IDS = '1'
     Object.assign(env, { AUTH0_DOMAIN: 'https://ft.au.auth0.com/', AUTH0_CLIENT_ID: 'cid', AUTH0_AUDIENCE: 'aud' })
-    expect((await call(null, 'GET', '/api/config')).body).toEqual({ auth0: { domain: 'ft.au.auth0.com', clientId: 'cid', audience: 'aud' } })
+    expect((await call(null, 'GET', '/api/config')).body).toMatchObject({ auth0: { domain: 'ft.au.auth0.com', clientId: 'cid', audience: 'aud' } })
     env.GOOGLE_MAPS_KEY = 'browser-key'
     expect((await call(null, 'GET', '/api/config')).body.maps).toEqual({ googleKey: 'browser-key' })
     delete env.GOOGLE_MAPS_KEY

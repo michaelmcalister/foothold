@@ -1,10 +1,11 @@
 <script setup>
 // The app frame: top bar (mode switch and notifications), the current
-// screen, and the tab bar with the record button in the middle.
+// screen, and the tab bar with the record button in the middle. Signed-out
+// visitors play the practice map; #/app?signin=1 opens Auth0 sign-in.
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import './app.css'
-import { store, boot, setMode } from '../lib/store.js'
+import { store, boot, setMode, toast } from '../lib/store.js'
 import BrandMark from '../components/BrandMark.vue'
 import { auth, login } from '../lib/auth.js'
 
@@ -14,10 +15,14 @@ const full = computed(() => !!route.meta.full)
 
 // Screens anyone can open before setting up: onboarding itself and the demo recap
 const openWithoutSetup = (r) => r.name === 'onboarding' || (r.name === 'recap' && r.params.id === 'demo')
-const needsSignIn = computed(() => auth.enabled && !auth.loggedIn)
+
+// A link with ?signin=1 (from the landing page, say) goes straight to sign-in
+watch(() => route.query.signin, (v) => {
+  if (v === '1' && auth.enabled && !auth.loggedIn) login({ signup: route.query.signup === '1', returnTo: '#/app' })
+}, { immediate: true })
 
 onMounted(async () => {
-  if (needsSignIn.value) return
+  if (auth.error) toast(`Sign-in didn't finish: ${auth.error}`)
   await boot()
   if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
 })
@@ -36,7 +41,7 @@ const tabs = [
 
 <template>
   <div class="app">
-    <header v-if="!full && !needsSignIn" class="top">
+    <header v-if="!full" class="top">
       <RouterLink to="/app" class="brand" aria-label="Foothold map">
         <BrandMark :size="26" />
       </RouterLink>
@@ -52,21 +57,13 @@ const tabs = [
     </header>
 
     <main class="body" :class="{ full }">
-      <div v-if="needsSignIn" class="signin">
-        <BrandMark :size="56" />
-        <h1>Take ground. Hold it.</h1>
-        <p class="muted">Sign in to put your runs on the shared map. Already use FormTrack? Use the same account.</p>
-        <p v-if="auth.error" class="notice bad">{{ auth.error }}</p>
-        <button class="btn block" type="button" @click="login()">Sign in</button>
-        <button class="btn secondary block" type="button" @click="login({ signup: true })">Create an account</button>
-      </div>
-      <RouterView v-else-if="store.ready" v-slot="{ Component }">
+      <RouterView v-if="store.ready" v-slot="{ Component }">
         <component :is="Component" />
       </RouterView>
       <div v-else class="loading" aria-live="polite">Loading your map</div>
     </main>
 
-    <nav v-if="!full && !needsSignIn" class="tabs" aria-label="Main">
+    <nav v-if="!full" class="tabs" aria-label="Main">
       <template v-for="t in tabs" :key="t.name">
         <RouterLink v-if="t.name === 'record'" :to="{ name: 'record' }" class="rec-btn" aria-label="Record a run, walk or ride">
           <svg viewBox="0 0 120 120" width="62" height="62" aria-hidden="true">
@@ -105,7 +102,6 @@ const tabs = [
 .body { min-height: calc(100dvh - var(--top-h)); }
 .body.full { min-height: 100dvh; }
 .loading { padding: 40px; text-align: center; color: var(--ink-60); }
-.signin { min-height: 100dvh; display: grid; gap: 16px; align-content: center; justify-items: start; padding: 24px 18px; max-width: 440px; margin: 0 auto; }
 
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;

@@ -6,6 +6,8 @@ import { useRouter } from 'vue-router'
 import { api } from '../../lib/api/index.js'
 import { store, locate, refresh } from '../../lib/store.js'
 import BrandMark from '../../components/BrandMark.vue'
+import { auth, login } from '../../lib/auth.js'
+import { isLocal } from '../../lib/api/index.js'
 
 const router = useRouter()
 const step = ref(0)
@@ -43,7 +45,13 @@ async function finish() {
           Close a loop on a run, walk or ride and every street inside it is yours.
           Rivals can take it back, so keep moving.
         </p>
-        <button class="btn block" type="button" @click="step = 1">Let's go</button>
+        <template v-if="auth.enabled && !auth.loggedIn">
+          <button class="btn block" type="button" @click="login({ returnTo: '#/app' })">Sign in</button>
+          <button class="btn secondary block" type="button" @click="login({ signup: true, returnTo: '#/app' })">Create an account</button>
+          <p class="small muted">Already use FormTrack? Same account. Or <button class="linkish" type="button" @click="step = 1">try the practice map first</button>: it runs on this phone with made-up rivals, and nothing goes on the shared map.</p>
+        </template>
+        <button v-else class="btn block" type="button" @click="step = 1">Let's go</button>
+        <p v-if="isLocal && !auth.enabled" class="small muted">This is the practice map. It runs on this phone with made-up rivals.</p>
       </template>
 
       <template v-else-if="step === 1">
@@ -105,4 +113,5 @@ legend { font-weight: 650; margin-bottom: 6px; }
 .dots li { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
 .dots li.on { background: var(--you); width: 22px; border-radius: 4px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--you); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 </style>
