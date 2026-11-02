@@ -115,6 +115,19 @@ user base. Playing music needs Premium for every user.
 Phones: Spotify's API can turn the volume down on Android, but not on iPhone,
 so on iPhone the music pauses for a moment while the coach talks.
 
+## The coach's Australian voice (ElevenLabs)
+
+The voice coach speaks with an Australian ElevenLabs voice (Charlie, or
+Brenna) through `POST /api/tts`, so the key never reaches the app. Repeated
+lines come from Cloudflare's cache, and fresh lines are limited to 150 an
+hour per address. Without the key, the app uses the phone's own voice.
+
+1. In ElevenLabs, create an API key with Text to Speech access (the same
+   account FormTrack uses is fine).
+2. In Cloudflare, add it to the Worker as a secret named `ELEVENLABS_API_KEY`
+   (Settings, Variables and secrets, Add, type Secret), or run
+   `npx wrangler secret put ELEVENLABS_API_KEY`.
+
 ## Developing locally
 
 ```bash

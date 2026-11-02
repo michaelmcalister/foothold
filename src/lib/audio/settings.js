@@ -6,7 +6,8 @@ const KEY = 'fh-audio'
 
 export const DEFAULTS = {
   voice: true, // spoken updates during a run
-  voiceName: '', // a specific voice; empty picks an Australian one
+  coachVoice: 'charlie', // the server's Australian voice ('charlie', 'brenna'), or 'phone'
+  voiceName: '', // with 'phone': a specific phone voice; empty picks an Australian one
   every: 'km', // 'km' | 'half' (0.5 km) | '5min' | '10min' | 'off'
   sayPace: true,
   sayTime: true,

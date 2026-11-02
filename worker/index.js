@@ -15,6 +15,7 @@ import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
+import { handleTts, ttsConfig } from './tts.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
 import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
 import { socialRoute, swapStatements, activityCommentDeletes } from './social.js'
@@ -762,7 +763,15 @@ export async function handleApi(req, env, ctx) {
     if (env.GOOGLE_MAPS_KEY) out.maps = { googleKey: String(env.GOOGLE_MAPS_KEY) }
     // Spotify app id for music during runs (public; sign-in uses PKCE, no secret)
     if (env.SPOTIFY_CLIENT_ID) out.spotify = { clientId: String(env.SPOTIFY_CLIENT_ID) }
+    const tts = ttsConfig(env) // the Australian voice coach (ElevenLabs), when its key is set
+    if (tts) out.tts = tts
     res = json(out)
+    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+    return res
+  }
+  // Public, rate limited: the voice coach speaks on the practice map too
+  if (url.pathname === '/api/tts' && req.method === 'POST') {
+    res = await handleTts(req, env)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
   }

@@ -18,7 +18,7 @@ let lastStatus = 'idle'
 
 function say(text) {
   if (!text || !audio.voice) return
-  queue = queue.then(() => spotify.aroundSpeech(() => speak(text, { voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })).catch(() => {})
+  queue = queue.then(() => spotify.aroundSpeech(() => speak(text, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })).catch(() => {})
 }
 
 // Today's planned session, so the coach can say if an easy run is too quick

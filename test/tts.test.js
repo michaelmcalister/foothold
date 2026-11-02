@@ -1,0 +1,68 @@
+// Tests for the voice coach's server voice (worker/tts.js): key handling,
+// caching of repeated lines, limits and failures.
+import { describe, it, expect } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
+import { readFileSync, readdirSync } from 'node:fs'
+import { handleTts, ttsConfig, VOICES } from '../worker/tts.js'
+import { LIMITS } from '../worker/db.js'
+
+// Minimal D1 stand-in for the rate limiter
+function fakeDB() {
+  const db = new DatabaseSync(':memory:')
+  const dir = new URL('../migrations/', import.meta.url)
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
+  const prep = (sql) => ({
+    bind: (...a) => ({ first: async () => db.prepare(sql).get(...a) ?? null, run: async () => db.prepare(sql).run(...a), all: async () => ({ results: db.prepare(sql).all(...a) }) }),
+  })
+  return { prepare: prep }
+}
+function fakeCache() {
+  const m = new Map()
+  return { match: async (k) => m.get(k.url)?.clone() || null, put: async (k, r) => { m.set(k.url, r) }, size: () => m.size }
+}
+const req = (body, ip = '1.2.3.4') => new Request('https://x/api/tts', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip }, body: JSON.stringify(body) })
+
+describe('server voice', () => {
+  it('is off without a key, and says so in config', async () => {
+    expect(ttsConfig({})).toBeNull()
+    const r = await handleTts(req({ text: 'Hi' }), {}, { cache: null })
+    expect(r.status).toBe(503)
+    expect(ttsConfig({ ELEVENLABS_API_KEY: 'k' }).voices.map((v) => v.key)).toEqual(Object.keys(VOICES))
+  })
+
+  it('speaks with the chosen Australian voice, caches repeats and never sends the key anywhere else', async () => {
+    const calls = []
+    const fetcher = async (url, init) => { calls.push({ url, init }); return new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'audio/mpeg' } }) }
+    const env = { ELEVENLABS_API_KEY: 'secret', DB: fakeDB() }
+    const cache = fakeCache()
+    const a = await handleTts(req({ text: '1 kilometre.', voice: 'brenna' }), env, { fetcher, cache })
+    expect(a.status).toBe(200)
+    expect(a.headers.get('content-type')).toBe('audio/mpeg')
+    expect(calls[0].url).toContain(VOICES.brenna.id)
+    expect(calls[0].url.startsWith('https://api.elevenlabs.io/')).toBe(true)
+    expect(calls[0].init.headers['xi-api-key']).toBe('secret')
+    const b = await handleTts(req({ text: '  1   kilometre. ', voice: 'brenna' }), env, { fetcher, cache })
+    expect(new Uint8Array(await b.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]))
+    expect(calls).toHaveLength(1) // the repeat came from the cache
+    // Unknown voices fall back to the default, they don't reach ElevenLabs as given
+    await handleTts(req({ text: 'Hello', voice: 'not-a-voice' }), env, { fetcher, cache })
+    expect(calls[1].url).toContain(VOICES.charlie.id)
+  })
+
+  it('refuses empty or long lines', async () => {
+    const env = { ELEVENLABS_API_KEY: 'k', DB: fakeDB() }
+    expect((await handleTts(req({ text: '' }), env, { cache: null })).status).toBe(400)
+    expect((await handleTts(req({ text: 'x'.repeat(301) }), env, { cache: null })).status).toBe(400)
+  })
+
+  it('limits fresh lines per address, and reports a failed voice without leaking details', async () => {
+    const env = { ELEVENLABS_API_KEY: 'k', DB: fakeDB() }
+    const ok = async () => new Response(new Uint8Array([9]))
+    for (let i = 0; i < LIMITS.tts.max; i++) expect((await handleTts(req({ text: `line ${i}` }), env, { fetcher: ok, cache: null })).status).toBe(200)
+    expect((await handleTts(req({ text: 'one more' }), env, { fetcher: ok, cache: null })).status).toBe(429)
+    expect((await handleTts(req({ text: 'one more' }, '5.6.7.8'), env, { fetcher: ok, cache: null })).status).toBe(200)
+    const bad = await handleTts(req({ text: 'oops' }, '9.9.9.9'), env, { fetcher: async () => new Response('quota', { status: 401 }), cache: null })
+    expect(bad.status).toBe(502)
+    expect(await bad.text()).not.toContain('quota')
+  })
+})

@@ -74,6 +74,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | Method | Path | Body / query | Returns |
 | --- | --- | --- | --- |
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
+| POST | /api/tts | `{ text, voice? }` (no sign-in needed; max 300 characters; voice is a key from `/api/config` `tts.voices`) | `audio/mpeg` (cached by voice and text; 503 when the voice isn't set up, 429 when an address asks for too many new lines) |
 | GET | /api/me | | `{ user }` |
 | PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen? }` | `{ user }` |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |

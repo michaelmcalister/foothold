@@ -4,7 +4,7 @@
 // how much encouragement, and what the music does while it talks.
 import { ref, computed, onMounted } from 'vue'
 import { audio } from '../lib/audio/settings.js'
-import { australianVoices, voicesReady, speak, unlock } from '../lib/audio/voice.js'
+import { australianVoices, voicesReady, speak, unlock, serverVoices } from '../lib/audio/voice.js'
 import * as spotify from '../lib/audio/spotify.js'
 import { toast } from '../lib/store.js'
 
@@ -14,6 +14,7 @@ const lists = ref([])
 const busy = ref(false)
 const error = ref('')
 const voiceList = ref([])
+const coachVoices = ref([]) // the Australian voices on the Foothold server
 const hasSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window
 
 const contextChoice = computed({
@@ -38,6 +39,9 @@ onMounted(async () => {
   } catch (e) { error.value = e.message }
   if (linked.value) loadLists()
   voiceList.value = (await voicesReady(), australianVoices()).map((v) => ({ name: v.name, lang: v.lang }))
+  coachVoices.value = (await serverVoices())?.voices || []
+  if (!coachVoices.value.length) audio.coachVoice = 'phone'
+  else if (audio.coachVoice !== 'phone' && !coachVoices.value.some((v) => v.key === audio.coachVoice)) audio.coachVoice = coachVoices.value[0].key
 })
 
 async function connect() {
@@ -57,14 +61,15 @@ async function testMusic() {
   try {
     const r = await spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle })
     unlock()
-    await spotify.aroundSpeech(() => speak(`Music's playing on ${r.device}. This is how updates will sound.`, { voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
+    await spotify.aroundSpeech(() => speak(`Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
     if (!r.canVolume && audio.music === 'duck') toast("This phone won't let other apps change Spotify's volume, so the music will pause briefly instead.")
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }
 
 function testVoice() {
   unlock()
-  speak('One kilometre. Five minutes forty. Average pace 5 40 per k. Good on ya, keep it steady.', { voiceName: audio.voiceName })
+  // (the sample says 'Good on ya' so you can hear the accent)
+  speak('One kilometre. Five minutes forty. Average pace 5 40 per k. Good on ya, keep it steady.', { coachVoice: audio.coachVoice, voiceName: audio.voiceName })
 }
 </script>
 
@@ -152,8 +157,16 @@ function testVoice() {
           <label for="s-duck">Music volume while talking: {{ audio.duckTo }}%</label>
           <input id="s-duck" v-model.number="audio.duckTo" type="range" min="5" max="60" step="5" />
         </div>
-        <div v-if="voiceList.length > 1" class="field">
-          <label for="s-voice">Voice</label>
+        <div v-if="coachVoices.length" class="field">
+          <label for="s-coachvoice">Coach's voice</label>
+          <select id="s-coachvoice" v-model="audio.coachVoice">
+            <option v-for="v in coachVoices" :key="v.key" :value="v.key">{{ v.name }}, {{ v.about }}</option>
+            <option value="phone">The phone's own voice (works offline)</option>
+          </select>
+          <span class="hint">Made with ElevenLabs. Needs a signal; drops back to the phone's voice when there isn't one.</span>
+        </div>
+        <div v-if="voiceList.length > 1 && (audio.coachVoice === 'phone' || !coachVoices.length)" class="field">
+          <label for="s-voice">Phone voice</label>
           <select id="s-voice" v-model="audio.voiceName">
             <option value="">Australian (automatic)</option>
             <option v-for="v in voiceList" :key="v.name" :value="v.name">{{ v.name }} ({{ v.lang }})</option>
