@@ -1,7 +1,8 @@
 <script setup>
 // Record a run, walk or ride. Shows time, distance and pace, the route on
-// the map, and how far you are from closing your loop. Also imports GPX
-// files from a watch, and (in the practice map) simulates a loop.
+// the map, and how far you are from closing your loop. Also imports GPX, TCX
+// and FIT files (one or many) from a watch or app, and (in the practice map)
+// simulates a loop.
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -9,7 +10,8 @@ import { rec, start, pause, resume, stop } from '../../lib/recorder.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
-import { loopTrack, parseGpx } from '../../lib/tracks.js'
+import { loopTrack } from '../../lib/tracks.js'
+import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
 import { beginRun, finishRun, endRun } from '../../lib/audio/runAudio.js'
 import { audio } from '../../lib/audio/settings.js'
@@ -20,6 +22,7 @@ const mode = ref(store.mode)
 const saving = ref(false)
 const error = ref(null)
 const fileInput = ref(null)
+const progress = ref(null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
@@ -88,14 +91,52 @@ async function simulate() {
 }
 
 async function onFile(e) {
-  const f = e.target.files?.[0]
+  const files = [...(e.target.files || [])]
   e.target.value = ''
-  if (!f) return
+  if (!files.length) return
+  error.value = null
+  saving.value = 'Reading your files'
+  progress.value = null
   try {
-    const { points, mode: m } = parseGpx(await f.text())
-    await save({ mode: m, source: 'import', startedAt: points[0].t, points }, 'Importing')
+    const known = await api.activities({ limit: 200 }).then((r) => r.activities.map((x) => x.startedAt)).catch(() => [])
+    const { ready, duplicates, problems } = await readImports(files, known)
+    const failed = [...problems]
+    let last = null
+    let saved = 0
+    let lastError = null
+    for (let i = 0; i < ready.length; i++) {
+      const r = ready[i]
+      saving.value = ready.length > 1 ? `Importing ${i + 1} of ${ready.length}` : 'Importing'
+      progress.value = ready.length > 1 ? new Date(r.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${MODE_LABEL[r.mode]}` : null
+      try {
+        last = await api.postActivity({ mode: r.mode, source: 'import', startedAt: r.startedAt, points: r.points })
+        saved++
+        lastError = null
+      } catch (err) {
+        failed.push({ name: r.name, message: err.message })
+        // The same error twice in a row (a daily limit, say) won't fix itself: stop here.
+        if (err.message === lastError) break
+        lastError = err.message
+      }
+    }
+    const skipped = []
+    if (duplicates) skipped.push(`${duplicates} already saved`)
+    if (failed.length) skipped.push(`${failed.length} couldn't be imported`)
+    if (!last) {
+      error.value = failed.length === 1 && !duplicates ? failed[0].message
+        : duplicates && !failed.length ? (duplicates === 1 ? 'That activity is already saved.' : 'Those activities are already saved.')
+        : `Nothing new to import: ${skipped.join(', ')}.${failed[0] ? ` ${failed[0].message}` : ''}`
+      return
+    }
+    setLastResult(last)
+    await refresh()
+    if (saved > 1 || skipped.length) toast(`Imported ${saved} ${saved === 1 ? 'activity' : 'activities'}${skipped.length ? `. ${skipped.join(', ')}` : ''}.`, 5000)
+    router.replace({ name: 'result', params: { id: last.activity.id } })
   } catch (err) {
     error.value = err.message
+  } finally {
+    saving.value = false
+    progress.value = null
   }
 }
 
@@ -121,6 +162,7 @@ onBeforeUnmount(() => {
         <div class="saving" aria-live="polite">
           <div class="spinner" aria-hidden="true"></div>
           <strong>{{ saving }}</strong>
+          <span v-if="progress" class="muted small">{{ progress }}</span>
           <span class="muted small">Finding your loops and claiming ground</span>
         </div>
       </template>
@@ -137,10 +179,10 @@ onBeforeUnmount(() => {
         <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
         <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
         <div class="alt">
-          <button class="btn quiet small" type="button" @click="fileInput.click()">Import a GPX file</button>
+          <button class="btn quiet small" type="button" @click="fileInput.click()">Import from a watch or app (GPX, TCX, FIT)</button>
           <button v-if="isLocal" class="btn quiet small" type="button" @click="simulate">Practice loop (no GPS)</button>
           <RouterLink class="btn quiet small" :to="{ name: 'recap', params: { id: 'demo' } }">Watch a demo recap</RouterLink>
-          <input ref="fileInput" type="file" accept=".gpx,application/gpx+xml" hidden @change="onFile" />
+          <input ref="fileInput" type="file" multiple accept=".gpx,.tcx,.fit,.gz,.zip,application/gpx+xml,application/vnd.garmin.tcx+xml,application/xml,text/xml,application/zip,application/gzip,application/octet-stream" hidden @change="onFile" />
         </div>
       </template>
 
