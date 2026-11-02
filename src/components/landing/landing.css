@@ -1,0 +1,359 @@
+/* Landing page layout and the colours of its small map drawings.
+   Everything here is prefixed lp- (layout) or v- (drawings) so it never
+   touches the app screens. Tokens come from src/style.css. */
+
+.landing { overflow-x: clip; }
+
+.lp-small { font-size: 0.9rem; color: var(--ink-60); }
+
+/* Index of chapters, set like a street directory's key */
+.lp-index {
+  padding: 0 var(--gutter);
+  margin: 0 auto clamp(8px, 3vw, 24px);
+  max-width: 1280px;
+}
+.lp-index ul {
+  list-style: none;
+  margin: 0;
+  padding: 18px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink-15);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 26px;
+}
+.lp-index a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-weight: 700;
+  font-stretch: 80%;
+  font-size: 1.02rem;
+  text-decoration: none;
+}
+.lp-index a::before {
+  content: '';
+  width: 12px;
+  height: 10px;
+  background: var(--you);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.lp-index a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Chapters */
+.lp-chapter {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(56px, 9vw, 112px) var(--gutter);
+  display: grid;
+  gap: clamp(32px, 5vw, 56px);
+  scroll-margin-top: 8px;
+}
+.lp-chapter:focus { outline: none; }
+.lp-chapter + .lp-chapter { border-top: 1px solid var(--ink-15); }
+
+.lp-head { display: grid; gap: 14px; max-width: 46rem; }
+.lp-head h2 {
+  font-size: clamp(2.3rem, 7.4vw, 4.6rem);
+  font-weight: 850;
+  font-stretch: 125%;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+.lp-head p { font-size: 1.18rem; color: var(--ink-60); max-width: 44ch; }
+
+/* Feature pairs: a drawing, then a condensed heading like a street label */
+.lp-pairs {
+  display: grid;
+  gap: clamp(40px, 6vw, 72px) clamp(32px, 5vw, 80px);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 760px) {
+  .lp-pairs { grid-template-columns: 1fr 1fr; }
+}
+.lp-feature { display: grid; gap: 10px; grid-template-rows: 1fr auto auto; min-width: 0; }
+.lp-feature > :first-child { align-self: end; }
+.lp-feature > svg, .lp-feature > figure, .lp-feature > .lp-season { margin-bottom: 10px; }
+.lp-feature h3,
+.lp-list dt,
+.lp-panel-title {
+  font-size: 1.4rem;
+  font-weight: 750;
+  font-stretch: 75%;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+.lp-feature p { color: var(--ink-60); max-width: 46ch; }
+
+/* Plain lists of smaller features */
+.lp-list {
+  margin: 0;
+  display: grid;
+  gap: 26px clamp(32px, 5vw, 64px);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 760px) {
+  .lp-list { grid-template-columns: repeat(3, 1fr); }
+  .lp-list.lp-list-single { grid-template-columns: 1fr; }
+}
+.lp-list > div { padding-top: 14px; border-top: 1px solid var(--ink-15); }
+.lp-list dt { font-size: 1.2rem; }
+.lp-list dd { margin: 6px 0 0; color: var(--ink-60); max-width: 46ch; }
+
+/* Split chapters: text one side, a picture the other */
+.lp-split { grid-template-columns: 1fr; align-items: start; }
+.lp-split > div { display: grid; gap: clamp(28px, 4vw, 44px); min-width: 0; }
+@media (min-width: 900px) {
+  .lp-split { grid-template-columns: 6fr 5fr; column-gap: clamp(40px, 6vw, 96px); }
+  .lp-split-media { grid-template-columns: 5fr 6fr; align-items: center; }
+}
+
+/* Example rivals panel, styled like the app */
+.lp-panel {
+  margin: 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: inset 0 0 0 1px var(--ink-15);
+  display: grid;
+  gap: 8px;
+  align-self: center;
+  min-width: 0;
+}
+.lp-panel ul { list-style: none; margin: 0; padding: 0; }
+.lp-panel li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ink-15);
+}
+.lp-crest {
+  width: 30px;
+  height: 26px;
+  background: var(--rival);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.lp-crest.club { background: var(--ink); }
+.lp-rival { display: grid; min-width: 0; }
+.lp-rival strong { font-weight: 700; }
+.lp-rival span { font-size: 0.9rem; color: var(--ink-60); }
+.lp-record {
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+/* On the run: the one dark chapter, like an early start */
+.lp-ink {
+  max-width: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  padding-left: max(var(--gutter), calc((100vw - 1280px) / 2 + var(--gutter)));
+  padding-right: max(var(--gutter), calc((100vw - 1280px) / 2 + var(--gutter)));
+}
+.lp-chapter.lp-ink, .lp-chapter.lp-ink + .lp-chapter { border-top: 0; }
+.lp-ink .lp-head p, .lp-ink .lp-list dd { color: var(--on-ink-muted); }
+.lp-ink .lp-list > div { border-top-color: rgba(243, 245, 239, 0.2); }
+.lp-voice { display: grid; gap: clamp(18px, 3vw, 28px); }
+.lp-voice blockquote {
+  margin: 0;
+  font-size: clamp(1.7rem, 5.6vw, 3.4rem);
+  font-weight: 700;
+  font-stretch: 68%;
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  max-width: 22ch;
+}
+.lp-voice .lp-voice-loop { color: #8FA8FF; justify-self: end; text-align: right; }
+
+/* After the run */
+.lp-flyover { max-width: 560px; justify-self: center; width: 100%; }
+.lp-button-quiet {
+  justify-self: start;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.lp-button-quiet:hover { background: rgba(22, 48, 42, 0.06); }
+
+/* History: the file types are the picture */
+.lp-history { gap: 18px; }
+.lp-history h2, .lp-formtrack h2 {
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  font-weight: 850;
+  font-stretch: 112%;
+  letter-spacing: -0.025em;
+}
+.lp-formats {
+  margin: 4px 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.35em;
+  font-size: clamp(3.2rem, 16vw, 10rem);
+  font-weight: 900;
+  font-stretch: 62%;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  color: var(--you);
+  max-width: none;
+}
+.lp-formats span:nth-child(2) { color: var(--ink); }
+.lp-history > p:last-child, .lp-formtrack p { font-size: 1.15rem; max-width: 52ch; }
+
+.lp-formtrack { gap: 14px; align-content: start; }
+
+/* History and FormTrack share a row on wide screens */
+.lp-duo { border-top: 1px solid var(--ink-15); }
+.lp-duo .lp-chapter { border-top: 0; }
+.lp-duo .lp-formtrack { border-top: 1px solid var(--ink-15); }
+@media (min-width: 900px) {
+  .lp-duo {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+  }
+  .lp-duo .lp-chapter { margin: 0; max-width: none; }
+  .lp-duo .lp-formtrack { border-top: 0; padding-top: calc(clamp(56px, 9vw, 112px) + 4px); }
+  .lp-duo .lp-formats { font-size: clamp(3.2rem, 7.4vw, 6.6rem); }
+}
+.lp-duo + .lp-chapter { border-top: 1px solid var(--ink-15); }
+
+/* Final call to action, on map paper */
+.lp-cta {
+  background: var(--map-paper);
+  padding: clamp(56px, 9vw, 112px) max(var(--gutter), calc((100vw - 1280px) / 2 + var(--gutter)));
+  display: grid;
+  gap: 20px;
+  justify-items: start;
+}
+.lp-cta h2 {
+  font-size: clamp(2.3rem, 7.4vw, 4.6rem);
+  font-weight: 850;
+  font-stretch: 125%;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  max-width: 14ch;
+}
+.lp-cta p { font-size: 1.15rem; max-width: 50ch; }
+
+.lp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  border-top: 0;
+  padding-left: max(var(--gutter), calc((100vw - 1280px) / 2 + var(--gutter)));
+  padding-right: max(var(--gutter), calc((100vw - 1280px) / 2 + var(--gutter)));
+}
+.lp-foot p:last-child { display: flex; gap: 20px; }
+
+/* Season bar */
+.lp-season {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.lp-season-block {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 2px;
+  padding: 12px 10px 14px;
+  background: var(--map-paper);
+  border-radius: 4px;
+  min-width: 0;
+}
+.lp-season-block strong {
+  position: relative;
+  font-weight: 750;
+  font-stretch: 75%;
+  font-size: 1.05rem;
+}
+.lp-season-block span:not(.lp-season-fill) {
+  position: relative;
+  font-size: 0.78rem;
+  color: var(--ink-60);
+  font-stretch: 85%;
+}
+.lp-season-block.now { box-shadow: inset 0 0 0 2px var(--you); }
+.lp-season-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--you-fill);
+}
+.lp-season-note {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+/* Figures and captions */
+.lp-fig { margin: 0; display: grid; gap: 8px; }
+.lp-cap { font-size: 0.9rem; font-weight: 650; min-height: 1.4em; }
+.lp-keys { display: flex; flex-wrap: wrap; gap: 4px 16px; font-weight: 600; color: var(--ink-60); }
+.lp-keys span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-key {
+  width: 14px;
+  height: 12px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.lp-key.new { background: var(--you-fill); box-shadow: inset 0 0 0 20px rgba(46, 85, 230, 0.2); }
+.lp-key.rival { background: #E8A817; }
+.lp-key.held { background: var(--you); }
+
+/* Drawings */
+.lp-vg { display: block; width: 100%; height: auto; overflow: visible; }
+.v-you { fill: var(--you-fill); stroke: var(--you); stroke-width: 1; }
+.v-rival { fill: var(--rival-fill); stroke: var(--rival); stroke-width: 1; }
+.v-wild { fill: var(--map-paper); stroke: var(--ink-15); stroke-width: 1; }
+.v-label { font: 650 11px/1 var(--font); font-stretch: 80%; fill: var(--ink-60); }
+.v-label.small { font-size: 10px; font-weight: 600; }
+.v-label.you { fill: var(--you); }
+.v-label.park { fill: var(--park-ink); }
+.v-big { font: 850 26px/1 var(--font); font-stretch: 112%; fill: var(--ink); letter-spacing: -0.02em; }
+
+.v-axis { stroke: var(--ink-40); stroke-width: 1; }
+.v-tick { stroke: var(--ink-15); stroke-width: 1; stroke-dasharray: 2 3; }
+.v-tick.strong { stroke: var(--ink-40); }
+.v-wildline { stroke: var(--rival); stroke-width: 1; stroke-dasharray: 4 3; }
+.v-curve { fill: none; stroke: var(--you); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.v-ridehex { fill: var(--you); stroke: var(--you); stroke-width: 1.5; }
+
+.v-dayon { fill: var(--ink); }
+.v-daynow { fill: var(--you); }
+.v-dayoff { fill: var(--ink-15); }
+
+.v-water { fill: var(--water); }
+.v-loop { fill: none; stroke: var(--you); stroke-width: 4; stroke-linejoin: round; }
+.v-start { fill: var(--you); }
+.v-crown path, .v-crown rect { fill: #E8A817; stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; }
+
+.v-bar { fill: var(--you); }
+.v-easy { fill: var(--you-fill); stroke: var(--you); stroke-width: 1; stroke-dasharray: 3 2; }
+
+.v-plan-new { fill: rgba(46, 85, 230, 0.16); stroke: rgba(46, 85, 230, 0.5); stroke-width: 1; }
+.v-plan-rival { fill: var(--rival-fill); stroke: var(--rival); stroke-width: 1; }
+.v-plan-held { fill: var(--you); stroke: var(--you); stroke-width: 1; }
+.v-planline { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: 7 5; stroke-linejoin: round; }
+
+.v-orbit { fill: none; stroke: var(--ink-40); stroke-width: 1.5; stroke-dasharray: 5 6; }
+.v-top { fill: #6F8CF0; stroke: var(--you); stroke-width: 1; }
+.v-side { fill: var(--you); }
+.v-side-dark { fill: #1F3FB8; }
+.v-cam { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+.v-camarrow { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.v-zone { fill: rgba(22, 48, 42, 0.04); stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.v-route { fill: none; stroke: var(--you); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.v-trimmed { fill: none; stroke: var(--ink-40); stroke-width: 2; stroke-dasharray: 1 5; stroke-linecap: round; }
+.v-home { fill: var(--ink); }
