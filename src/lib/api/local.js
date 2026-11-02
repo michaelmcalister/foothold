@@ -18,6 +18,8 @@ import { cleanRoute, MAX_ROUTES } from '../planner.js'
 import { checkText } from '../social/filter.js'
 import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, groundOf } from '../social/leagues.js'
 import { practiceCommentsFor } from '../social/practice.js'
+import { practiceDivision } from '../social/divisionPractice.js'
+import { weekScore, tierOut, clampTier, daysLeftIn, placedText, promotedText, ACTIVE_DAYS, PROMOTE_TOP, PER_HEX, PER_OUTING, MAX_OUTINGS, DIVISION_SIZE } from '../engine/divisions.js'
 
 const DAY = 86400000
 const ME_DEFAULT_COLOUR = '#2E55E6'
@@ -58,6 +60,7 @@ async function state() {
     efforts: await kv.get('efforts', []), // stronghold efforts, everyone's (practice rivals too)
     bests: await kv.get('bests', {}), // your personal bests: { mode: { key: { value, activityId, at } } }
     social: await kv.get('social', { comments: [], reports: [], leagues: [], swaps: [], decided: [] }),
+    division: await kv.get('division', null), // weekly division: { week, tier, best, seed, history }
   }
   if (!S.user) {
     S.user = {
@@ -93,6 +96,7 @@ const save = {
   efforts: () => kv.set('efforts', S.efforts),
   bests: () => kv.set('bests', S.bests),
   social: () => kv.set('social', S.social),
+  division: () => kv.set('division', S.division),
 }
 
 function player(id) {
@@ -260,6 +264,7 @@ async function tick() {
   if (!S.world) return
   const now = Date.now()
   await seasonTick(now)
+  await divisionTick(now)
   if (now - (S.world.lastTick || 0) < 3 * 3600000) return
   S.world.lastTick = now
   const rand = rng(Math.floor(now / 3600000))
@@ -361,6 +366,44 @@ async function seasonTick(now) {
   }
   S.world.seasonReset = season.id
   await save.world()
+}
+
+// ---- weekly divisions ----
+// The practice division: the practice rivals and named practice players
+// around your real score (social/divisionPractice.js). Unlike the server,
+// you're always placed, so the table is there from your first day.
+const weekActs = (id, week) => S.activities.filter((a) => a.userId === id && a.startedAt >= week.start && a.startedAt < week.end)
+function divisionTable(weekKey, tier, now) {
+  const week = weekFor(weekKey)
+  const real = new Map(RIVALS.map((r) => [r.id, weekScore(weekActs(r.id, week))]))
+  const me = { userId: S.user.id, ...player(S.user.id), ...weekScore(weekActs(S.user.id, week)) }
+  return practiceDivision({ week, tier, seed: S.division.seed, rivals: RIVALS, real, me, now: Math.min(now, week.end - 1) })
+}
+
+// A new week: finish the last one (top 5 move up, nobody moves down) and join a new division
+async function divisionTick(now = Date.now()) {
+  const wk = weekOf(now)
+  if (!S.division) S.division = { week: null, tier: 0, best: 0, seed: uid().slice(0, 8), history: [] }
+  const D = S.division
+  if (D.week === wk.key) return
+  let changed = false
+  if (D.week) {
+    const table = divisionTable(D.week, D.tier, now)
+    const me = table.find((r) => r.me)
+    D.history.unshift({ week: D.week, tier: D.tier, rank: me.rank, size: table.length, score: me.score, hexes: me.hexes, outings: me.outings, promoted: me.promotes, finalised: true })
+    D.history = D.history.slice(0, 52)
+    if (me.promotes) {
+      D.tier = clampTier(D.tier + 1)
+      D.best = Math.max(D.best, D.tier)
+      notify('division', promotedText(D.tier), now)
+    }
+    // Back after a while, or still getting out: the Monday notice
+    if (S.activities.some((a) => a.userId === S.user.id && !a.rejected && a.startedAt >= now - ACTIVE_DAYS * DAY)) notify('division', placedText(D.tier), now)
+    changed = true
+  }
+  D.week = wk.key
+  await save.division()
+  if (changed) await save.notifications()
 }
 
 // ---- social: swaps, practice comments ----
@@ -917,6 +960,41 @@ export const local = {
     return { recap: weekRecap(await weekInput(week, now)) }
   },
 
+  // Weekly divisions (same shapes as GET /api/division and /api/division/history)
+  async division() {
+    await state()
+    const now = Date.now()
+    await divisionTick(now)
+    const D = S.division
+    const wk = weekOf(now)
+    const table = divisionTable(D.week, D.tier, now)
+    const me = table.find((r) => r.me)
+    const last = D.history[0]?.week === prevWeek(wk).key ? D.history[0] : null
+    return {
+      week: wk,
+      daysLeft: daysLeftIn(wk, now),
+      endsAt: wk.end,
+      tier: tierOut(D.tier),
+      bestTier: tierOut(D.best),
+      active: true,
+      division: { id: `practice-${D.week}`, tier: tierOut(D.tier), size: table.length, promoteTop: PROMOTE_TOP },
+      table,
+      you: { rank: me.rank, score: me.score, hexes: me.hexes, outings: me.outings, promotes: me.promotes },
+      promotion: last?.promoted ? { week: last.week, tier: tierOut(last.tier + 1) } : null,
+      last: last ? { week: last.week, tier: tierOut(last.tier), rank: last.rank, size: last.size, promoted: !!last.promoted } : null,
+      scoring: { perHex: PER_HEX, perOuting: PER_OUTING, maxOutings: MAX_OUTINGS, promoteTop: PROMOTE_TOP, size: DIVISION_SIZE, activeDays: ACTIVE_DAYS },
+    }
+  },
+  async divisionHistory() {
+    await state()
+    const now = Date.now()
+    await divisionTick(now)
+    const D = S.division
+    const me = divisionTable(D.week, D.tier, now).find((r) => r.me)
+    const current = { week: D.week, tier: tierOut(D.tier), rank: null, size: 20, score: me.score, hexes: me.hexes, outings: me.outings, promoted: false, finalised: false }
+    return { history: [current, ...D.history.map((h) => ({ ...h, tier: tierOut(h.tier) }))], tier: tierOut(D.tier), bestTier: tierOut(D.best) }
+  },
+
   async bests({ mode = 'run' } = {}) {
     await state()
     return { bests: bestsList(S.bests[mode], mode) }
@@ -1008,6 +1086,7 @@ export const local = {
       comments: S.social.comments.filter((c) => c.userId === S.user.id),
       reports: S.social.reports.filter((r) => r.reporter === S.user.id),
       leagues: myLeagues().map(leagueOut),
+      division: S.division,
     }
   },
   async deleteAccount() {

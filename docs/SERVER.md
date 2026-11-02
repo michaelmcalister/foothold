@@ -135,6 +135,8 @@ The coach can build a plan from the runner's own words through
 explanation; the engine still builds every week, so the safety rules hold.
 
 1. Apply migration `0007_ai.sql` (`npm run db:migrate`). It adds `ai_usage`.
+   Later, `0009_divisions.sql` adds the weekly division tables (`divisions`,
+   `division_members`, `division_weeks`); apply it before deploying divisions.
 2. Create an Anthropic API key and add it as a Worker secret named
    `ANTHROPIC_API_KEY` (`npx wrangler secret put ANTHROPIC_API_KEY`).
 3. Optional variables: `PLAN_MODEL` (default `claude-sonnet-5-5`) and

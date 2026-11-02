@@ -62,6 +62,7 @@ Recap     { week: { key, start, end, current, previous }, distanceM, movingS, ou
             explored, quests: Quest[], questsDone, biggestLoop: { activityId, hexes, mode,
             startedAt, distanceM } | null, best: { activityId, text } | null,
             last: { key, distanceM, movingS, outings }, compare, visited: [h3] (max 3000) }
+Tier      { index: 0..5, id, name, next: { index, id, name } | null }   Scout, Pathfinder, Ranger, Warden, Sentinel, Marshal
 Season    { id: '2026-12', key: 'summer'|'autumn'|'winter'|'spring', name: 'Summer 2026/27',
             label: 'Summer season, Dec to Feb', span: 'Dec to Feb', startsAt, endsAt, daysLeft }
 ```
@@ -123,6 +124,8 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
 | GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
 | GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
+| GET | /api/division | | `{ week: Week, daysLeft, endsAt, tier: Tier, bestTier: Tier, active, division: { id, tier: Tier, size, promoteTop } \| null, table: [{ userId, name, colour, crest, score, hexes, outings, rank, top, promotes, me }], you: { rank, score, hexes, outings, promotes } \| null, promotion: { week, tier: Tier } \| null, last: { week, tier, rank, size, promoted } \| null, scoring: { perHex, perOuting, maxOutings, promoteTop, size, activeDays } }` (`active` false and an empty table until you've had an outing in the last 14 days; `promotion` is set when last week moved you up) |
+| GET | /api/division/history | | `{ history: [{ week, tier: Tier, rank, size, score, hexes, outings, promoted, finalised }], tier: Tier, bestTier: Tier }` (newest first, up to 52) |
 
 ## Personal bests and strongholds
 
@@ -168,6 +171,26 @@ Held hexes in a past week's recap come from today's map, so they count
 ground held then and still held now. On Monday (Sydney) the cron, and the
 practice map's tick, send "Your week in Foothold is ready. Want a look?"
 (kind `week`) to anyone who got out the week before.
+## Weekly divisions
+
+Rules in `src/lib/engine/divisions.js` (docs/ENGINE.md), server side in
+`worker/divisions.js`, tables from `migrations/0009_divisions.sql`
+(`divisions`, `division_members`, `division_weeks`). The hourly cron finishes
+any week that has ended, groups the new week once (the first run after
+midnight on Monday, Sydney; a `division_weeks` row stops it running twice) and
+seats late joiners. `GET /api/division` does the same catch-up first, so a
+missed cron hour never leaves anyone out. Scores are worked out from
+activities and cached in `division_members`. Notifications have kind
+`division`. `division_members` is in Download my data and goes with the
+account; a division's `city` (an H3 resolution 4 cell) is never sent to the app.
+Bots: none on the server yet. When they arrive, leave them out where
+`activePlayers` reads activities and seat them after grouping.
+
+The practice map (local.js) builds a division of 20 from the practice rivals
+and named practice players whose scores grow through the week
+(`src/lib/social/divisionPractice.js`); your score is real. Unlike the server,
+practice always places you, so the table is there on day one.
+
 ## Comments, leagues and rivals
 
 - Comments are tidied (spaces squashed, invisible characters dropped),

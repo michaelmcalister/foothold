@@ -14,7 +14,7 @@ onMounted(async () => {
   refresh()
 })
 // A "your week is ready" notice opens the week it was about: the one before it arrived
-const target = (n) => (n.kind === 'week' ? `/app/week?w=${prevWeek(weekOf(n.at)).key}` : n.kind === 'battle' ? '/app/battles' : n.kind === 'coach' ? '/app/coach' : n.kind === 'comment' ? '/app/you' : '/app')
+const target = (n) => (n.kind === 'week' ? `/app/week?w=${prevWeek(weekOf(n.at)).key}` : n.kind === 'battle' ? '/app/battles' : n.kind === 'division' ? '/app/battles?tab=division' : n.kind === 'coach' ? '/app/coach' : n.kind === 'comment' ? '/app/you' : '/app')
 </script>
 
 <template>

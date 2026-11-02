@@ -1,5 +1,6 @@
 // Foothold's sound effects, synthesised with the Web Audio API: claiming
 // ground, taking it from a rival, levelling up, new bests, quests, crowns,
+// moving up a division,
 // the recording controls and a few tiny UI sounds. Also owns the one shared
 // AudioContext (made on the first tap, since phones need a gesture) and the
 // master bus the recap music plays through.
@@ -99,6 +100,19 @@ export const EFFECTS = {
       bell(ctx, out, t + 0.3, N('A6'), { peak: 0.08, decay: 1.0 })
       crash(ctx, out, t + 0.18, { peak: 0.03 })
       return t + 1.5
+    },
+  },
+  promote: {
+    dur: 1.5,
+    celebration: true,
+    build(ctx, out, t) {
+      // Moving up a division: a rising step, then a warm chord
+      ;['D5', 'E5', 'F#5', 'A5'].forEach((n, i) => pluck(ctx, out, t + i * 0.08, N(n), { peak: 0.16, decay: 0.28, bright: 3000 }))
+      const hit = t + 0.34
+      pad(ctx, out, hit, [N('D4'), N('F#4'), N('A4')], { peak: 0.06, attack: 0.04, hold: 0.35, decay: 0.7, cutoff: 1400, to: 2600 })
+      bell(ctx, out, hit, N('D6'), { peak: 0.14, decay: 1.0 })
+      bell(ctx, out, hit + 0.12, N('A6'), { peak: 0.08, decay: 0.9 })
+      return hit + 1.1
     },
   },
   start: {

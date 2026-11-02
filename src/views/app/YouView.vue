@@ -1,16 +1,19 @@
 <script setup>
 // Your numbers: ground held, where you are on the ladder, this week's
-// quests and recap, your weeks, your personal bests, and every activity.
+// quests and recap, your division tier, your weeks, your personal bests, and every activity.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh } from '../../lib/store.js'
 import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { LEVELS, weekOf, prevWeek, clock } from '../../lib/engine/index.js'
 import QuestList from '../../components/QuestList.vue'
+import TierBadge from '../../components/TierBadge.vue'
+import { TIERS } from '../../lib/engine/divisions.js'
 
 const activities = ref([])
 const quests = ref([])
 const bests = ref([])
+const division = ref(null)
 const lastWeek = prevWeek(weekOf()).key
 async function load() {
   await refresh()
@@ -22,6 +25,7 @@ async function load() {
   activities.value = acts.activities
   bests.value = b.bests
   quests.value = qs.quests
+  api.division().then((d) => { division.value = d }).catch(() => {})
 }
 const bestValue = (b) => (b.kind === 'dist' ? `${km(b.value, 1)} km` : clock(b.value))
 const bestDate = (t) => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -70,6 +74,21 @@ const ladderPct = computed(() => {
       </ol>
       <div v-if="s.next" class="meter" :aria-label="`${s.toNext} hexes to ${s.next.name}`"><span :style="{ width: `${ladderPct}%` }"></span></div>
       <p v-if="s.next" class="small muted">{{ s.toNext }} more hexes to reach {{ s.next.name }}.</p>
+    </section>
+
+    <section v-if="division" aria-labelledby="division" class="divsec">
+      <h2 id="division">Your division</h2>
+      <ol class="tiers" aria-label="Division tiers">
+        <li v-for="(t, i) in TIERS" :key="t.id" :class="{ now: division.tier.index === i }">
+          <TierBadge :tier="i" :size="30" :dim="i > division.bestTier.index" />
+          <span class="small">{{ t.name }}</span>
+        </li>
+      </ol>
+      <p class="small muted">
+        You're a {{ division.tier.name }} this week.
+        Best tier: {{ division.bestTier.name }}.
+        <RouterLink :to="{ name: 'battles', query: { tab: 'division' } }">See your division</RouterLink>
+      </p>
     </section>
 
     <section v-if="quests.length" aria-labelledby="quests" class="questsec">
@@ -152,6 +171,12 @@ const ladderPct = computed(() => {
 .bar.now span { background: var(--you); }
 .plain { list-style: none; margin: 0; padding: 0; }
 .questsec { display: grid; gap: 12px; }
+.divsec { display: grid; gap: 10px; }
+.divsec h2, .divsec p { margin: 0; }
+.tiers { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.tiers li { display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
+.tiers li span { font-weight: 650; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-size: 0.66rem; letter-spacing: -0.01em; }
+.tiers li.now span { color: var(--you); font-weight: 800; }
 .questsec h2, .questsec p { margin: 0; }
 .weeklinks { display: flex; gap: 10px; flex-wrap: wrap; }
 .act { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }

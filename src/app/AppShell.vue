@@ -8,6 +8,9 @@ import './app.css'
 import { store, boot, setMode, toast } from '../lib/store.js'
 import BrandMark from '../components/BrandMark.vue'
 import { auth, login } from '../lib/auth.js'
+import { api } from '../lib/api/index.js'
+import { freshPromotion, markPromotionSeen } from '../lib/divisionSeen.js'
+import { play } from '../lib/audio/sfx.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +28,15 @@ onMounted(async () => {
   if (auth.error) toast(`Sign-in didn't finish: ${auth.error}`)
   await boot()
   if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
+  // Moved up a division last week: say so once, with its sound, the next time the app opens
+  if (store.user.onboarded) {
+    const d = await api.division().catch(() => null)
+    if (freshPromotion(d?.promotion)) {
+      markPromotionSeen(d.promotion)
+      toast(`You moved up to ${d.promotion.tier.name}.`)
+      play('promote', { wait: false })
+    }
+  }
 })
 watch(() => route.name, () => {
   if (store.ready && !store.user?.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
