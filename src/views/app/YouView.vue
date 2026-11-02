@@ -91,7 +91,7 @@ const ladderPct = computed(() => {
         </div>
         <TrendChart class="spark" :rows="fiveKRows" spark />
       </div>
-      <p id="fit-line" class="small">{{ fitness.headline.text }}<template v-if="fitness.current.confidence === 'low'"> {{ fitness.headline.note }}</template></p>
+      <p id="fit-line" class="small">{{ fitness.headline.text }}<template v-if="fitness.current.confidence === 'low'">{{ ' ' + fitness.headline.note }}</template></p>
       <span class="see small">See your fitness</span>
     </RouterLink>
 

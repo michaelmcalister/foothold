@@ -41,6 +41,7 @@ const domain = computed(() => {
   return [Math.max(0, lo), hi]
 })
 const ticks = computed(() => {
+  if (!present.value.length) return [] // no runs yet: an empty axis beats made-up numbers
   const [lo, hi] = domain.value
   if (props.kind === 'bar') return [lo, hi]
   const mid = Math.round((lo + hi) / 2 / props.step) * props.step
