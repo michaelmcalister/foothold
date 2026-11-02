@@ -1,9 +1,10 @@
-// Coach's notes after an activity: 2 to 4 short, rule-based notes (not AI) on the plan, pacing, heart rate, load and ground.
+// Coach's notes after an activity: 2 to 4 short, rule-based notes (not AI) on how it felt, the plan, pacing, heart rate, load and ground.
 import { distance } from '../engine/geo.js'
 import { loadCheck } from '../engine/load.js'
 import { isRun } from './plans.js'
 import { toISO } from './dates.js'
 import { formatPace, formatRange } from './paces.js'
+import { areaWords } from './checkin.js'
 
 const EASY = ['easy', 'long', 'recovery', 'strides']
 const r1 = (x) => Math.round(x * 10) / 10
@@ -124,13 +125,31 @@ function territoryNote(a, result) {
   return { kind: 'territory', text: 'Your loop closed. Try one that pushes into new streets next time.' }
 }
 
+// What the runner told us in the post-run check-in (activity.feel, activity.hurt).
+function feelNote(a, planned) {
+  const f = a.feel
+  if (f == null) return null
+  const easyDay = planned && EASY.includes(planned.type)
+  if (f === 'hurt') {
+    const where = a.hurt?.area ? `your ${areaWords(a.hurt.area)}` : 'something'
+    const text = a.hurt?.level === 'hurt'
+      ? `You said ${where} hurts. Please rest it and see a GP or physio before running again.`
+      : `You said ${where} hurt. Keep the next few runs easy and stop if it gets worse.`
+    return { kind: 'feel', feel: f, text }
+  }
+  if (f >= 4) return { kind: 'feel', feel: f, text: `You said that felt ${f >= 5 ? 'all out' : 'very hard'}. Next easy run, go slower than you think.` }
+  if (f === 3) return { kind: 'feel', feel: f, text: easyDay ? 'You said that felt hard. Next easy run, go slower than you think.' : 'You said that was hard work. A good, honest effort.' }
+  return { kind: 'feel', feel: f, text: easyDay ? `You said that felt ${f === 1 ? 'easy' : 'comfortable'}. That is just how an easy run should feel.` : `You said that felt ${f === 1 ? 'easy' : 'comfortable'}. Nice and controlled.` }
+}
+
 function suggestion(found, a, planned) {
   const plan = found.find((n) => n.kind === 'plan')
   const load = found.find((n) => n.kind === 'load')
   const split = found.find((n) => n.kind === 'split')
   const body = found.find((n) => n.kind === 'body')
   let text
-  if (load && load.level !== 'ok') text = 'Next time, keep it short and easy, or take a rest day. Ground waits for you.'
+  if (a.feel === 'hurt') text = 'Next time, keep it short and easy, and stop if it starts to hurt.'
+  else if (load && load.level !== 'ok') text = 'Next time, keep it short and easy, or take a rest day. Ground waits for you.'
   else if (plan?.fast) text = `Next time, aim for ${formatRange(planned.paceRange)}. If you can chat in full sentences, you're there.`
   else if (plan?.longer) text = 'Next time, stick close to the planned distance. Your next session will feel better for it.'
   else if (split?.split === 'positive') text = 'Next time, run the first km 10 to 15 seconds slower and see how the finish feels.'
@@ -149,6 +168,7 @@ export function debrief({ activity, track = [], planned = null, recent = [], res
   const plan = planned && a.mode === 'run' ? planned : null
   const splits = a.mode === 'ride' ? [] : kmSplits(track)
   const candidates = [
+    [0, feelNote(a, plan)],
     [1, plan ? planNote(a, plan, splits) : null],
     [3, a.mode === 'ride' ? null : splitNote(splits, plan)],
     [4, bodyNote(track, a.mode)],

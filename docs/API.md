@@ -30,7 +30,11 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
             appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos, comments,
-            bests: { [key]: seconds, longest?: metres } | null }
+            bests: { [key]: seconds, longest?: metres } | null,
+            feel: 1|2|3|4|5|'hurt'|null, hurt: { area, level } | null, checkinAt: number|null }
+            (feel, hurt and checkinAt: your own activities only. feel 1 easy, 2 comfortable,
+            3 hard work, 4 very hard, 5 all out; area foot|shin|calf|knee|hip|hamstring|back|other;
+            level niggle|sore|hurt. checkinAt with a null feel means the prompt was dismissed)
 Cell      { h3, owner, ownerName, ownerColour, ownerCrest, mine, strength, daysToWild,
             flips, heat, lastFlip }   (flips: times taken; heat: recent flips, 0 after 30 quiet days)
 Best      { key, label, kind: 'time'|'dist', value, activityId, at }
@@ -82,6 +86,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
 | GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
 | POST | /api/activities/:id/appeal | `{ note }` | `{ activity }` |
+| POST | /api/activities/:id/checkin | `{ feel, hurt?: { area, level } }` or `{ dismissed: true }` | `{ activity }` (yours only; answering again replaces it) |
 | GET | /api/territory | `?mode=run&bbox=w,s,e,n` | `{ cells: Cell[] }` (others' private hexes left out; max 5000) |
 | GET | /api/stats | `?mode=run` | `{ hexes, km2, level, next, toNext, weekKm: number[5], streakWeeks, fadingSoon: number }` |
 | GET | /api/leaderboard | `?mode=run&scope=local|world|club&board=all|season&lat&lng` | `{ rows: [{ userId, name, colour, crest, hexes, km2, me }], season: Season }`; with `board=season` rows are `{ userId, name, colour, crest, gained, me }`, ranked by hexes claimed or taken this season |
@@ -251,3 +256,23 @@ Limits: 5 an hour and 15 a day per address, 15 a day per signed-in player
 (429 `rate_limited`), and a global daily spend cap `AI_DAILY_CAP_AUD`
 (default 10, 503 `ai_paused`) counted in the `ai_usage` table, which holds
 token counts and cost only.
+
+## Post-run check-ins and the fitness trend
+
+After a run the app asks once "How did that feel?" (Result screen, and the
+Activity screen for your latest activity). The answer is saved on the
+activity with `POST /api/activities/:id/checkin`; dismissing it saves
+`checkinAt` with no `feel`, so it is never asked again for that activity.
+The rules live in `src/lib/coach/checkin.js` and both adapters use them.
+"Something hurt" with a place and how bad also runs the coach's injury
+adaptation on your plan (`adaptPlan` with `{ type: 'injury' }`). When the last
+3 planned easy runs, or 2 in a week, felt very hard, the plan gets a
+`{ type: 'tired' }` event: the next 4 days are easy at about 80%.
+
+The fitness trend (`/app/fitness`, `src/lib/coach/trend.js`) is worked out
+in the app from your activities: a rolling predicted 5K per week (from the
+8 weeks before it), easy run pace, heartbeats per km on easy runs when the
+track has heart rate, weekly kilometres, and FormTrack readiness. The server
+summary only has today's readiness, so the app keeps one score a day on the
+device (`src/lib/readiness.js`). Resting heart rate is not in the summary, so
+it is not shown.

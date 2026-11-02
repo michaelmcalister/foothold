@@ -37,6 +37,7 @@ export const remote = {
   activities: ({ limit = 50 } = {}) => call('GET', '/api/activities' + q({ limit })),
   activity: (id) => call('GET', `/api/activities/${encodeURIComponent(id)}`),
   appeal: (id, note) => call('POST', `/api/activities/${encodeURIComponent(id)}/appeal`, { note }),
+  checkin: (id, body) => call('POST', `/api/activities/${encodeURIComponent(id)}/checkin`, body),
   deleteActivity: (id) => call('DELETE', `/api/activities/${encodeURIComponent(id)}`),
   territory: ({ mode = 'run', bbox } = {}) => call('GET', '/api/territory' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
   stats: ({ mode = 'run' } = {}) => call('GET', '/api/stats' + q({ mode })),

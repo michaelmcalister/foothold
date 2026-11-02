@@ -101,7 +101,10 @@ export function unpackTrack(s) {
   })
 }
 
-/** Activity shape from a row. Others never see where it started. */
+// feel is stored as text: '1' to '5', or 'hurt'
+export const feelOut = (v) => (v == null ? null : v === 'hurt' ? 'hurt' : Number(v) || null)
+
+/** Activity shape from a row. Others never see where it started, or how it felt. */
 export function activityOut(row, viewerId, kudosGiven = false) {
   const a = {
     id: row.id,
@@ -135,6 +138,10 @@ export function activityOut(row, viewerId, kudosGiven = false) {
   if (row.user_id === viewerId) {
     a.start = parse(row.start, null)
     a.bbox = parse(row.bbox, null)
+    // Post-run check-in (migrations/0010_checkins.sql): only the owner sees how it felt
+    a.feel = feelOut(row.feel)
+    a.hurt = parse(row.hurt, null)
+    a.checkinAt = row.checkin_at ?? null
   }
   return a
 }
@@ -142,6 +149,7 @@ export function activityOut(row, viewerId, kudosGiven = false) {
 // Columns for activity lists, without the heavy track JSON
 export const ACTIVITY_COLS = `a.id, a.user_id, a.mode, a.source, a.started_at, a.distance_m, a.duration_s, a.moving_s, a.pace_s_per_km, a.elev_gain_m,
   a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox, a.bests,
+  a.feel, a.hurt, a.checkin_at,
   (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos,
   (SELECT COUNT(*) FROM comments c WHERE c.activity_id = a.id) AS comments`
 
