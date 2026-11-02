@@ -19,8 +19,8 @@ describe('recap plan', () => {
     expect(p.timeline.map((s) => s.id)).toEqual(['flyin', 'follow', 'orbit', 'overview'])
     expect(p.km).toBeGreaterThan(2.5)
     const follow = p.timeline[1].ms
-    expect(follow).toBeGreaterThanOrEqual(10000)
-    expect(follow).toBeLessThanOrEqual(22000)
+    expect(follow).toBeGreaterThanOrEqual(12000)
+    expect(follow).toBeLessThanOrEqual(26000)
     const long = planRecap(loopTrack({ centre, perimeterKm: 12, seed: 3 }))
     expect(long.timeline[1].ms).toBeGreaterThan(follow)
   })

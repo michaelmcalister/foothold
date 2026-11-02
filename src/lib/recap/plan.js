@@ -11,10 +11,11 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x))
 const lerp = (a, b, f) => a + (b - a) * f
 
 // How the camera behaves for each mode: rides cover more ground, so sit higher.
+// Run camera is about 230 m up, above most city towers in the 3D map.
 const FOLLOW = {
-  run: { range: 240, tilt: 64, lookAheadM: 60 },
-  walk: { range: 200, tilt: 66, lookAheadM: 45 },
-  ride: { range: 420, tilt: 60, lookAheadM: 140 },
+  run: { range: 420, tilt: 57, lookAheadM: 80 },
+  walk: { range: 380, tilt: 58, lookAheadM: 60 },
+  ride: { range: 620, tilt: 55, lookAheadM: 160 },
 }
 
 export function bearing(a, b) {
@@ -61,7 +62,8 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
   const follow = FOLLOW[mode] || FOLLOW.run
   // One clip length whatever the distance: longer runs just move faster
   const km = total / 1000
-  const followMs = Math.round(clamp(9000 + km * 1100, 10000, 22000))
+  // (slow enough for the 3D imagery to load as the camera moves)
+  const followMs = Math.round(clamp(10000 + km * 1800, 12000, 26000))
   // Fit the whole area with some room around it. The map's field of view is
   // about 35 degrees top to bottom; on a portrait phone the narrow side is
   // across, so fit to whichever is tighter.
