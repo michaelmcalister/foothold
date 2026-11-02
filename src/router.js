@@ -13,6 +13,7 @@ export const router = createRouter({
       component: () => import('./app/AppShell.vue'),
       children: [
         { path: '', name: 'map', component: () => import('./views/app/MapView.vue') },
+        { path: 'plan', name: 'plan', component: () => import('./views/app/PlanView.vue'), meta: { full: true } },
         { path: 'record', name: 'record', component: () => import('./views/app/RecordView.vue'), meta: { full: true } },
         { path: 'result/:id', name: 'result', component: () => import('./views/app/ResultView.vue'), meta: { full: true } },
         { path: 'recap/:id', name: 'recap', component: () => import('./views/app/RecapView.vue'), meta: { full: true } },

@@ -34,6 +34,8 @@ Cell      { h3, owner, ownerName, ownerColour, mine, strength, daysToWild }
 Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
+Route     { id, name, mode, ring: [[lng, lat], ...], distanceM, createdAt, updatedAt }
+            (a planned route; a closed loop's ring ends where it starts; private to its owner)
 ```
 
 ## Routes
@@ -65,6 +67,9 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | POST | /api/integrations/formtrack | `{ token }` (a FormTrack personal token, `ftk_...`) | `{ linked: true, summary }` |
 | DELETE | /api/integrations/formtrack | | `{ linked: false }` |
 | GET | /api/integrations/formtrack/summary | | `{ today, readiness, strengthThisWeek }` |
+| GET | /api/routes | | `{ routes: Route[] }` (yours, newest first, max 200) |
+| POST | /api/routes | `{ id?, name, mode, ring }` (2 to 2000 points; with `id`, updates that route) | `{ route }` |
+| DELETE | /api/routes/:id | | `{ ok }` |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 
 ## FormTrack link
@@ -79,3 +84,13 @@ FormTrack exposes an MCP endpoint at `{FORMTRACK_URL}/mcp/{ftk_token}`
 The token is stored encrypted at rest (AES-GCM with the `TOKEN_KEY`
 secret) and never returned to the app. Writing runs back into FormTrack
 needs a small FormTrack change, see `docs/FORMTRACK.md`.
+
+## Planned routes
+
+The route planner (`/app/plan`, logic in `src/lib/planner.js`) previews what
+a loop would take with the same engine rules as a real activity: `findLoops`
+decides whether it counts, `cellsForLoops` the hexes and `applyClaim` whether
+each is wild, yours or a rival's you would take or only weaken. The server
+checks routes with the same `cleanRoute` the app uses. Routes need
+`migrations/0005_routes.sql`, and they are included in Download my data.
+

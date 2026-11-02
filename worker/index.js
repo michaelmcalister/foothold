@@ -13,6 +13,7 @@ import { encryptSecret, decryptSecret } from './crypto.js'
 import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
+import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -357,6 +358,8 @@ async function feed(env, user) {
   return { items: rows.map((r) => ({ activity: activityOut(r, user.id, r.given), userName: r.user_name, userColour: r.user_colour, mine: r.user_id === user.id })) }
 }
 
+const routeOut = (r) => ({ id: r.id, name: r.name, mode: r.mode, ring: parse(r.ring, []), distanceM: r.distance_m, createdAt: r.created_at, updatedAt: r.updated_at })
+
 async function route(req, env, url, user, ctx) {
   const path = url.pathname
   const m = req.method
@@ -571,6 +574,35 @@ async function route(req, env, url, user, ctx) {
         .bind(user.id, s, now).run()
     }
     return json({ plan })
+  }
+
+  // Planned routes (the route planner), private to the player
+  if (path === '/api/routes' && m === 'GET') {
+    const rows = (await env.DB.prepare('SELECT * FROM routes WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?').bind(user.id, MAX_ROUTES).all()).results
+    return json({ routes: rows.map(routeOut) })
+  }
+  if (path === '/api/routes' && m === 'POST') {
+    let r
+    try { r = cleanRoute(body) } catch (e) { bad(e.message) }
+    const id = body.id == null ? null : String(body.id)
+    if (id) {
+      const res = await env.DB.prepare('UPDATE routes SET name = ?, mode = ?, ring = ?, distance_m = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+        .bind(r.name, r.mode, JSON.stringify(r.ring), r.distanceM, now, id, user.id).run()
+      if (!res.meta?.changes) return err('That route is gone.', 404, 'not_found')
+      return json({ route: routeOut(await env.DB.prepare('SELECT * FROM routes WHERE id = ?').bind(id).first()) })
+    }
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM routes WHERE user_id = ?').bind(user.id).first()
+    if ((n?.n || 0) >= MAX_ROUTES) bad(`You have ${MAX_ROUTES} saved routes. Delete one to save another.`, 409, 'too_many_routes')
+    const newId = uid()
+    await env.DB.prepare('INSERT INTO routes (id, user_id, name, mode, ring, distance_m, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(newId, user.id, r.name, r.mode, JSON.stringify(r.ring), r.distanceM, now, now).run()
+    return json({ route: routeOut(await env.DB.prepare('SELECT * FROM routes WHERE id = ?').bind(newId).first()) })
+  }
+  const rm = path.match(/^\/api\/routes\/([A-Za-z0-9-]{1,64})$/)
+  if (rm && m === 'DELETE') {
+    const res = await env.DB.prepare('DELETE FROM routes WHERE id = ? AND user_id = ?').bind(rm[1], user.id).run()
+    if (!res.meta?.changes) return err('That route is gone.', 404, 'not_found')
+    return json({ ok: true })
   }
 
   // Notifications

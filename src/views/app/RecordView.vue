@@ -1,9 +1,10 @@
 <script setup>
 // Record a run, walk or ride. Shows time, distance and pace, the route on
 // the map, and how far you are from closing your loop. Also imports GPX
-// files from a watch, and (in the practice map) simulates a loop.
+// files from a watch, and (in the practice map) simulates a loop. A route
+// from the planner shows dashed, with how far off it you are.
 import { ref, computed, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import { rec, start, pause, resume, stop } from '../../lib/recorder.js'
 import { api, isLocal } from '../../lib/api/index.js'
@@ -14,15 +15,34 @@ import { setLastResult } from '../../lib/lastResult.js'
 import { beginRun, finishRun, endRun } from '../../lib/audio/runAudio.js'
 import { audio } from '../../lib/audio/settings.js'
 import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
+import { planned, setPlanned } from '../../lib/plannedRoute.js'
+import { offRouteM } from '../../lib/planner.js'
 
 const router = useRouter()
-const mode = ref(store.mode)
+const here = useRoute()
+// A planned route only when we came from the planner
+const plannedRing = ref(here.query.route === 'planned' && planned.route ? planned.route.ring : null)
+const mode = ref(plannedRing.value ? planned.route.mode : store.mode)
 const saving = ref(false)
 const error = ref(null)
 const fileInput = ref(null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
+const offRoute = computed(() => {
+  if (!plannedRing.value || !me.value) return null
+  return Math.round(offRouteM(me.value, plannedRing.value))
+})
+const routeLine = computed(() => {
+  if (!plannedRing.value) return null
+  if (!live.value) return `Following ${planned.route.name}. The dashed line is your route.`
+  if (offRoute.value == null) return null
+  return offRoute.value <= 25 ? 'On route.' : `${offRoute.value} m off route. Head back to the dashed line when you can.`
+})
+function dropRoute() {
+  plannedRing.value = null
+  setPlanned(null)
+}
 const loopReady = computed(() => rec.distanceM > 400 && rec.toStartM != null && rec.toStartM <= 30)
 const loopHint = computed(() => {
   if (rec.status !== 'recording' || rec.distanceM < 150) return null
@@ -109,11 +129,15 @@ onBeforeUnmount(() => {
 <template>
   <div class="rec">
     <div class="maparea">
-      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" />
+      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
       <div v-if="loopHint" class="loophint" :class="{ ready: loopReady }" aria-live="polite">{{ loopHint }}</div>
+      <div v-if="routeLine" class="routeline" :class="{ off: offRoute > 25 }" aria-live="polite">
+        <span>{{ routeLine }}</span>
+        <button v-if="!live" type="button" class="drop" aria-label="Stop following this route" @click="dropRoute">×</button>
+      </div>
     </div>
 
     <section class="panel-bottom">
@@ -184,6 +208,15 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .loophint.ready { background: var(--you); color: #fff; }
+.routeline {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.95rem; min-height: 44px;
+  box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
+}
+.routeline span { flex: 1; min-width: 0; }
+.routeline.off { background: #FFF4DE; color: #5A3B00; }
+.routeline .drop { border: 0; background: var(--soft); width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--ink); flex: none; }
 .panel-bottom {
   background: var(--paper); padding: 18px var(--pad) calc(18px + env(safe-area-inset-bottom));
   display: grid; gap: 14px; border-top: 1px solid var(--line);

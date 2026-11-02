@@ -229,7 +229,7 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
         <p v-if="next.paceRange" class="small"><strong>Pace:</strong> {{ pace(next.paceRange[0]) }} to {{ pace(next.paceRange[1]) }} per km</p>
         <div class="row">
           <a v-if="next.formtrack" class="btn" :href="formtrackUrl" target="_blank" rel="noopener">Do it in FormTrack</a>
-          <RouterLink v-else-if="next.territory" class="btn" to="/app">Find a loop that takes ground</RouterLink>
+          <RouterLink v-else-if="next.territory" class="btn" :to="{ name: 'plan', query: { suggest: 1, km: next.distanceKm } }">Plan a loop that takes ground</RouterLink>
           <RouterLink v-else-if="next.type !== 'rest'" class="btn" :to="{ name: 'record' }">Start it</RouterLink>
           <button class="btn quiet" type="button" @click="openEdit(next)">Change it</button>
         </div>

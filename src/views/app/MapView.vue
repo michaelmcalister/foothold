@@ -112,7 +112,10 @@ async function suggest() {
           </div>
           <button class="close" type="button" aria-label="Close" @click="suggestion = null">×</button>
         </div>
-        <RouterLink class="btn block" :to="{ name: 'record' }">Start this loop</RouterLink>
+        <div class="actions">
+          <RouterLink class="btn" :to="{ name: 'record' }">Start this loop</RouterLink>
+          <RouterLink class="btn quiet" :to="{ name: 'plan', query: { suggest: 1, km: suggestion.distanceKm } }">Edit in planner</RouterLink>
+        </div>
       </template>
       <template v-else>
         <div v-if="nudge" class="nudge">
@@ -123,6 +126,7 @@ async function suggest() {
           <RouterLink class="btn" :to="{ name: 'record' }">Start a {{ store.mode }}</RouterLink>
           <button class="btn quiet" type="button" :disabled="suggesting" @click="suggest">{{ suggesting ? 'Finding a loop' : 'Suggest a loop' }}</button>
         </div>
+        <RouterLink class="planlink small" :to="{ name: 'plan' }">Plan a route and see what it takes</RouterLink>
       </template>
     </div>
   </div>
@@ -154,6 +158,7 @@ async function suggest() {
   max-width: 520px; margin: 0 auto;
 }
 .nudge { display: grid; gap: 2px; }
+.planlink { justify-self: center; color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; padding: 10px; margin: -8px 0 -6px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .pick .hexdot { width: 20px; height: 18px; margin-top: 3px; }
