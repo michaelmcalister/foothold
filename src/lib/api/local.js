@@ -15,6 +15,9 @@ import {
 import { isCrest } from '../crests.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
+import { checkText } from '../social/filter.js'
+import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, crestFor, groundOf } from '../social/leagues.js'
+import { practiceCommentsFor } from '../social/practice.js'
 
 const DAY = 86400000
 const ME_DEFAULT_COLOUR = '#2E55E6'
@@ -54,6 +57,7 @@ async function state() {
     losses: await kv.get('losses', []), // hexes rivals took from you: [{ h3, mode, at, by }]
     efforts: await kv.get('efforts', []), // stronghold efforts, everyone's (practice rivals too)
     bests: await kv.get('bests', {}), // your personal bests: { mode: { key: { value, activityId, at } } }
+    social: await kv.get('social', { comments: [], reports: [], leagues: [], swaps: [], decided: [] }),
   }
   if (!S.user) {
     S.user = {
@@ -88,6 +92,7 @@ const save = {
   losses: () => kv.set('losses', S.losses.slice(-3000)),
   efforts: () => kv.set('efforts', S.efforts),
   bests: () => kv.set('bests', S.bests),
+  social: () => kv.set('social', S.social),
 }
 
 function player(id) {
@@ -271,6 +276,7 @@ async function tick() {
     for (const [h, c] of updated) cells.set(h, c)
     logLosses(diff, b.mode || 'run', b.defender, now)
     b.lastResponse = now
+    recordSwaps(diff.taken, b.defender, now)
     if (diff.taken.length) {
       const who = player(b.defender).name
       notify('battle', `${who} took back ${diff.taken.length} hexes. Will you answer before the battle ends?`, now)
@@ -298,6 +304,7 @@ async function tick() {
       }
       S.activities.push(res.activity)
       const fromMe = logLosses(res.diff, 'run', who, now)
+      recordSwaps(res.diff.taken, who, now, res.activity.id)
       if (fromMe) notify('battle', `${player(who).name} ran the ${run.loopName} and took ${fromMe} of your hexes. Run it back?`, now)
       changed = true
     }
@@ -337,7 +344,7 @@ async function tick() {
     S.world.weekNotice = wk.key
   }
   await save.world()
-  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses(), save.efforts()])
+  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses(), save.efforts(), save.social()])
 }
 
 // A new season softens everyone's ground, the same as the server's hourly
@@ -355,6 +362,46 @@ async function seasonTick(now) {
   S.world.seasonReset = season.id
   await save.world()
 }
+
+// ---- social: swaps, practice comments ----
+// Who took ground from whom, only where the player is involved (for the rivals list)
+function recordSwaps(taken, taker, at, activityId = null) {
+  const byLoser = new Map()
+  for (const t of taken || []) if (t.from && t.from !== taker && (taker === S.user.id || t.from === S.user.id)) byLoser.set(t.from, (byLoser.get(t.from) || 0) + 1)
+  for (const [loser, n] of byLoser) S.social.swaps.push({ activityId, taker, loser, n, at })
+  S.social.swaps = S.social.swaps.filter((s) => s.at >= Date.now() - SWAP_DAYS * DAY).slice(-2000)
+}
+
+// Practice rivals leave a kind word on some of your activities, a little while after
+function practiceComments() {
+  const decided = new Set(S.social.decided)
+  let changed = false
+  const foes = new Set(S.battles.flatMap((b) => [b.attacker, b.defender]))
+  const pool = RIVALS.filter((r) => foes.has(r.id))
+  for (const a of S.activities) {
+    if (a.userId !== S.user.id || a.rejected || decided.has(a.id)) continue
+    decided.add(a.id)
+    changed = true
+    for (const c of practiceCommentsFor(a, pool.length ? pool : RIVALS, rng('comments:' + a.id))) {
+      S.social.comments.push({ id: 'pc-' + uid().slice(0, 10), activityId: a.id, ...c })
+    }
+  }
+  if (changed) S.social.decided = [...decided].slice(-1000)
+  return changed
+}
+
+const hiddenFor = (c) => S.social.reports.some((r) => r.commentId === c.id && r.reporter === S.user.id)
+const visibleComments = (activityId, now = Date.now()) => S.social.comments.filter((c) => c.activityId === activityId && c.at <= now && !hiddenFor(c)).sort((a, b) => a.at - b.at)
+const withCount = (a) => ({ ...a, comments: visibleComments(a.id).length })
+function commentOut(c, ownerId) {
+  const p = player(c.userId)
+  const mine = c.userId === S.user.id
+  return { id: c.id, userId: c.userId, name: p.name, colour: p.colour, text: c.text, at: c.at, mine, canDelete: mine || ownerId === S.user.id }
+}
+function leagueOut(l) {
+  return { id: l.id, name: l.name, code: l.code, members: l.members.length, mine: true, createdByMe: l.createdBy === S.user.id, createdAt: l.createdAt }
+}
+const myLeagues = () => S.social.leagues.filter((l) => l.members.some((m) => m.userId === S.user.id))
 
 // ---- API (docs/API.md) ----
 function strongholdOut(sh, mode, now) {
@@ -432,6 +479,7 @@ export const local = {
       return { ...out, message: crownMessage(out) }
     })
     S.activities.unshift(res.activity)
+    recordSwaps(res.diff.taken, S.user.id, now, res.activity.id)
     await kv.set(`track:${res.activity.id}`, res.track)
     if (!res.activity.rejected) S.visited[res.activity.id] = { at: res.activity.startedAt, mode, cells: visitedCells(res.track) }
     for (const b of res.battles) {
@@ -460,8 +508,9 @@ export const local = {
 
   async activities({ limit = 50, mine = true } = {}) {
     await state()
+    if (practiceComments()) await save.social()
     const list = mine ? S.activities.filter((a) => a.userId === S.user.id) : S.activities
-    return { activities: list.slice(0, limit) }
+    return { activities: list.slice(0, limit).map(withCount) }
   },
 
   async activity(id) {
@@ -469,7 +518,7 @@ export const local = {
     const activity = S.activities.find((a) => a.id === id)
     if (!activity) throw new Error('That activity is gone.')
     const track = (await kv.get(`track:${id}`, null)) || []
-    return { activity, track }
+    return { activity: withCount(activity), track }
   },
 
   async appeal(id, note) {
@@ -488,8 +537,10 @@ export const local = {
     delete S.visited[id]
     S.efforts = S.efforts.filter((e) => e.activityId !== id)
     if (gone?.bests) S.bests = { ...S.bests, [gone.mode]: rebuildBests(S.activities.filter((a) => a.userId === S.user.id && a.mode === gone.mode), gone.mode) }
+    S.social.comments = S.social.comments.filter((c) => c.activityId !== id)
+    S.social.reports = S.social.reports.filter((r) => r.activityId !== id)
     await kv.del(`track:${id}`)
-    await Promise.all([save.activities(), save.visited(), save.efforts(), save.bests()])
+    await Promise.all([save.activities(), save.visited(), save.efforts(), save.bests(), save.social()])
     return { ok: true }
   },
 
@@ -615,24 +666,29 @@ export const local = {
     }
   },
 
-  async rivals() {
+  async rivals({ mode = 'run' } = {}) {
     await state()
-    const swaps = new Map()
-    for (const b of S.battles) {
-      const other = b.attacker === S.user.id ? b.defender : b.defender === S.user.id ? b.attacker : null
-      if (other) swaps.set(other, (swaps.get(other) || 0) + b.hexes.length)
-    }
-    // Neighbours: rivals whose ground is near yours, even before a battle
-    return {
-      rivals: [...swaps.entries()].map(([id, n]) => ({ userId: id, name: player(id).name, colour: player(id).colour, swaps: n })).sort((a, b) => b.swaps - a.swaps),
-    }
+    const now = Date.now()
+    const sums = rivalSums(S.user.id, S.battles, S.social.swaps, now)
+    const publicHexes = (id) => groundOf(S.cells[mode].values(), id, now, (c) => !isWild(c, now)).hexes
+    const rivals = [...sums].map(([id, r]) => {
+      const p = player(id)
+      const last = S.activities.filter((a) => a.userId === id && !a.rejected).reduce((m, a) => Math.max(m, a.startedAt), 0)
+      return {
+        userId: id, name: p.name, colour: p.colour, crest: crestFor(p.name, p.colour),
+        swaps: r.swaps, tookFromThem: r.tookFromThem, tookFromYou: r.tookFromYou, record: r.record,
+        battle: r.live ? decorate(r.live, now) : null, lastActive: last || null, hexes: publicHexes(id),
+      }
+    })
+    return { rivals: sortRivals(rivals).slice(0, 50), you: { hexes: publicHexes(S.user.id) }, days: SWAP_DAYS }
   },
 
   async feed() {
     await state()
+    if (practiceComments()) await save.social()
     return {
       items: S.activities.filter((a) => !a.rejected).sort((a, b) => b.startedAt - a.startedAt).slice(0, 30)
-        .map((a) => ({ activity: a, userName: player(a.userId).name, userColour: player(a.userId).colour, userCrest: player(a.userId).crest || null, mine: a.userId === S.user.id })),
+        .map((a) => ({ activity: withCount(a), userName: player(a.userId).name, userColour: player(a.userId).colour, userCrest: player(a.userId).crest || null, mine: a.userId === S.user.id })),
     }
   },
 
@@ -644,6 +700,114 @@ export const local = {
     a.kudos = (a.kudos || 0) + (a.kudosGiven ? 1 : -1)
     await save.activities()
     return { kudos: a.kudos, given: a.kudosGiven }
+  },
+
+  async comments(activityId) {
+    await state()
+    const a = S.activities.find((x) => x.id === activityId)
+    if (!a) throw new Error('That activity is gone.')
+    if (practiceComments()) await save.social()
+    const list = visibleComments(activityId).map((c) => commentOut(c, a.userId))
+    return { comments: list, count: list.length }
+  },
+  async addComment(activityId, text) {
+    await state()
+    const a = S.activities.find((x) => x.id === activityId)
+    if (!a) throw new Error('That activity is gone.')
+    const check = checkText(text)
+    if (!check.ok) throw new Error(check.message)
+    const c = { id: 'c-' + uid().slice(0, 12), activityId, userId: S.user.id, text: check.text, at: Date.now() }
+    S.social.comments.push(c)
+    await save.social()
+    return { comment: commentOut(c, a.userId), count: visibleComments(activityId).length }
+  },
+  async deleteComment(activityId, commentId) {
+    await state()
+    const a = S.activities.find((x) => x.id === activityId)
+    const c = S.social.comments.find((x) => x.id === commentId && x.activityId === activityId)
+    if (!a || !c) throw new Error('That comment is gone.')
+    if (c.userId !== S.user.id && a.userId !== S.user.id) throw new Error('You can only delete your own comments, or comments on your own activities.')
+    S.social.comments = S.social.comments.filter((x) => x.id !== commentId)
+    await save.social()
+    return { ok: true, count: visibleComments(activityId).length }
+  },
+  async reportComment(activityId, commentId, reason) {
+    await state()
+    const c = S.social.comments.find((x) => x.id === commentId && x.activityId === activityId)
+    if (!c) throw new Error('That comment is gone.')
+    if (c.userId === S.user.id) throw new Error('That is your own comment. You can delete it instead.')
+    if (!S.social.reports.some((r) => r.commentId === commentId && r.reporter === S.user.id)) {
+      S.social.reports.push({ commentId, activityId, reporter: S.user.id, author: c.userId, text: c.text, reason: reason ? String(reason).slice(0, 200) : null, status: 'open', at: Date.now() })
+      await save.social()
+    }
+    return { ok: true }
+  },
+
+  async leagues() {
+    await state()
+    return { leagues: myLeagues().map(leagueOut), max: MAX_LEAGUES, maxMembers: MAX_MEMBERS }
+  },
+  async createLeague(name) {
+    await state()
+    const check = checkText(name, { min: 3, max: 40, what: 'name' })
+    if (!check.ok) throw new Error(check.code === 'empty' ? 'Give your league a name of at least three letters.' : check.message)
+    if (myLeagues().length >= MAX_LEAGUES) throw new Error(`You're in ${MAX_LEAGUES} leagues already. Leave one to start another.`)
+    let code
+    do code = makeCode()
+    while (S.social.leagues.some((l) => l.code === code))
+    const now = Date.now()
+    const l = { id: 'l-' + uid().slice(0, 8), name: check.text, code, createdBy: S.user.id, createdAt: now, members: [{ userId: S.user.id, joinedAt: now }] }
+    S.social.leagues.push(l)
+    await save.social()
+    return { league: leagueOut(l) }
+  },
+  async joinLeague(input) {
+    await state()
+    const code = normaliseCode(input)
+    if (!code) throw new Error('An invite code has six letters and numbers, like K7P2QX.')
+    const l = S.social.leagues.find((x) => x.code === code)
+    if (!l) throw new Error("We couldn't find that league. In practice mode you can only join leagues made on this phone. Joining a friend's league works once the Foothold server is on.")
+    if (l.members.some((m) => m.userId === S.user.id)) return { league: leagueOut(l), already: true }
+    if (l.members.length >= MAX_MEMBERS) throw new Error(`${l.name} is full. A league can have up to ${MAX_MEMBERS} members.`)
+    if (myLeagues().length >= MAX_LEAGUES) throw new Error(`You're in ${MAX_LEAGUES} leagues already. Leave one to join this one.`)
+    l.members.push({ userId: S.user.id, joinedAt: Date.now() })
+    await save.social()
+    return { league: leagueOut(l) }
+  },
+  async leaveLeague(id) {
+    await state()
+    const l = S.social.leagues.find((x) => x.id === id)
+    if (l) l.members = l.members.filter((m) => m.userId !== S.user.id)
+    // The last real player out closes the league
+    S.social.leagues = S.social.leagues.filter((x) => x.members.some((m) => !m.userId.startsWith('r-')))
+    await save.social()
+    return { ok: true }
+  },
+  async league(id, { mode = 'run' } = {}) {
+    await state()
+    const l = S.social.leagues.find((x) => x.id === id)
+    if (!l) throw new Error('That league is gone.')
+    if (!l.members.some((m) => m.userId === S.user.id)) throw new Error('Join this league with its invite code to see the table.')
+    const now = Date.now()
+    const cells = [...S.cells[mode].values()]
+    const live = (c) => !isWild(c, now)
+    const table = rankTable(l.members.map((m) => {
+      const p = player(m.userId)
+      return { userId: m.userId, name: p.name, colour: p.colour, ...groundOf(cells, m.userId, now, live), me: m.userId === S.user.id }
+    }))
+    const members = l.members.map((m) => ({ userId: m.userId, name: player(m.userId).name, colour: player(m.userId).colour, joinedAt: m.joinedAt, me: m.userId === S.user.id, owner: m.userId === l.createdBy }))
+      .sort((a, b) => a.joinedAt - b.joinedAt)
+    return { league: leagueOut(l), table, members, mode, days: GAIN_DAYS }
+  },
+  // Practice only: the practice rivals join so the table isn't empty
+  async invitePractice(id) {
+    await state()
+    const l = S.social.leagues.find((x) => x.id === id)
+    if (!l) throw new Error('That league is gone.')
+    const now = Date.now()
+    for (const r of RIVALS) if (l.members.length < MAX_MEMBERS && !l.members.some((m) => m.userId === r.id)) l.members.push({ userId: r.id, joinedAt: now })
+    await save.social()
+    return { league: leagueOut(l) }
   },
 
   async clubs() {
@@ -813,8 +977,22 @@ export const local = {
     await state()
     const mine = S.activities.filter((a) => a.userId === S.user.id)
     const visited = Object.fromEntries(mine.filter((a) => S.visited[a.id]).map((a) => [a.id, S.visited[a.id]]))
-    return { user: S.user, activities: mine, plan: S.plan, routes: S.routes, visited, losses: S.losses }
-    return { user: S.user, activities: S.activities.filter((a) => a.userId === S.user.id), plan: S.plan, bests: Object.fromEntries(['run', 'walk', 'ride'].map((m) => [m, bestsList(S.bests[m], m)])), efforts: S.efforts.filter((e) => e.userId === S.user.id) }
+    return {
+      user: S.user,
+      activities: mine,
+      plan: S.plan,
+      routes: S.routes,
+      visited,
+      losses: S.losses,
+      bests: Object.fromEntries(['run', 'walk', 'ride'].map((m) => [m, bestsList(S.bests[m], m)])),
+      efforts: S.efforts.filter((e) => e.userId === S.user.id),
+      comments: S.social.comments.filter((c) => c.userId === S.user.id),
+      reports: S.social.reports.filter((r) => r.reporter === S.user.id),
+      leagues: myLeagues().map(leagueOut),
+    }
+  },
+  async deleteAccount() {
+    return this.reset()
   },
   async reset() {
     await kv.clearAll()

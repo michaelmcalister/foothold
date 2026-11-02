@@ -29,7 +29,7 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             distanceM, durationS, movingS, paceSPerKm, elevGainM,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
-            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos,
+            appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos, comments,
             bests: { [key]: seconds, longest?: metres } | null }
 Cell      { h3, owner, ownerName, ownerColour, ownerCrest, mine, strength, daysToWild,
             flips, heat, lastFlip }   (flips: times taken; heat: recent flips, 0 after 30 quiet days)
@@ -43,6 +43,10 @@ Stronghold { id, name, mode, line (encoded polyline), start: {lat,lng},
             mine: { efforts, bestS, holds, toCrown } }
 StrongholdRun { id, name, elapsedS, efforts, holds, toCrown, tookFrom,
             holderName, message }
+Comment   { id, userId, name, colour, text, at, mine, canDelete }
+Rival     { userId, name, colour, crest: { letter, colour }, swaps, tookFromThem, tookFromYou,
+            record: { won, lost, draws }, battle: Battle|null, lastActive, hexes }
+League    { id, name, code, members, mine, createdByMe, createdAt }
 Battle    { id, attacker, defender, attackerName, defenderName, attackerColour, defenderColour,
             attackerCrest, defenderCrest, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
@@ -81,9 +85,18 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/leaderboard | `?mode=run&scope=local|world|club&board=all|season&lat&lng` | `{ rows: [{ userId, name, colour, crest, hexes, km2, me }], season: Season }`; with `board=season` rows are `{ userId, name, colour, crest, gained, me }`, ranked by hexes claimed or taken this season |
 | GET | /api/season | | `{ season: Season, previous: { season, gained, rank, players, badge: { id, name, min } } \| null, showSummary }` (previous counts every map; `showSummary` is true once, early in a season, until `seasonSeen` is set to this season's id) |
 | GET | /api/battles | | `{ live: Battle[], past: Battle[] }` |
-| GET | /api/rivals | | `{ rivals: [{ userId, name, colour, swaps }] }` |
+| GET | /api/rivals | `?mode=run` | `{ rivals: Rival[], you: { hexes }, days: 30 }` (up to 50, most ground swapped in the last 30 days first; `swaps` is all-time battle hexes as before; `hexes` counts public ground only) |
 | GET | /api/feed | | `{ items: [{ activity, userName, userColour, userCrest }] }` |
 | POST | /api/activities/:id/kudos | | `{ kudos }` |
+| GET | /api/activities/:id/comments | | `{ comments: Comment[], count }` (oldest first; comments you reported are hidden from you) |
+| POST | /api/activities/:id/comments | `{ text }` | `{ comment, count }` |
+| DELETE | /api/activities/:id/comments/:cid | | `{ ok, count }` (the author, or the activity's owner) |
+| POST | /api/activities/:id/comments/:cid/report | `{ reason? }` | `{ ok }` (recorded once per person for the owner to review) |
+| GET | /api/leagues | | `{ leagues: League[], max: 5, maxMembers: 50 }` (the leagues you're in) |
+| POST | /api/leagues | `{ name }` (3 to 40 characters) | `{ league }` (you join it) |
+| POST | /api/leagues/join | `{ code }` (the code or the whole invite link) | `{ league, already? }` |
+| POST | /api/leagues/:id/leave | | `{ ok }` (the last one out closes it) |
+| GET | /api/leagues/:id | `?mode=run` | `{ league, table: [{ userId, name, colour, gained7d, hexes, me, rank }], members: [{ userId, name, colour, joinedAt, me, owner }], mode, days: 7 }` (members only) |
 | GET | /api/clubs | | `{ clubs: [{ id, name, members, hexes, mine }] }` |
 | POST | /api/clubs | `{ name }` | `{ club }` |
 | POST | /api/clubs/:id/join | | `{ club }` |
@@ -102,6 +115,8 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/strongholds | `?mode=run&bbox=w,s,e,n` | `{ strongholds: Stronghold[] }` (no bbox: around your last activity) |
 | GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
 | GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
+| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, comments, reports, leagues, swaps }` |
+| DELETE | /api/me | | `{ ok }` (removes the account and all of the above; held ground goes wild) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
 | GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
@@ -151,3 +166,20 @@ Held hexes in a past week's recap come from today's map, so they count
 ground held then and still held now. On Monday (Sydney) the cron, and the
 practice map's tick, send "Your week in Foothold is ready. Want a look?"
 (kind `week`) to anyone who got out the week before.
+## Comments, leagues and rivals
+
+- Comments are tidied (spaces squashed, invisible characters dropped),
+  1 to 280 characters, and checked by `src/lib/social/filter.js` on the
+  server: links, slurs and abuse get a 400 with `code` `link` or `unkind`.
+  Limits: 30 comments an hour, 20 reports a day. The activity's owner gets a
+  `comment` notification. Deleting an activity deletes its comments and
+  their reports.
+- Invite codes are 6 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`. The
+  invite link is `{app}/#/app/leagues/join/CODE`. Up to 5 leagues each and 50
+  members a league (`league_limit`, `league_full`). Joining is limited to 20
+  tries an hour so codes can't be guessed.
+- League tables and rival hex counts only count public ground: hexes inside
+  anyone's privacy zone are left out for everyone, including you.
+- `tookFromThem` and `tookFromYou` come from the `swaps` table, written with
+  each activity. The practice game (local.js) keeps the same records in the
+  browser, and its practice rivals leave the odd friendly comment.

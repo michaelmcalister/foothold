@@ -27,7 +27,12 @@ import BrandMark from '../components/BrandMark.vue'
         <li>Ground you hold, your name, colour and crest, and your activities' distance and time.</li>
         <li>Never your home. Ground inside your privacy zones is hidden from everyone else, and the start and end of your routes inside a zone are trimmed.</li>
         <li>Never where you are right now. Claims show up after a delay, not live.</li>
+        <li>Comments you leave on an activity, with your name, to anyone who can see that activity. Deleting an activity deletes its comments.</li>
+        <li>In a private league, the other members see your name, colour and how many hexes you hold and gained this week. Ground inside your privacy zones is never counted.</li>
       </ul>
+
+      <h2>Reports</h2>
+      <p>If you report a comment, we keep a copy of it and who reported it so we can review it. The person who wrote it isn't told who reported them.</p>
 
       <h2>What we never do</h2>
       <ul>

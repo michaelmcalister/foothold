@@ -4,6 +4,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
+import ActivityComments from '../../components/ActivityComments.vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, dateLong, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -110,6 +111,8 @@ async function remove() {
         </tbody>
       </table>
     </section>
+
+    <ActivityComments :activity-id="a.id" @count="(n) => (a.comments = n)" />
 
     <div class="actions">
       <RouterLink class="btn" :to="{ name: 'recap', params: { id: a.id } }">Watch recap</RouterLink>

@@ -124,6 +124,7 @@ export function activityOut(row, viewerId, kudosGiven = false) {
     rejected: !!row.rejected,
     rejectReason: row.reject_reason || null,
     kudos: row.kudos ?? 0,
+    comments: row.comments ?? 0,
     kudosGiven: !!kudosGiven,
     mine: row.user_id === viewerId,
     bests: parse(row.bests, null), // personal best efforts found in it (engine/bests.js)
@@ -140,7 +141,8 @@ export function activityOut(row, viewerId, kudosGiven = false) {
 // Columns for activity lists, without the heavy track JSON
 export const ACTIVITY_COLS = `a.id, a.user_id, a.mode, a.source, a.started_at, a.distance_m, a.duration_s, a.moving_s, a.pace_s_per_km, a.elev_gain_m,
   a.loops, a.gain, a.claimed, a.reinforced, a.taken, a.held, a.trust, a.flags, a.rejected, a.reject_reason, a.appeal, a.start, a.bbox, a.bests,
-  (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos`
+  (SELECT COUNT(*) FROM kudos k WHERE k.activity_id = a.id) AS kudos,
+  (SELECT COUNT(*) FROM comments c WHERE c.activity_id = a.id) AS comments`
 
 // ---- cells ----
 
@@ -226,6 +228,10 @@ export const LIMITS = {
   feedback: { max: 10, sec: 86400 },
   club: { max: 5, sec: 86400 },
   formtrack: { max: 10, sec: 3600 },
+  comment: { max: 30, sec: 3600 },
+  report: { max: 20, sec: 86400 },
+  league: { max: 10, sec: 86400 },
+  leagueJoin: { max: 20, sec: 3600 },
 }
 
 /** Count one use. Fails open if the table is missing so a hiccup can't lock everyone out. */

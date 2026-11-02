@@ -44,9 +44,20 @@ export const remote = {
   season: () => call('GET', '/api/season'),
   clubBoard: async () => ({ rows: (await call('GET', '/api/clubs')).clubs }),
   battles: () => call('GET', '/api/battles'),
-  rivals: () => call('GET', '/api/rivals'),
+  rivals: ({ mode } = {}) => call('GET', '/api/rivals' + q({ mode })),
   feed: () => call('GET', '/api/feed'),
   kudos: (id) => call('POST', `/api/activities/${encodeURIComponent(id)}/kudos`),
+  comments: (id) => call('GET', `/api/activities/${encodeURIComponent(id)}/comments`),
+  addComment: (id, text) => call('POST', `/api/activities/${encodeURIComponent(id)}/comments`, { text }),
+  deleteComment: (id, cid) => call('DELETE', `/api/activities/${encodeURIComponent(id)}/comments/${encodeURIComponent(cid)}`),
+  reportComment: (id, cid, reason) => call('POST', `/api/activities/${encodeURIComponent(id)}/comments/${encodeURIComponent(cid)}/report`, { reason }),
+  leagues: () => call('GET', '/api/leagues'),
+  createLeague: (name) => call('POST', '/api/leagues', { name }),
+  joinLeague: (code) => call('POST', '/api/leagues/join', { code }),
+  leaveLeague: (id) => call('POST', `/api/leagues/${encodeURIComponent(id)}/leave`),
+  league: (id, { mode } = {}) => call('GET', `/api/leagues/${encodeURIComponent(id)}` + q({ mode })),
+  // Practice mode only; real friends join with the invite link
+  invitePractice: async () => { throw new Error('Share the invite link to bring friends in.') },
   clubs: () => call('GET', '/api/clubs'),
   createClub: (name) => call('POST', '/api/clubs', { name }),
   joinClub: (id) => call('POST', `/api/clubs/${encodeURIComponent(id)}/join`),
@@ -72,14 +83,7 @@ export const remote = {
   ensureWorld: async () => null,
   loadFor: async () => null,
   cellsMap: async () => null,
-  exportData: async () => {
-    const [me, routes, run, walk, ride, mine] = await Promise.all([
-      call('GET', '/api/me'),
-      call('GET', '/api/routes'),
-      ...['run', 'walk', 'ride'].map((mode) => call('GET', '/api/bests' + q({ mode }))),
-      call('GET', '/api/strongholds/efforts'),
-    ])
-    return { ...me, routes: routes.routes, bests: { run: run.bests, walk: walk.bests, ride: ride.bests }, efforts: mine.efforts }
-  },
+  exportData: () => call('GET', '/api/me/export'),
+  deleteAccount: () => call('DELETE', '/api/me'),
   reset: async () => ({ ok: true }),
 }
