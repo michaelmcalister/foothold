@@ -10,6 +10,7 @@ import {
   findLoops, summarise, offset, distance, cellCentre, hexIsPrivate,
 } from '../engine/index.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
+import { cleanRoute, MAX_ROUTES } from '../planner.js'
 
 const DAY = 86400000
 const ME_DEFAULT_COLOUR = '#2E55E6'
@@ -44,6 +45,7 @@ async function state() {
     clubs: await kv.get('clubs', []),
     world: await kv.get('world', null),
     feedback: await kv.get('feedback', []),
+    routes: await kv.get('routes', []),
   }
   if (!S.user) {
     S.user = {
@@ -72,6 +74,7 @@ const save = {
   clubs: () => kv.set('clubs', S.clubs),
   world: () => kv.set('world', S.world),
   feedback: () => kv.set('feedback', S.feedback),
+  routes: () => kv.set('routes', S.routes),
 }
 
 function player(id) {
@@ -533,6 +536,37 @@ export const local = {
     return { ok: true }
   },
 
+  // Planned routes (the route planner)
+  async routes() {
+    await state()
+    return { routes: S.routes.slice().sort((a, b) => b.updatedAt - a.updatedAt) }
+  },
+  async saveRoute(body) {
+    await state()
+    const r = cleanRoute(body)
+    const now = Date.now()
+    if (body?.id != null) {
+      const old = S.routes.find((x) => x.id === body.id)
+      if (!old) throw new Error('That route is gone.')
+      Object.assign(old, r, { updatedAt: now })
+      await save.routes()
+      return { route: { ...old } }
+    }
+    if (S.routes.length >= MAX_ROUTES) throw new Error(`You have ${MAX_ROUTES} saved routes. Delete one to save another.`)
+    const route = { id: uid(), ...r, createdAt: now, updatedAt: now }
+    S.routes.push(route)
+    await save.routes()
+    return { route: { ...route } }
+  },
+  async deleteRoute(id) {
+    await state()
+    const n = S.routes.length
+    S.routes = S.routes.filter((x) => x.id !== id)
+    if (S.routes.length === n) throw new Error('That route is gone.')
+    await save.routes()
+    return { ok: true }
+  },
+
   // Local only
   async loadFor(mode = 'run', plannedKm = 0) {
     await state()
@@ -544,7 +578,7 @@ export const local = {
   },
   async exportData() {
     await state()
-    return { user: S.user, activities: S.activities.filter((a) => a.userId === S.user.id), plan: S.plan }
+    return { user: S.user, activities: S.activities.filter((a) => a.userId === S.user.id), plan: S.plan, routes: S.routes }
   },
   async reset() {
     await kv.clearAll()

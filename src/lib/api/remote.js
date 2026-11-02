@@ -58,10 +58,13 @@ export const remote = {
   unlinkFormtrack: () => call('DELETE', '/api/integrations/formtrack'),
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
+  routes: () => call('GET', '/api/routes'),
+  saveRoute: (body) => call('POST', '/api/routes', body),
+  deleteRoute: (id) => call('DELETE', `/api/routes/${encodeURIComponent(id)}`),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,
   cellsMap: async () => null,
-  exportData: () => call('GET', '/api/me'),
+  exportData: async () => ({ ...(await call('GET', '/api/me')), routes: (await call('GET', '/api/routes')).routes }),
   reset: async () => ({ ok: true }),
 }

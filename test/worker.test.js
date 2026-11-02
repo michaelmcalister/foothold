@@ -1,7 +1,7 @@
 // Worker tests: every route against a fake D1 (Node's built-in SQLite with
-// migrations/0001_init.sql applied), with FormTrack's MCP endpoint mocked.
+// every file in migrations/ applied in order), with FormTrack's MCP endpoint mocked.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import worker from '../worker/index.js'
 import { runCron } from '../worker/cron.js'
@@ -15,7 +15,8 @@ const DAY = 86400000
 // ---- a D1 lookalike: prepare().bind().first()/all()/run() and batch() ----
 function fakeD1() {
   const db = new DatabaseSync(':memory:')
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'))
+  const dir = new URL('../migrations/', import.meta.url)
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
   const stmt = (sql, args = []) => ({
     bind: (...a) => {
       if (a.some((v) => v === undefined)) throw new Error('D1_TYPE_ERROR: undefined bound')
@@ -328,5 +329,43 @@ describe('FormTrack week boundary', () => {
     expect(new Date(weekStart(Date.parse('2026-10-04T05:00:00Z'))).toISOString()).toBe('2026-09-27T14:00:00.000Z')
     // Monday 5 Oct is AEDT (+11)
     expect(new Date(weekStart(Date.parse('2026-10-05T03:00:00Z'))).toISOString()).toBe('2026-10-04T13:00:00.000Z')
+  })
+})
+
+describe('planned routes', () => {
+  const ring = [[151.15, -33.9], [151.155, -33.9], [151.155, -33.896], [151.15, -33.896], [151.15, -33.9]]
+
+  it('saves, lists, updates and deletes your routes', async () => {
+    const r = await call(A, 'POST', '/api/routes', { name: ' Park loop ', mode: 'run', ring })
+    expect(r.status).toBe(200)
+    expect(r.body.route).toMatchObject({ name: 'Park loop', mode: 'run', ring })
+    expect(r.body.route.distanceM).toBeGreaterThan(1500)
+    const id = r.body.route.id
+
+    const list = await call(A, 'GET', '/api/routes')
+    expect(list.body.routes.map((x) => x.id)).toEqual([id])
+
+    const up = await call(A, 'POST', '/api/routes', { id, name: 'Park loop, longer', mode: 'walk', ring })
+    expect(up.body.route).toMatchObject({ id, name: 'Park loop, longer', mode: 'walk' })
+    expect((await call(A, 'GET', '/api/routes')).body.routes).toHaveLength(1)
+
+    expect((await call(A, 'DELETE', `/api/routes/${id}`)).body).toEqual({ ok: true })
+    expect((await call(A, 'GET', '/api/routes')).body.routes).toEqual([])
+    expect((await call(A, 'DELETE', `/api/routes/${id}`)).status).toBe(404)
+  })
+
+  it('keeps routes private to the player who made them', async () => {
+    const { body } = await call(A, 'POST', '/api/routes', { name: 'Mine', ring })
+    expect((await call(B, 'GET', '/api/routes')).body.routes).toEqual([])
+    expect((await call(B, 'DELETE', `/api/routes/${body.route.id}`)).status).toBe(404)
+    expect((await call(B, 'POST', '/api/routes', { id: body.route.id, name: 'Taken', ring })).status).toBe(404)
+    expect((await call(A, 'GET', '/api/routes')).body.routes[0].name).toBe('Mine')
+  })
+
+  it('refuses routes it cannot use', async () => {
+    expect((await call(A, 'POST', '/api/routes', { ring: [[151.15, -33.9]] })).status).toBe(400)
+    expect((await call(A, 'POST', '/api/routes', { ring: [[999, 0], [0, 0]] })).status).toBe(400)
+    expect((await call(A, 'POST', '/api/routes', { ring, mode: 'swim' })).body.error).toMatch(/Mode/)
+    expect((await call(A, 'POST', '/api/routes', { ring: 'nope' })).status).toBe(400)
   })
 })
