@@ -643,6 +643,8 @@ export async function handleApi(req, env, ctx) {
     // Google Maps browser key for run recaps. It is a public key, locked to
     // this app's addresses in Google Cloud, so it is fine to hand to the app.
     if (env.GOOGLE_MAPS_KEY) out.maps = { googleKey: String(env.GOOGLE_MAPS_KEY) }
+    // Spotify app id for music during runs (public; sign-in uses PKCE, no secret)
+    if (env.SPOTIFY_CLIENT_ID) out.spotify = { clientId: String(env.SPOTIFY_CLIENT_ID) }
     res = json(out)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res

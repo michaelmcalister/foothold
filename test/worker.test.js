@@ -107,6 +107,9 @@ describe('users', () => {
     env.GOOGLE_MAPS_KEY = 'browser-key'
     expect((await call(null, 'GET', '/api/config')).body.maps).toEqual({ googleKey: 'browser-key' })
     delete env.GOOGLE_MAPS_KEY
+    env.SPOTIFY_CLIENT_ID = 'spot-id'
+    expect((await call(null, 'GET', '/api/config')).body.spotify).toEqual({ clientId: 'spot-id' })
+    delete env.SPOTIFY_CLIENT_ID
   })
   it('hands other paths to the static app', async () => {
     const res = await worker.fetch(new Request('https://foothold.test/map'), env)

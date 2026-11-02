@@ -91,6 +91,29 @@ Google Cloud.
 Google's terms don't allow saving their imagery outside the map, so recaps
 play live in the app and aren't exported as video files.
 
+## Music during runs (Spotify)
+
+Foothold can start Spotify when a run starts and turn it down while the voice
+coach talks. Sign-in uses PKCE in the browser, so there is no client secret.
+
+1. At developer.spotify.com, create an app (Web API). The owner needs Spotify
+   Premium.
+2. Add the redirect URI `https://foothold.michael-0d4.workers.dev/spotify/callback/`
+   (and `https://michaelmcalister.github.io/foothold/spotify/callback/` for
+   the GitHub Pages copy). It must match exactly, trailing slash included.
+3. In the app's User Management, add the Spotify email of each tester.
+4. In Cloudflare, add the app's Client ID to the Worker as a variable named
+   `SPOTIFY_CLIENT_ID`. For GitHub Pages, add a repository variable with the
+   same name.
+
+Limits: since March 2026, a Spotify app in development mode allows up to five
+listed users, each with Premium. Going wider needs Spotify's extended quota,
+which Spotify currently grants only to established businesses with a large
+user base. Playing music needs Premium for every user.
+
+Phones: Spotify's API can turn the volume down on Android, but not on iPhone,
+so on iPhone the music pauses for a moment while the coach talks.
+
 ## Developing locally
 
 ```bash

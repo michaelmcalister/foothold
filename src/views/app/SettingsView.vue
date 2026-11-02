@@ -5,6 +5,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast, locate } from '../../lib/store.js'
+import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
 
 const router = useRouter()
 const name = ref(store.user.name)
@@ -134,12 +135,14 @@ async function startAgain() {
       <button class="btn secondary" type="button" @click="addZoneHere">Add a zone where I am</button>
     </section>
 
+    <MusicVoiceSettings />
+
     <section class="panel stack" aria-labelledby="s-ft">
       <h2 id="s-ft">FormTrack</h2>
       <template v-if="store.user.formtrack?.linked">
         <p class="notice good">Linked. Your coach plans fit around today's FormTrack session and your recovery.</p>
         <div v-if="ftSummary" class="small">
-          <p v-if="ftSummary.today"><strong>Today in FormTrack:</strong> {{ ftSummary.today }}</p>
+          <p v-if="ftSummary.today"><strong>Today in FormTrack:</strong> {{ ftSummary.today.title || ftSummary.today }}</p>
           <p v-if="ftSummary.readiness != null"><strong>Readiness:</strong> {{ ftSummary.readiness }} of 100</p>
           <p v-if="ftSummary.strengthThisWeek != null"><strong>Strength sessions this week:</strong> {{ ftSummary.strengthThisWeek }}</p>
         </div>

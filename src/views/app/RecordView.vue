@@ -11,6 +11,9 @@ import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack, parseGpx } from '../../lib/tracks.js'
 import { setLastResult } from '../../lib/lastResult.js'
+import { beginRun, finishRun, endRun } from '../../lib/audio/runAudio.js'
+import { audio } from '../../lib/audio/settings.js'
+import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
 
 const router = useRouter()
 const mode = ref(store.mode)
@@ -31,7 +34,15 @@ const loopHint = computed(() => {
 function begin() {
   error.value = null
   start(mode.value)
+  // Same tap starts the music and wakes the voice (phones need a tap for sound)
+  beginRun(mode.value, { onError: (msg) => toast(msg) })
 }
+const audioLine = computed(() => {
+  const parts = []
+  if (audio.voice) parts.push('Voice coach on')
+  if (spotifyLinked() && audio.spotifyAutoplay) parts.push(audio.spotifyContextName ? `Spotify: ${audio.spotifyContextName}` : 'Spotify on')
+  return parts.join('. ') || 'Music and voice off'
+})
 
 async function save(payload, label = 'Saving') {
   saving.value = label
@@ -49,7 +60,9 @@ async function save(payload, label = 'Saving') {
 }
 
 async function finish() {
+  const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   const out = stop()
+  finishRun(totals)
   if (out.points.length < 10) {
     toast('That was too short to save. Nothing was recorded.')
     return
@@ -60,6 +73,7 @@ async function finish() {
 function cancel() {
   if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
   stop()
+  endRun()
 }
 
 async function simulate() {
@@ -88,7 +102,7 @@ async function onFile(e) {
 onBeforeUnmount(() => {
   // Leaving mid-recording keeps the recording going only if we're still on screen;
   // a route change stops it so GPS isn't left running.
-  if (rec.status !== 'idle') stop()
+  if (rec.status !== 'idle') { stop(); endRun() }
 })
 </script>
 
@@ -121,6 +135,7 @@ onBeforeUnmount(() => {
         </p>
         <div v-if="rec.error || error" class="notice bad">{{ rec.error || error }}</div>
         <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
+        <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
         <div class="alt">
           <button class="btn quiet small" type="button" @click="fileInput.click()">Import a GPX file</button>
           <button v-if="isLocal" class="btn quiet small" type="button" @click="simulate">Practice loop (no GPS)</button>
@@ -186,4 +201,5 @@ onBeforeUnmount(() => {
   animation: spin 0.9s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+.audioline { justify-self: center; color: var(--ink-60); text-decoration: underline; text-underline-offset: 3px; }
 </style>
