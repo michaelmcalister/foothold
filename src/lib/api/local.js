@@ -9,7 +9,9 @@ import {
   weeklyKm, loadCheck, applyClaim, openBattles, battleScore, cellsForLoops, effortGain,
   findLoops, summarise, offset, distance, cellCentre, hexIsPrivate,
   visitedCells, mergeExplored, weekOf, weekFor, prevWeek, isWeekKey, weeklyQuests, weekRecap, MODES,
+  seasonFor, seasonOut, seasonById, previousSeason, seasonGains, seasonSummary, showSummary, softReset, heatOf,
 } from '../engine/index.js'
+import { isCrest } from '../crests.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
 
@@ -18,12 +20,12 @@ const ME_DEFAULT_COLOUR = '#2E55E6'
 const WORLD_VERSION = 4 // bump to re-seed the practice rivals after a change
 
 export const RIVALS = [
-  { id: 'r-sam', name: 'Sam', colour: '#E8A817' },
-  { id: 'r-priya', name: 'Priya', colour: '#E5604D' },
-  { id: 'r-jess', name: 'Jess', colour: '#1A9E8F' },
-  { id: 'r-tom', name: 'Tom', colour: '#8A5CD8' },
-  { id: 'r-mei', name: 'Mei', colour: '#D6418E' },
-  { id: 'r-lachie', name: 'Lachie', colour: '#6E8B22' },
+  { id: 'r-sam', name: 'Sam', colour: '#E8A817', crest: 'sun' },
+  { id: 'r-priya', name: 'Priya', colour: '#E5604D', crest: 'bolt' },
+  { id: 'r-jess', name: 'Jess', colour: '#1A9E8F', crest: 'wave' },
+  { id: 'r-tom', name: 'Tom', colour: '#8A5CD8', crest: 'peak' },
+  { id: 'r-mei', name: 'Mei', colour: '#D6418E', crest: 'star' },
+  { id: 'r-lachie', name: 'Lachie', colour: '#6E8B22', crest: 'leaf' },
 ]
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36))
@@ -55,6 +57,7 @@ async function state() {
       id: 'me-' + uid().slice(0, 8),
       name: '',
       colour: ME_DEFAULT_COLOUR,
+      crest: null,
       units: 'metric',
       mode: 'run',
       zones: [],
@@ -83,8 +86,8 @@ const save = {
 }
 
 function player(id) {
-  if (id === S.user.id) return { id, name: S.user.name || 'You', colour: S.user.colour }
-  return RIVALS.find((r) => r.id === id) || { id, name: 'Someone', colour: '#888' }
+  if (id === S.user.id) return { id, name: S.user.name || 'You', colour: S.user.colour, crest: S.user.crest || null }
+  return RIVALS.find((r) => r.id === id) || { id, name: 'Someone', colour: '#888', crest: null }
 }
 
 function notify(kind, text, at = Date.now()) {
@@ -211,7 +214,7 @@ export async function ensureWorld(where) {
     const old = S.clubs.find((o) => o.id === c.id)
     return old ? { ...c, members: [...new Set([...c.members, ...old.members])] } : c
   })
-  S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null }
+  S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null, seasonReset: seasonFor(now).id }
   await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses()])
   return S.world
 }
@@ -220,6 +223,7 @@ export async function ensureWorld(where) {
 async function tick() {
   if (!S.world) return
   const now = Date.now()
+  await seasonTick(now)
   if (now - (S.world.lastTick || 0) < 3 * 3600000) return
   S.world.lastTick = now
   const rand = rng(Math.floor(now / 3600000))
@@ -298,6 +302,22 @@ async function tick() {
   if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses()])
 }
 
+// A new season softens everyone's ground, the same as the server's hourly
+// cron. A world made before seasons existed starts counting from now.
+async function seasonTick(now) {
+  const season = seasonFor(now)
+  if (S.world.seasonReset === season.id) return
+  if (S.world.seasonReset) {
+    for (const mode of MODES) {
+      const updated = softReset(S.cells[mode], season, now)
+      for (const [h, c] of updated) S.cells[mode].set(h, c)
+      if (updated.size) await save.cells(mode)
+    }
+  }
+  S.world.seasonReset = season.id
+  await save.world()
+}
+
 // ---- API (docs/API.md) ----
 function decorate(b, now = Date.now()) {
   return {
@@ -306,6 +326,8 @@ function decorate(b, now = Date.now()) {
     defenderName: player(b.defender).name,
     attackerColour: player(b.attacker).colour,
     defenderColour: player(b.defender).colour,
+    attackerCrest: player(b.attacker).crest,
+    defenderCrest: player(b.defender).crest,
     score: b.finalScore || battleScore(b, S.cells[b.mode || 'run'], now),
   }
 }
@@ -321,7 +343,9 @@ export const local = {
 
   async updateMe(patch) {
     await state()
-    const allowed = ['name', 'colour', 'mode', 'zones', 'units', 'onboarded', 'goal', 'homeCentre']
+    if ('crest' in patch && patch.crest !== null && !isCrest(patch.crest)) throw new Error("That crest isn't one of the choices.")
+    if ('seasonSeen' in patch && patch.seasonSeen !== null && !seasonById(patch.seasonSeen)) throw new Error("That season isn't one we know.")
+    const allowed = ['name', 'colour', 'crest', 'mode', 'zones', 'units', 'onboarded', 'goal', 'homeCentre', 'seasonSeen']
     for (const k of allowed) if (k in patch) S.user[k] = patch[k]
     if (typeof S.user.name === 'string') S.user.name = S.user.name.trim().slice(0, 30)
     await save.user()
@@ -412,7 +436,10 @@ export const local = {
         if (p.lng < bbox[0] || p.lat < bbox[1] || p.lng > bbox[2] || p.lat > bbox[3]) continue
       }
       const pl = player(c.owner)
-      out.push({ h3: c.h3, owner: c.owner, ownerName: pl.name, ownerColour: pl.colour, mine, strength: Math.round(strength), daysToWild: daysUntilWild(c, now) })
+      out.push({
+        h3: c.h3, owner: c.owner, ownerName: pl.name, ownerColour: pl.colour, ownerCrest: pl.crest || null, mine,
+        strength: Math.round(strength), daysToWild: daysUntilWild(c, now), flips: c.flips || 0, heat: heatOf(c, now), lastFlip: c.lastFlip ?? null,
+      })
       if (out.length >= 5000) break
     }
     return { cells: out }
@@ -448,9 +475,23 @@ export const local = {
     }
   },
 
-  async leaderboard({ mode = 'run', scope = 'local' } = {}) {
+  async leaderboard({ mode = 'run', scope = 'local', board = 'all' } = {}) {
     await state()
     const now = Date.now()
+    const season = seasonFor(now)
+    if (board === 'season') {
+      const gains = seasonGains(S.activities.filter((a) => (a.mode || 'run') === mode), season)
+      let ids = [...new Set([S.user.id, ...RIVALS.map((r) => r.id)])]
+      if (scope === 'club') {
+        const club = S.clubs.find((c) => c.id === S.user.clubId)
+        ids = club ? [...new Set([S.user.id, ...club.members])] : [S.user.id]
+      }
+      const rows = ids.map((id) => {
+        const p = player(id)
+        return { userId: id, name: p.name, colour: p.colour, crest: p.crest || null, gained: gains.get(id) || 0, me: id === S.user.id }
+      }).filter((r) => r.gained || r.me).sort((a, b) => b.gained - a.gained || (a.me ? -1 : b.me ? 1 : 0))
+      return { rows, season: seasonOut(season, now) }
+    }
     const counts = new Map()
     for (const c of S.cells[mode].values()) {
       if (isWild(c, now)) continue
@@ -464,9 +505,19 @@ export const local = {
     const rows = ids.map((id) => {
       const p = player(id)
       const hexes = counts.get(id) || 0
-      return { userId: id, name: p.name, colour: p.colour, hexes, km2: Math.round(hexes * HEX_KM2 * 100) / 100, me: id === S.user.id }
+      return { userId: id, name: p.name, colour: p.colour, crest: p.crest || null, hexes, km2: Math.round(hexes * HEX_KM2 * 100) / 100, me: id === S.user.id }
     }).sort((a, b) => b.hexes - a.hexes)
-    return { rows }
+    return { rows, season: seasonOut(season, now) }
+  },
+
+  async season() {
+    await state()
+    await tick()
+    const now = Date.now()
+    const cur = seasonFor(now)
+    const prev = previousSeason(cur)
+    const previous = seasonSummary(seasonGains(S.activities, prev), S.user.id, prev)
+    return { season: seasonOut(cur, now), previous, showSummary: showSummary(previous, cur, S.user.seasonSeen ?? null, now) }
   },
 
   async clubBoard() {
@@ -510,7 +561,7 @@ export const local = {
     await state()
     return {
       items: S.activities.filter((a) => !a.rejected).sort((a, b) => b.startedAt - a.startedAt).slice(0, 30)
-        .map((a) => ({ activity: a, userName: player(a.userId).name, userColour: player(a.userId).colour, mine: a.userId === S.user.id })),
+        .map((a) => ({ activity: a, userName: player(a.userId).name, userColour: player(a.userId).colour, userCrest: player(a.userId).crest || null, mine: a.userId === S.user.id })),
     }
   },
 

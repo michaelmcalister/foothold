@@ -17,14 +17,14 @@ import BrandMark from '../components/BrandMark.vue'
       <ul>
         <li><strong>Your routes.</strong> GPS points from runs, walks and rides you record or import, with times. This is how loops and ground are worked out.</li>
         <li><strong>Routes you plan.</strong> The name, type and line of routes you save in the planner. Only you can see them, and you can delete them any time.</li>
-        <li><strong>Your name on the map</strong> and the colour you pick.</li>
+                <li><strong>Your name on the map</strong> and the colour and crest you pick.</li>
         <li><strong>Heart rate and cadence</strong>, only if your watch sends them, used to check activities are genuine.</li>
         <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time.</li>
       </ul>
 
       <h2>What other players see</h2>
       <ul>
-        <li>Ground you hold, your name and colour, and your activities' distance and time.</li>
+        <li>Ground you hold, your name, colour and crest, and your activities' distance and time.</li>
         <li>Never your home. Ground inside your privacy zones is hidden from everyone else, and the start and end of your routes inside a zone are trimmed.</li>
         <li>Never where you are right now. Claims show up after a delay, not live.</li>
       </ul>

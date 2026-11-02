@@ -40,6 +40,7 @@ export function userOut(row) {
     id: row.id,
     name: row.name,
     colour: row.colour,
+    crest: row.crest || null,
     units: prefs.units || 'metric',
     mode: row.mode,
     zones: parse(row.zones, []),
@@ -48,18 +49,19 @@ export function userOut(row) {
     onboarded: !!prefs.onboarded,
     goal: prefs.goal ?? null,
     homeCentre: prefs.homeCentre ?? null,
+    seasonSeen: prefs.seasonSeen ?? null,
     formtrack: { linked: !!row.formtrack_token_enc, linkedAt: row.formtrack_linked_at || null },
   }
 }
 
-/** id -> { name, colour } for a set of user ids */
+/** id -> { name, colour, crest } for a set of user ids */
 export async function players(env, ids) {
   const out = new Map()
   const list = [...new Set(ids)].filter(Boolean)
   for (let i = 0; i < list.length; i += 90) {
     const part = list.slice(i, i + 90)
-    const rows = (await env.DB.prepare(`SELECT id, name, colour FROM users WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all()).results
-    for (const r of rows) out.set(r.id, { name: r.name, colour: r.colour })
+    const rows = (await env.DB.prepare(`SELECT id, name, colour, crest FROM users WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all()).results
+    for (const r of rows) out.set(r.id, { name: r.name, colour: r.colour, crest: r.crest || null })
   }
   return out
 }
@@ -149,7 +151,10 @@ export function wildAt(cell) {
 }
 
 export function rowToCell(r) {
-  return { h3: r.h3, owner: r.owner, strength: r.strength, visits: r.visits, lastVisit: r.last_visit, claimedAt: r.claimed_at, private: r.private ? true : undefined }
+  const c = { h3: r.h3, owner: r.owner, strength: r.strength, visits: r.visits, lastVisit: r.last_visit, claimedAt: r.claimed_at, private: r.private ? true : undefined }
+  if (r.flips) Object.assign(c, { flips: r.flips, lastFlip: r.last_flip ?? undefined, recentFlips: r.recent_flips || 0 })
+  if (r.season_reset) c.seasonReset = r.season_reset
+  return c
 }
 
 /** Live cells in [w, s, e, n] for one mode, as a Map for the engine */
@@ -172,11 +177,13 @@ export async function cellsByIds(env, mode, ids) {
 export function upsertCell(env, mode, c) {
   const { lat, lng } = cellCentre(c.h3)
   return env.DB.prepare(
-    `INSERT INTO cells (mode, h3, owner, strength, visits, last_visit, claimed_at, private, lat, lng, wild_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO cells (mode, h3, owner, strength, visits, last_visit, claimed_at, private, lat, lng, wild_at, flips, last_flip, recent_flips)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (mode, h3) DO UPDATE SET owner = excluded.owner, strength = excluded.strength, visits = excluded.visits,
-       last_visit = excluded.last_visit, claimed_at = excluded.claimed_at, private = excluded.private, wild_at = excluded.wild_at`,
-  ).bind(mode, c.h3, c.owner, c.strength, c.visits || 1, c.lastVisit ?? c.claimedAt, c.claimedAt ?? c.lastVisit, c.private ? 1 : 0, lat, lng, wildAt(c))
+       last_visit = excluded.last_visit, claimed_at = excluded.claimed_at, private = excluded.private, wild_at = excluded.wild_at,
+       flips = excluded.flips, last_flip = excluded.last_flip, recent_flips = excluded.recent_flips`,
+  ).bind(mode, c.h3, c.owner, c.strength, c.visits || 1, c.lastVisit ?? c.claimedAt, c.claimedAt ?? c.lastVisit, c.private ? 1 : 0, lat, lng, wildAt(c),
+    c.flips || 0, c.lastFlip ?? null, c.recentFlips || 0)
 }
 
 /** Run statements in batches D1 is comfortable with */

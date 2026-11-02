@@ -1,13 +1,13 @@
 // Worker tests: every route against a fake D1 (Node's built-in SQLite with
-// every migration applied), with FormTrack's MCP endpoint mocked.
+// every file in migrations/ applied in order), with FormTrack's MCP endpoint mocked.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import worker from '../worker/index.js'
-import { runCron } from '../worker/cron.js'
+import { runCron, seasonReset } from '../worker/cron.js'
 import { readinessFrom, extractToken } from '../worker/formtrack.js'
 import { encryptSecret, decryptSecret } from '../worker/crypto.js'
-import { offset, levelFor } from '../src/lib/engine/index.js'
+import { offset, levelFor, seasonFor, previousSeason, nextSeason } from '../src/lib/engine/index.js'
 
 const ORIGIN = { lat: -33.9, lng: 151.15 } // inner west Sydney
 const DAY = 86400000
@@ -441,5 +441,100 @@ describe('quests, explored map and weekly recap', () => {
     const notes = (await call(A, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')
     expect(notes.map((n) => n.text)).toEqual(['Your week in Foothold is ready. Want a look?'])
     expect((await call(B, 'GET', '/api/notifications')).body.items.filter((n) => n.kind === 'week')).toHaveLength(0)
+  })
+})
+
+describe('seasons, hot spots and crests', () => {
+  const bbox = '151.13,-33.92,151.17,-33.88'
+  const fight = async () => {
+    await call(A, 'PUT', '/api/me', { name: 'Ava', crest: 'wave' })
+    await call(B, 'PUT', '/api/me', { name: 'Ben', crest: 'bolt' })
+    const a = await call(A, 'POST', '/api/activities', { mode: 'run', points: rectRun() })
+    const b = await call(B, 'POST', '/api/activities', { mode: 'run', source: 'watch', points: rectRun({ w: 1500, h: 1000, start: offset(ORIGIN, -300, -300) }) })
+    return { a: a.body, b: b.body }
+  }
+
+  it('saves a crest, refuses made up ones, and shows it next to names', async () => {
+    const r = await call(A, 'PUT', '/api/me', { crest: 'peak' })
+    expect(r.body.user.crest).toBe('peak')
+    expect((await call(A, 'PUT', '/api/me', { crest: 'logo' })).status).toBe(400)
+    expect((await call(A, 'PUT', '/api/me', { crest: null })).body.user.crest).toBeNull()
+    const { b } = await fight()
+    expect(b.battles[0]).toMatchObject({ attackerCrest: 'bolt', defenderCrest: 'wave' })
+    const lb = await call(A, 'GET', `/api/leaderboard?scope=local&lat=${ORIGIN.lat}&lng=${ORIGIN.lng}`)
+    expect(lb.body.rows.map((x) => x.crest)).toEqual(['bolt', 'wave'])
+    expect((await call(A, 'GET', '/api/feed')).body.items.map((i) => i.userCrest).sort()).toEqual(['bolt', 'wave'])
+    const t = await call(A, 'GET', `/api/territory?mode=run&bbox=${bbox}`)
+    expect(t.body.cells.find((c) => !c.mine).ownerCrest).toBe('bolt')
+    expect((await call(A, 'GET', '/api/battles')).body.live[0].defenderCrest).toBe('wave')
+  })
+
+  it('counts flips on hexes that change hands, for the hot spots map', async () => {
+    const { b } = await fight()
+    const t = await call(B, 'GET', `/api/territory?mode=run&bbox=${bbox}`)
+    const taken = new Set(b.diff.taken.map((x) => x.h3))
+    const hot = t.body.cells.filter((c) => c.heat > 0)
+    expect(hot.length).toBe(taken.size)
+    expect(hot.every((c) => taken.has(c.h3) && c.flips === 1 && c.lastFlip > 0)).toBe(true)
+    expect(t.body.cells.filter((c) => !taken.has(c.h3)).every((c) => c.heat === 0 && c.flips === 0)).toBe(true)
+  })
+
+  it('ranks the season board by ground gained, and keeps the all time board', async () => {
+    const { a, b } = await fight()
+    const q = `scope=local&lat=${ORIGIN.lat}&lng=${ORIGIN.lng}`
+    const season = await call(A, 'GET', `/api/leaderboard?board=season&${q}`)
+    expect(season.status).toBe(200)
+    expect(season.body.season).toMatchObject({ id: seasonFor(Date.now()).id })
+    expect(season.body.season.daysLeft).toBeGreaterThan(0)
+    const gained = Object.fromEntries(season.body.rows.map((r) => [r.name, r.gained]))
+    expect(gained).toEqual({ Ava: a.activity.claimed + a.activity.taken, Ben: b.activity.claimed + b.activity.taken })
+    const all = await call(A, 'GET', `/api/leaderboard?${q}`)
+    expect(all.body.rows[0].hexes).toBeGreaterThan(0)
+    expect(all.body.season.id).toBe(season.body.season.id)
+    expect((await call(A, 'GET', '/api/leaderboard?board=season&scope=world')).body.rows.length).toBe(2)
+    expect((await call(C, 'GET', '/api/leaderboard?board=season&scope=club')).body.rows).toEqual([expect.objectContaining({ me: true, gained: 0 })])
+    expect((await call(A, 'GET', '/api/leaderboard?board=weekly')).status).toBe(400)
+  })
+
+  it("sums up last season once, then remembers it's been seen", async () => {
+    await fight()
+    const cur = seasonFor(Date.now())
+    // Move every activity into last season
+    env.DB.db.exec(`UPDATE activities SET started_at = ${previousSeason(cur).endsAt - 86400000}`)
+    const r = await call(A, 'GET', '/api/season')
+    expect(r.body.season.id).toBe(cur.id)
+    expect(r.body.previous).toMatchObject({ rank: 2, players: 2, season: { id: previousSeason(cur).id } })
+    expect(r.body.previous.badge.name).toBeTruthy()
+    // Early in a season it shows; this test may run late in one, so check the rule rather than the date
+    const early = Date.now() - cur.startsAt < 21 * DAY
+    expect(r.body.showSummary).toBe(early)
+    await call(A, 'PUT', '/api/me', { seasonSeen: cur.id })
+    expect((await call(A, 'GET', '/api/season')).body.showSummary).toBe(false)
+    expect((await call(A, 'GET', '/api/me')).body.user.seasonSeen).toBe(cur.id)
+    expect((await call(A, 'PUT', '/api/me', { seasonSeen: 'soon' })).status).toBe(400)
+    expect((await call(C, 'GET', '/api/season')).body).toMatchObject({ previous: null, showSummary: false })
+  })
+
+  it('softens held ground once at the start of a season, in the hourly cron', async () => {
+    await fight()
+    const before = new Map(env.DB.db.prepare('SELECT h3, strength, wild_at FROM cells').all().map((r) => [r.h3, r]))
+    // The first run only notes the season under way
+    expect(await seasonReset(env)).toBe(0)
+    expect(env.DB.db.prepare('SELECT season_id FROM season_resets').all().map((r) => r.season_id)).toEqual([seasonFor(Date.now()).id])
+    const next = nextSeason(seasonFor(Date.now()))
+    const at = next.startsAt + 3600000
+    const out = await runCron(env, at)
+    expect(out.softened).toBe(before.size)
+    for (const r of env.DB.db.prepare('SELECT h3, strength, wild_at, season_reset FROM cells').all()) {
+      const was = before.get(r.h3)
+      expect(r.season_reset).toBe(next.id)
+      expect(r.strength).toBeLessThan(was.strength)
+      expect(r.strength).toBeGreaterThanOrEqual(Math.min(was.strength, 10) - 1e-9)
+      expect(r.wild_at).toBeLessThanOrEqual(was.wild_at)
+    }
+    // Running again the same season changes nothing
+    const snap = JSON.stringify(env.DB.db.prepare('SELECT h3, strength FROM cells ORDER BY h3').all())
+    expect((await runCron(env, at + 3600000)).softened).toBe(0)
+    expect(JSON.stringify(env.DB.db.prepare('SELECT h3, strength FROM cells ORDER BY h3').all())).toBe(snap)
   })
 })
