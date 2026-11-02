@@ -1,9 +1,9 @@
 // Hourly jobs: end battles whose week is up (the winner holds more of the
-// contested hexes), and a once-a-day "fading soon" reminder for anyone with
-// hexes about to go wild.
+// contested hexes), a once-a-day "fading soon" reminder for anyone with
+// hexes about to go wild, and the soft reset at the start of each season.
 
-import { battleScore } from '../src/lib/engine/index.js'
-import { batched, cellsByIds, notify, players, rowToBattle } from './db.js'
+import { battleScore, seasonFor, softenCell, needsReset } from '../src/lib/engine/index.js'
+import { batched, cellsByIds, notify, players, rowToBattle, rowToCell, wildAt } from './db.js'
 
 const DAY = 86400000
 
@@ -58,10 +58,52 @@ export async function fadingNotices(env, now = Date.now()) {
   return stmts.length
 }
 
+// The season's soft reset (docs/ENGINE.md). Safe to run every hour: each hex
+// records the season that softened it, and the season is marked done once
+// no hexes are left. A big map is worked through over a few runs.
+const RESET_PAGE = 500
+const RESET_PAGES_PER_RUN = 20
+export async function seasonReset(env, now = Date.now()) {
+  const season = seasonFor(now)
+  const done = await env.DB.prepare('SELECT season_id FROM season_resets WHERE season_id = ?').bind(season.id).first()
+  if (done) return 0
+  const any = await env.DB.prepare('SELECT season_id FROM season_resets LIMIT 1').first()
+  if (!any) {
+    // First run after this feature ships: the season under way keeps its ground as it is
+    await env.DB.prepare('INSERT OR IGNORE INTO season_resets (season_id, starts_at, applied_at, cells) VALUES (?, ?, ?, 0)').bind(season.id, season.startsAt, now).run()
+    return 0
+  }
+  let softened = 0
+  for (let page = 0; page < RESET_PAGES_PER_RUN; page++) {
+    const rows = (await env.DB.prepare(
+      `SELECT * FROM cells WHERE wild_at > ? AND last_visit < ? AND (season_reset IS NULL OR season_reset <> ?) LIMIT ${RESET_PAGE}`,
+    ).bind(now, season.startsAt, season.id).all()).results
+    const stmts = []
+    for (const r of rows) {
+      const c = rowToCell(r)
+      const soft = needsReset(c, season, now) ? softenCell(c, now) : null
+      // Every row is marked, so the next page moves on even if this one didn't need softening
+      stmts.push(soft
+        ? env.DB.prepare('UPDATE cells SET strength = ?, wild_at = ?, season_reset = ? WHERE mode = ? AND h3 = ?').bind(soft.strength, wildAt(soft), season.id, r.mode, r.h3)
+        : env.DB.prepare('UPDATE cells SET season_reset = ? WHERE mode = ? AND h3 = ?').bind(season.id, r.mode, r.h3))
+      if (soft) softened++
+    }
+    await batched(env, stmts)
+    if (rows.length < RESET_PAGE) {
+      // cells counts what this last run softened; earlier runs for a big map aren't added up
+      await env.DB.prepare('INSERT OR IGNORE INTO season_resets (season_id, starts_at, applied_at, cells) VALUES (?, ?, ?, ?)')
+        .bind(season.id, season.startsAt, now, softened).run()
+      break
+    }
+  }
+  return softened
+}
+
 export async function runCron(env, now = Date.now()) {
+  const softened = await seasonReset(env, now).catch((e) => (console.error('cron season', e?.message), 0))
   const ended = await endBattles(env, now).catch((e) => (console.error('cron battles', e?.message), 0))
   const fading = await fadingNotices(env, now).catch((e) => (console.error('cron fading', e?.message), 0))
   // Old rate limit windows are no use to anyone
   await env.DB.prepare('DELETE FROM rate_limits WHERE win < ?').bind(Math.floor(now / 1000) - 2 * 86400).run().catch(() => {})
-  return { ended, fading }
+  return { ended, fading, softened }
 }

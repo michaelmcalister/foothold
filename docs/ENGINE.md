@@ -37,6 +37,44 @@ every **21 days**. Under 5 it goes wild. Holidays don't wipe you out.
 Taking someone's ground starts a **7 day** battle over those hexes. Whoever
 holds more of them at the end wins.
 
+## Seasons
+
+The year runs in four seasons that follow the Australian ones, in Sydney
+time: **summer** (Dec to Feb), **autumn** (Mar to May), **winter** (Jun to
+Aug) and **spring** (Sep to Nov). Each starts at midnight in Sydney on the
+1st. A season's id is its first month (`2026-12` is Summer 2026/27).
+Code: `seasons.js`. Tests: `test/seasons.test.js`.
+
+- **Season board:** ranks players by ground gained this season, the hexes
+  they claimed or took (from activities that started in the season). Someone
+  who starts in the last month can still top it. The all time board (hexes
+  held right now) stays.
+- **Soft reset:** at the start of each season every held hex keeps **half**
+  its strength, but the reset never takes a hex below **10** (ground already
+  under 10 is left as it is), so nobody's ground goes wild because of it. The
+  stored strength is scaled, so fading carries on from the same last visit.
+  Ground is easier to take early in a season, and a big lead from last
+  season shrinks but doesn't vanish. Wild hexes, hexes visited since the
+  season began and hexes already softened this season are skipped.
+- **Once only:** each hex records the season that softened it. The server
+  runs the reset in the hourly cron and marks the season done in
+  `season_resets` when no hexes are left (a big map takes a few runs). The
+  practice map does the same in its tick. When seasons first switch on, the
+  season under way is noted and nothing is softened.
+- **Summary:** early in a new season (the first 21 days) each player who
+  gained ground last season sees it once: ground gained, their place, and a
+  badge for taking part: Scout (1+), Pathfinder (25+), Trailblazer (100+),
+  Vanguard (300+). There is no badge for losing.
+
+## Hot spots
+
+Each hex counts how often it changed hands (`flips`, taken by a rival; a
+wild claim isn't a flip) and when it last did (`lastFlip`). Its heat is the
+number of flips since it last had 30 quiet days, and it drops to 0 after 30
+days without one. The Hot spots map shades by heat, and the hottest areas
+nearby group hexes into H3 resolution 8 areas (about 0.7 km²). Code:
+`hotspots.js`.
+
 ## The ladder
 
 Foothold (1 hex), Outpost (60), Stronghold (250), Fortress (800), per map.

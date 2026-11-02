@@ -2,6 +2,7 @@
 // The live territory map: OpenFreeMap streets underneath, hexes on top
 // (yours in cobalt, rivals in their colours, faded by strength), plus an
 // optional track, closed loops, a suggested loop and the player's dot.
+// With `heat` on, hexes are shaded by how often they changed hands lately.
 import { ref, watch, onMounted, onBeforeUnmount, shallowRef } from 'vue'
 import { Map as MLMap, LngLatBounds, setWorkerUrl } from 'maplibre-gl'
 // MapLibre 6 runs its tile work in a module worker; let Vite bundle it.
@@ -23,6 +24,7 @@ const props = defineProps({
   follow: { type: Boolean, default: false },
   fit: { type: Boolean, default: false }, // fit to track/loops when they load
   interactive: { type: Boolean, default: true },
+  heat: { type: Boolean, default: false }, // hot spots: shade by recent flips instead of owner
 })
 const emit = defineEmits(['cell', 'moved', 'ready'])
 
@@ -46,7 +48,11 @@ function cellFeatures(cells, hi) {
         strength: c.strength,
         hi: hiSet.has(c.h3) ? 1 : 0,
         name: c.ownerName,
+        owner: c.owner,
+        crest: c.ownerCrest || '',
         days: c.daysToWild,
+        heat: c.heat || 0,
+        flips: c.flips || 0,
       },
       geometry: { type: 'Polygon', coordinates: [cellToBoundary(c.h3, true)] },
     })),
@@ -61,6 +67,31 @@ function circle({ lat, lng, radiusM }) {
     pts.push([lng + (radiusM * Math.cos(a)) / (111320 * Math.cos((lat * Math.PI) / 180)), lat + (radiusM * Math.sin(a)) / 110540])
   }
   return pts
+}
+
+// Paint for the two looks: owners (the default) and hot spots
+const OWNER_PAINT = {
+  'cells-fill': {
+    'fill-color': ['get', 'colour'],
+    // Yours stands out; rivals' ground is lighter. Stronger ground is more solid.
+    'fill-opacity': ['+', ['case', ['==', ['get', 'mine'], 1], 0.28, 0.1], ['*', 0.003, ['get', 'strength']], ['*', 0.25, ['get', 'hi']]],
+  },
+  'cells-line': { 'line-color': ['get', 'colour'], 'line-opacity': 0.7 },
+}
+const HEAT_COLOUR = ['interpolate', ['linear'], ['get', 'heat'], 0, '#B9C2B3', 1, '#F2B33D', 3, '#E5604D', 6, '#9E1F1A']
+const HEAT_PAINT = {
+  'cells-fill': {
+    'fill-color': HEAT_COLOUR,
+    'fill-opacity': ['case', ['>', ['get', 'heat'], 0], ['min', 0.8, ['+', 0.4, ['*', 0.08, ['get', 'heat']]]], 0.08],
+  },
+  'cells-line': { 'line-color': HEAT_COLOUR, 'line-opacity': ['case', ['>', ['get', 'heat'], 0], 0.8, 0.25] },
+}
+function applyPaint() {
+  const m = map.value
+  if (!loaded.value || !m) return
+  for (const [layer, paint] of Object.entries(props.heat ? HEAT_PAINT : OWNER_PAINT)) {
+    for (const [k, v] of Object.entries(paint)) m.setPaintProperty(layer, k, v)
+  }
 }
 
 function setData(id, data) {
@@ -123,15 +154,11 @@ onMounted(async () => {
     m.addSource('me', { type: 'geojson', data: empty })
     m.addLayer({
       id: 'cells-fill', type: 'fill', source: 'cells',
-      paint: {
-        'fill-color': ['get', 'colour'],
-        // Yours stands out; rivals' ground is lighter. Stronger ground is more solid.
-        'fill-opacity': ['+', ['case', ['==', ['get', 'mine'], 1], 0.28, 0.1], ['*', 0.003, ['get', 'strength']], ['*', 0.25, ['get', 'hi']]],
-      },
+      paint: { ...OWNER_PAINT['cells-fill'] },
     })
     m.addLayer({
       id: 'cells-line', type: 'line', source: 'cells',
-      paint: { 'line-color': ['get', 'colour'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 16, 1.2], 'line-opacity': 0.7 },
+      paint: { ...OWNER_PAINT['cells-line'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 16, 1.2] },
     })
     m.addLayer({ id: 'zones', type: 'line', source: 'zones', paint: { 'line-color': '#16302A', 'line-width': 2, 'line-dasharray': [2, 2] } })
     m.addLayer({ id: 'suggest', type: 'line', source: 'suggest', paint: { 'line-color': '#16302A', 'line-width': 3, 'line-dasharray': [1.5, 1.2] } })
@@ -151,6 +178,7 @@ onMounted(async () => {
     })
     loaded.value = true
     syncAll()
+    applyPaint()
     if (props.fit) fitTo()
     emit('ready', m)
     const b = m.getBounds()
@@ -161,6 +189,7 @@ onMounted(async () => {
 onBeforeUnmount(() => map.value?.remove())
 
 watch(() => [props.cells, props.highlight], () => setData('cells', cellFeatures(props.cells, props.highlight)))
+watch(() => props.heat, applyPaint)
 watch(() => props.track, () => {
   setData('track', props.track.length > 1 ? line(props.track) : empty)
 }, { deep: false })

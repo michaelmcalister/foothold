@@ -21,8 +21,8 @@ FormTrack, so one account signs in to both. For local development only,
 ## Types
 
 ```
-User      { id, name, colour, units: 'metric', mode: 'run'|'walk'|'ride',
-            zones: [{ lat, lng, radiusM, label }], clubId, createdAt,
+User      { id, name, colour, crest: string|null, units: 'metric', mode: 'run'|'walk'|'ride',
+            zones: [{ lat, lng, radiusM, label }], clubId, createdAt, seasonSeen: string|null,
             formtrack: { linked: boolean, linkedAt } }
 Point     { lat, lng, t, alt?, acc?, hr?, cad? }
 Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
@@ -30,11 +30,18 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
             appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos }
-Cell      { h3, owner, ownerName, ownerColour, mine, strength, daysToWild }
-Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
+Cell      { h3, owner, ownerName, ownerColour, ownerCrest, mine, strength, daysToWild,
+            flips, heat, lastFlip }   (flips: times taken; heat: recent flips, 0 after 30 quiet days)
+Battle    { id, attacker, defender, attackerName, defenderName, attackerColour, defenderColour,
+            attackerCrest, defenderCrest, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
+Season    { id: '2026-12', key: 'summer'|'autumn'|'winter'|'spring', name: 'Summer 2026/27',
+            label: 'Summer season, Dec to Feb', span: 'Dec to Feb', startsAt, endsAt, daysLeft }
 ```
+
+Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
+`crest: null` means the app draws a default picked from the player id.
 
 ## Routes
 
@@ -42,17 +49,18 @@ Battle    { id, attacker, defender, attackerName, defenderName, hexes: [h3],
 | --- | --- | --- | --- |
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | GET | /api/me | | `{ user }` |
-| PUT | /api/me | `{ name?, colour?, mode?, zones? }` | `{ user }` |
+| PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen? }` | `{ user }` |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
 | GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
 | POST | /api/activities/:id/appeal | `{ note }` | `{ activity }` |
 | GET | /api/territory | `?mode=run&bbox=w,s,e,n` | `{ cells: Cell[] }` (others' private hexes left out; max 5000) |
 | GET | /api/stats | `?mode=run` | `{ hexes, km2, level, next, toNext, weekKm: number[5], streakWeeks, fadingSoon: number }` |
-| GET | /api/leaderboard | `?mode=run&scope=local|world|club&lat&lng` | `{ rows: [{ userId, name, colour, hexes, km2, me }] }` |
+| GET | /api/leaderboard | `?mode=run&scope=local|world|club&board=all|season&lat&lng` | `{ rows: [{ userId, name, colour, crest, hexes, km2, me }], season: Season }`; with `board=season` rows are `{ userId, name, colour, crest, gained, me }`, ranked by hexes claimed or taken this season |
+| GET | /api/season | | `{ season: Season, previous: { season, gained, rank, players, badge: { id, name, min } } \| null, showSummary }` (previous counts every map; `showSummary` is true once, early in a season, until `seasonSeen` is set to this season's id) |
 | GET | /api/battles | | `{ live: Battle[], past: Battle[] }` |
 | GET | /api/rivals | | `{ rivals: [{ userId, name, colour, swaps }] }` |
-| GET | /api/feed | | `{ items: [{ activity, userName, userColour }] }` |
+| GET | /api/feed | | `{ items: [{ activity, userName, userColour, userCrest }] }` |
 | POST | /api/activities/:id/kudos | | `{ kudos }` |
 | GET | /api/clubs | | `{ clubs: [{ id, name, members, hexes, mine }] }` |
 | POST | /api/clubs | `{ name }` | `{ club }` |

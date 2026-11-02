@@ -1,15 +1,18 @@
 <script setup>
-// Settings: name and colour, privacy zones, FormTrack, feedback, and
-// your data (export, start again).
+// Settings: name, colour and crest, privacy zones, FormTrack, feedback,
+// and your data (export, start again).
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast, locate } from '../../lib/store.js'
 import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
+import Crest from '../../components/Crest.vue'
+import { CRESTS, crestFor } from '../../lib/crests.js'
 
 const router = useRouter()
 const name = ref(store.user.name)
 const colour = ref(store.user.colour)
+const crest = ref(crestFor(store.user.id, store.user.crest))
 const zones = ref([...(store.user.zones || [])])
 const ftToken = ref('')
 const ftBusy = ref(false)
@@ -27,7 +30,7 @@ onMounted(async () => {
 })
 
 async function saveProfile() {
-  await api.updateMe({ name: name.value, colour: colour.value })
+  await api.updateMe({ name: name.value, colour: colour.value, crest: crest.value })
   await refresh()
   toast('Saved.')
 }
@@ -112,6 +115,15 @@ async function startAgain() {
         </div>
         <span class="hint">On your own screen your ground is always blue.</span>
       </fieldset>
+      <fieldset class="field">
+        <legend>Your crest</legend>
+        <div class="crests">
+          <button v-for="c in CRESTS" :key="c.id" type="button" class="cr" :aria-pressed="crest === c.id" :aria-label="`${c.name} crest`" :title="c.name" @click="crest = c.id">
+            <Crest :crest="c.id" :colour="colour" :size="34" />
+          </button>
+        </div>
+        <span class="hint">It sits next to your name on leaderboards, battles and the feed.</span>
+      </fieldset>
       <button class="btn" type="button" @click="saveProfile">Save</button>
     </section>
 
@@ -195,6 +207,9 @@ legend { font-weight: 650; margin-bottom: 6px; }
 .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
 .sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
 .sw[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--ink); }
+.crests { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; max-width: 360px; }
+.cr { display: grid; place-items: center; aspect-ratio: 1; min-height: 44px; border: 0; border-radius: 12px; background: var(--soft); cursor: pointer; padding: 0; }
+.cr[aria-pressed='true'] { background: #fff; box-shadow: 0 0 0 3px var(--ink); }
 .plain { list-style: none; margin: 0; padding: 0; }
 .zone { display: flex; gap: 12px; align-items: end; }
 .grow { flex: 1; }

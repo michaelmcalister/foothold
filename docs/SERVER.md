@@ -63,8 +63,9 @@ the practice map. Without it the app still runs, but only as the practice
 map with runs saved on each phone.
 
 Every push to `main` then builds and deploys. The hourly cron in
-`wrangler.toml` ends finished battles and sends the daily "fading soon"
-reminders, with no extra setup.
+`wrangler.toml` ends finished battles, sends the daily "fading soon"
+reminders and runs each season's soft reset (docs/ENGINE.md), with no extra
+setup.
 
 ## Run recaps in 3D (Google Maps)
 
