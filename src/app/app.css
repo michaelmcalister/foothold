@@ -64,6 +64,11 @@
   font: inherit; padding: 12px 14px; border-radius: 10px; border: 1.5px solid rgba(22, 48, 42, 0.25); background: #fff; color: var(--ink); min-height: 48px;
 }
 .field textarea { min-height: 110px; resize: vertical; }
+/* Grid items otherwise grow to fit their content: a select with a long option
+   (a playlist name, say) would push the whole page wider than the phone */
+.field > *, .panel > *, .screen > * { min-width: 0; }
+.field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.field select { text-overflow: ellipsis; }
 .field input:focus, .field select:focus, .field textarea:focus { outline: 3px solid var(--you); outline-offset: 1px; border-color: var(--you); }
 .hint { font-size: 0.85rem; color: var(--ink-60); }
 
