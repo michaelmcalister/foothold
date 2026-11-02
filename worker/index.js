@@ -21,6 +21,7 @@ import { weekStatements, explored, quests, week } from './weekly.js'
 import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
 import { socialRoute, swapStatements, activityCommentDeletes } from './social.js'
 import { exportAccount, deleteAccount } from './account.js'
+import { streak } from './habits.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -501,6 +502,11 @@ async function route(req, env, url, user, ctx) {
       if (body.seasonSeen !== null && !seasonById(body.seasonSeen)) bad("That season isn't one we know.")
       prefs.seasonSeen = body.seasonSeen; prefsChanged = true
     }
+    if ('foundingAt' in body) {
+      // The first week badge: kept once earned, so it can only be set, never moved or cleared
+      if (!isNum(body.foundingAt, Date.UTC(2020, 0, 1), now + 86400000)) bad('foundingAt must be a time.')
+      if (prefs.foundingAt == null) { prefs.foundingAt = body.foundingAt; prefsChanged = true }
+    }
     if (prefsChanged) { sets.push('prefs = ?'); args.push(JSON.stringify(prefs)) }
     if (sets.length) await env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...args, user.id).run()
     if (zones) {
@@ -594,6 +600,8 @@ async function route(req, env, url, user, ctx) {
   if (path === '/api/explored' && m === 'GET') return json(await explored(env, user, url))
   if (path === '/api/quests' && m === 'GET') return json(await quests(env, user, now))
   if (path === '/api/week' && m === 'GET') return json(await week(env, user, url, now))
+  // Weekly streak with banked rest weeks (worker/habits.js)
+  if (path === '/api/streak' && m === 'GET') return json(await streak(env, user, now))
   // Personal bests and strongholds
   if (path === '/api/bests' || path.startsWith('/api/strongholds')) {
     const out = await strongholdRoutes(env, user, url, m, now)

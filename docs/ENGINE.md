@@ -130,3 +130,24 @@ last four weeks so they are within reach: take new hexes, close loops, get out
 a few times, explore new hexes, go somewhere new, hold ground all week, take
 back ground a rival took, or take ground from a rival. A hold quest is settled
 when the week ends. Missing a quest costs nothing; next week brings new ones.
+
+## Weekly streaks (`streaks.js`)
+
+A streak counts Sydney weeks in a row with at least one outing (any mode,
+not rejected). Each finished week with an outing banks one rest week, up to
+three. A finished week with no outing spends a rest week ("Rest week used.
+Streak kept.") and counts towards the streak; with none banked, the streak
+ends. A new streak starts with nothing banked. This week is in progress:
+it joins the streak once it has an outing and is never counted as missed.
+Milestones at 4, 8, 12, 26 and 52 weeks are celebrated once each. Nothing
+ever warns about losing a streak.
+
+## The first week (`firstweek.js`)
+
+For new players (fewer than three outings from before they joined, account
+or practice map under 14 days old): 1) plant your first flag (the first
+outing that closes a loop; the suggested loop is 1.2 to 2 km walking, 2 to 3
+km running), 2) come back for more (any outing after it, aiming for within
+4 days), 3) hold your ground (a third outing, aiming for the first 10 days).
+A missed aim never fails a step; it stretches ("No rush. Whenever you're
+ready."). All three earn the Founding foothold badge, kept for good.

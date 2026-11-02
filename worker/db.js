@@ -50,6 +50,7 @@ export function userOut(row) {
     goal: prefs.goal ?? null,
     homeCentre: prefs.homeCentre ?? null,
     seasonSeen: prefs.seasonSeen ?? null,
+    foundingAt: prefs.foundingAt ?? null, // when the Founding foothold badge was earned (first week journey)
     formtrack: { linked: !!row.formtrack_token_enc, linkedAt: row.formtrack_linked_at || null },
   }
 }

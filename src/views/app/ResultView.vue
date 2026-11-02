@@ -2,6 +2,8 @@
 // After an activity: what you claimed, what you took and from whom, any
 // battles that started, a level-up, Coach's notes on the run, new personal
 // bests, strongholds you ran, and a gentle check on this week's load.
+// New players see which first week step it finished, with a one-tap
+// calendar reminder for the next outing after step 1.
 // A fresh result plays its sounds in turn: claim, take, crown, best, level.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -15,6 +17,8 @@ import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
+import { loadJourney, freshSteps, markCheered, cheerSound, remindSecondOuting } from '../../lib/journey.js'
+import { stepsDoneBy } from '../../lib/engine/firstweek.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +30,8 @@ const appealNote = ref('')
 const appealSent = ref(false)
 const plan = ref(null)
 const recent = ref([])
+const journey = ref(null)
+const reminded = ref(null)
 
 const a = computed(() => res.value?.activity)
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
@@ -57,9 +63,27 @@ const headline = computed(() => {
   return `Loop closed. ${plural(newHexes.value, 'hex', 'hexes')} ${newHexes.value === 1 ? 'is' : 'are'} yours.`
 })
 
+// First week steps this activity finished (new players only)
+const stepsHere = computed(() => (journey.value && a.value ? stepsDoneBy(journey.value, a.value.id) : []))
+const step1Here = computed(() => stepsHere.value.some((x) => x.n === 1) && !journey.value.steps[1].done)
+const laterStep = computed(() => stepsHere.value.filter((x) => x.n > 1).pop() || null)
+const remindedText = computed(() => reminded.value && new Date(reminded.value).toLocaleString('en-AU', { weekday: 'long', hour: 'numeric', minute: '2-digit' }))
+function remind() {
+  reminded.value = remindSecondOuting(a.value.startedAt)
+}
+
 onMounted(async () => {
-  if (res.value?.activity && firstTime('result:' + res.value.activity.id)) {
-    playSequence(resultSounds(res.value, !!levelUp.value), { delay: 0.45 }) // after the coach's wrap-up line
+  const fresh = !!res.value?.activity && firstTime('result:' + res.value.activity.id)
+  journey.value = await loadJourney().catch(() => null)
+  if (fresh) {
+    const seq = resultSounds(res.value, !!levelUp.value)
+    const cheer = freshSteps(journey.value).filter((x) => x.activityId === res.value.activity.id)
+    if (cheer.length) {
+      const name = cheerSound(cheer)
+      seq.push({ name: name === 'levelUp' && levelUp.value ? 'quest' : name })
+      markCheered(cheer)
+    }
+    playSequence(seq, { delay: 0.45 }) // after the coach's wrap-up line
   }
   api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
   api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
@@ -142,6 +166,16 @@ async function sendAppeal() {
         <span>{{ s.message }} <span class="see">See the leaderboard</span></span>
       </RouterLink>
 
+      <div v-if="step1Here" class="notice fw" role="status">
+        <p><strong>Step 1 of 3 done.</strong> Next: get out again in the next few days. Want a reminder?</p>
+        <p v-if="reminded" class="small">Reminder ready for {{ remindedText }}. Open the file to add it to your calendar.</p>
+        <button v-else class="btn small" type="button" @click="remind">Remind me in 2 days</button>
+      </div>
+      <div v-else-if="laterStep" class="notice fw" role="status">
+        <p><strong>{{ laterStep.cheer }}</strong><template v-if="laterStep.n === 3 && laterStep.reinforced">{{ ' Your first hexes are stronger too.' }}</template></p>
+        <p v-if="laterStep.n === 3" class="small">The Founding foothold badge is on your profile for good.</p>
+      </div>
+
       <div v-if="levelUp" class="notice good">
         <strong>You've reached {{ levelUp.name }}.</strong> {{ res.hexesAfter }} hexes held on the {{ a.mode }} map.
       </div>
@@ -187,6 +221,8 @@ async function sendAppeal() {
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 .appeal { display: grid; gap: 10px; justify-items: start; }
 .prs ul { list-style: none; padding: 0; }
+.notice.fw { background: #E8EDFC; color: var(--ink); display: grid; gap: 8px; justify-items: start; }
+.notice.fw p { margin: 0; }
 .shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: #E8EDFC; color: var(--ink); }
 .shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
 .shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }

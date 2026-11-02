@@ -11,6 +11,7 @@ import {
   visitedCells, mergeExplored, weekOf, weekFor, prevWeek, isWeekKey, weeklyQuests, weekRecap, MODES,
   seasonFor, seasonOut, seasonById, previousSeason, seasonGains, seasonSummary, showSummary, softReset, heatOf,
   bestEfforts, mergeBests, rebuildBests, bestsList, prepareStronghold, strongholdsRun, standings, crownStatus, crownMessage,
+  weeklyStreak, streakMilestoneNote,
 } from '../engine/index.js'
 import { isCrest } from '../crests.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
@@ -260,6 +261,7 @@ async function tick() {
   if (!S.world) return
   const now = Date.now()
   await seasonTick(now)
+  await streakTick(now)
   if (now - (S.world.lastTick || 0) < 3 * 3600000) return
   S.world.lastTick = now
   const rand = rng(Math.floor(now / 3600000))
@@ -363,6 +365,18 @@ async function seasonTick(now) {
   await save.world()
 }
 
+// Streak milestones (4, 8, 12, 26, 52 weeks), the same as the server's cron:
+// celebrated once each, and never anything else about streaks.
+const myStreak = (now) => weeklyStreak({ activities: S.activities.filter((a) => a.userId === S.user.id), now })
+async function streakTick(now) {
+  const note = streakMilestoneNote(myStreak(now))
+  const sent = S.world.streakNotes || []
+  if (!note || sent.includes(note.key)) return
+  S.world.streakNotes = [...sent, note.key].slice(-50)
+  notify('streak', note.text, now)
+  await Promise.all([save.world(), save.notifications()])
+}
+
 // ---- social: swaps, practice comments ----
 // Who took ground from whom, only where the player is involved (for the rivals list)
 function recordSwaps(taken, taker, at, activityId = null) {
@@ -433,15 +447,18 @@ export const local = {
   async me() {
     await state()
     await tick()
-    return { user: S.user }
+    return { user: { foundingAt: null, ...S.user } }
   },
 
   async updateMe(patch) {
     await state()
     if ('crest' in patch && patch.crest !== null && !isCrest(patch.crest)) throw new Error("That crest isn't one of the choices.")
     if ('seasonSeen' in patch && patch.seasonSeen !== null && !seasonById(patch.seasonSeen)) throw new Error("That season isn't one we know.")
+    if ('foundingAt' in patch && (typeof patch.foundingAt !== 'number' || !Number.isFinite(patch.foundingAt))) throw new Error('foundingAt must be a time.')
     const allowed = ['name', 'colour', 'crest', 'mode', 'zones', 'units', 'onboarded', 'goal', 'homeCentre', 'seasonSeen']
     for (const k of allowed) if (k in patch) S.user[k] = patch[k]
+    // The first week badge is kept once earned: set once, never moved or cleared
+    if ('foundingAt' in patch && S.user.foundingAt == null) S.user.foundingAt = patch.foundingAt
     if (typeof S.user.name === 'string') S.user.name = S.user.name.trim().slice(0, 30)
     await save.user()
     return { user: S.user }
@@ -915,6 +932,11 @@ export const local = {
     const week = w ? weekFor(w) : weekOf(now)
     if (week.start > now) throw new Error("That week hasn't started yet.")
     return { recap: weekRecap(await weekInput(week, now)) }
+  },
+
+  async streak() {
+    await state()
+    return { streak: myStreak(Date.now()) }
   },
 
   async bests({ mode = 'run' } = {}) {
