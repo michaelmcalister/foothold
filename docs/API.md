@@ -104,6 +104,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | POST | /api/clubs/:id/leave | | `{ ok }` |
 | GET | /api/plan | | `{ plan }` (null when none) |
 | PUT | /api/plan | `{ plan }` | `{ plan }` |
+| POST | /api/plan/ai | `{ brief, answers?, context }` (public, see below) | `{ settings, coach, model }` or `{ questions, model }` |
 | GET | /api/notifications | | `{ items: [{ id, at, kind, text, read }] }` |
 | POST | /api/notifications/read | `{ ids }` | `{ ok }` |
 | POST | /api/integrations/formtrack | `{ token }` (a FormTrack personal token, `ftk_...`) | `{ linked: true, summary }` |
@@ -184,3 +185,30 @@ practice map's tick, send "Your week in Foothold is ready. Want a look?"
 - `tookFromThem` and `tookFromYou` come from the `swaps` table, written with
   each activity. The practice game (local.js) keeps the same records in the
   browser, and its practice rivals leave the odd friendly comment.
+
+## AI built plans
+
+`POST /api/plan/ai` (worker/aiplan.js) is public like `/api/tts`, so it works
+on the practice map too. `/api/config` includes `ai: { plans: true }` only when
+`ANTHROPIC_API_KEY` is set; without it the route answers 503 `ai_off` and the
+app hides the option.
+
+- `brief`: the runner's own words, 3 to 1500 characters.
+- `answers`: up to 3 `{ q, a }` answers to the coach's earlier questions (a up to 300 characters).
+- `context`: `{ weeklyKm: [8 weeks, oldest first], longestKm, runCount, fiveKS, predictions: { 5k, 10k, half, marathon }, confidence, currentGoal, formtrackLinked, today }`.
+  Any other field is dropped before Claude sees it. Never send names, emails, places or tracks.
+
+Claude is called with a forced `design_plan` tool. It never writes sessions:
+the server checks and clamps its output into settings for `generatePlan`
+(`goal`, `raceDate?`, `daysPerWeek` 2 to 6, `runDays?`, `longRunDay`,
+`includeStrength`, `currentWeeklyKm?`, `longestRecentKm?`, `avoid?` of
+`intervals`, `tempo`, `hills`), plus `coach: { headline, overview, phases:
+[{ fromWeek, toWeek, focus }], tips, safety? }` with dashes turned into commas.
+An unknown goal is refused (502 `bad_output`). The app builds the plan on the
+phone and stores the words as `plan.ai = { headline, overview, phases, tips,
+safety, model, family, createdAt }`.
+
+Limits: 5 an hour and 15 a day per address, 15 a day per signed-in player
+(429 `rate_limited`), and a global daily spend cap `AI_DAILY_CAP_AUD`
+(default 10, 503 `ai_paused`) counted in the `ai_usage` table, which holds
+token counts and cost only.

@@ -64,6 +64,9 @@ export const remote = {
   leaveClub: (id) => call('POST', `/api/clubs/${encodeURIComponent(id || 'mine')}/leave`),
   plan: () => call('GET', '/api/plan'),
   savePlan: (plan) => call('PUT', '/api/plan', { plan }),
+  // AI built plans (worker/aiplan.js): public on the server, signed-in players are also limited per account
+  aiConfig: () => fetch(BASE + '/api/config', { signal: AbortSignal.timeout(4000) }).then((r) => (r.ok ? r.json() : {})),
+  planAi: (body) => call('POST', '/api/plan/ai', body),
   notifications: () => call('GET', '/api/notifications'),
   readNotifications: (ids) => call('POST', '/api/notifications/read', { ids }),
   linkFormtrack: (token) => call('POST', '/api/integrations/formtrack', { token }),

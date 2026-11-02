@@ -849,6 +849,25 @@ export const local = {
     return { plan }
   },
 
+  // AI built plans: the route is public, so the practice map uses it when this
+  // page is served by the Foothold server. With no server (GitHub Pages) it's off.
+  async aiConfig() {
+    const r = await fetch(import.meta.env.BASE_URL + 'api/config', { signal: AbortSignal.timeout(4000) })
+    if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) return {}
+    return r.json()
+  },
+  async planAi(body) {
+    let r
+    try {
+      r = await fetch(import.meta.env.BASE_URL + 'api/plan/ai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    } catch {
+      throw new Error("The coach couldn't be reached. Check your connection, or set it up yourself.")
+    }
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(data.error || `Something went wrong (${r.status}). Try again in a moment.`)
+    return data
+  },
+
   async notifications() {
     await state()
     await tick()

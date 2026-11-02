@@ -5,6 +5,8 @@ import { DAYS, DAY_LABEL, toISO, toMs, addDays, dayIndex, dayName, diffDays, mon
 
 export const GOALS = ['5k', '10k', 'half', 'marathon', 'base', 'return']
 export const QUALITY = ['tempo', 'intervals']
+// Session kinds a runner may ask to leave out. Hills are never prescribed, so avoiding them changes nothing here.
+export const AVOIDABLE = ['intervals', 'tempo', 'hills']
 export const RUN_TYPES = ['easy', 'long', 'tempo', 'intervals', 'strides', 'recovery', 'race', 'runwalk']
 export const LONG_CAP_KM = { '5k': 10, '10k': 14, half: 21, marathon: 32, base: 16, return: 8 }
 export const RAMP = 1.1
@@ -134,6 +136,23 @@ function qualitySession(ctx, date, km, type, weekKm) {
   const hard = r1(Math.max(1, Math.min(km - 2, hardCap)))
   const wu = r1((km - hard) * 0.6)
   const cd = r1(km - hard - wu)
+  if (type === 'progression') {
+    // A tempo session in fartlek style: easy, then build gradually to tempo pace. For runners who'd rather skip track intervals.
+    const pace = ctx.paces.tempo
+    return mk(ctx.planId, ctx.week, date, 'tempo', {
+      variant: 'progression',
+      title: `Progression ${km} km`,
+      description: `Start easy for ${wu} km. Then build bit by bit over ${hard} km until you reach ${formatRange(pace)}, as if you're chasing the next lamp post. Cool down easy.`,
+      distanceKm: km,
+      durationMin: Math.round((wu + cd) * ctx.paces.easy[1] / 60 + hard * pace[1] / 60),
+      paceRange: pace,
+      steps: [
+        { kind: 'warmup', distanceM: Math.round(wu * 1000), pace: ctx.paces.easy },
+        { kind: 'tempo', distanceM: Math.round(hard * 1000), pace, build: true },
+        { kind: 'cooldown', distanceM: Math.round(cd * 1000), pace: ctx.paces.easy },
+      ],
+    })
+  }
   if (type === 'tempo') {
     const pace = ctx.paces.tempo
     return mk(ctx.planId, ctx.week, date, 'tempo', {
@@ -215,10 +234,44 @@ function runWalkSession(ctx, date, minutes, stage, label) {
 
 // ---------- weekly layout ----------
 
-function runDays(longRunDay, daysPerWeek) {
+function runDays(longRunDay, daysPerWeek, chosen = null) {
+  if (chosen) return chosen
   const L = DAYS.indexOf(longRunDay)
   const offs = OFFSETS[daysPerWeek]
   return [L, ...offs.map((o) => (L - o + 7) % 7)].sort((a, b) => a - b)
+}
+
+// The runner's own weekdays, made consistent: real day keys only, 2 to 6 of them, and the long run on one of them
+// (their long run day if it's in the list, else Sunday, Saturday or the last one). Returns null to use the default layout.
+export function normaliseRunDays(list, longRunDay = 'sun') {
+  if (!Array.isArray(list)) return null
+  const idx = [...new Set(list.map((d) => DAYS.indexOf(String(d).toLowerCase().slice(0, 3))).filter((i) => i >= 0))].sort((a, b) => a - b)
+  if (idx.length < 2 || idx.length > 6) return null
+  let L = DAYS.indexOf(longRunDay)
+  if (!idx.includes(L)) L = idx.includes(6) ? 6 : idx.includes(5) ? 5 : idx[idx.length - 1]
+  return { days: idx, longRunDay: DAYS[L], daysPerWeek: idx.length }
+}
+
+// Spread n days out of a chosen set, always keeping the long run day (the return plan runs at most 4 days).
+function spreadDays(days, L, n) {
+  if (days.length <= n) return days
+  const out = [L]
+  const gap = (d) => Math.min(...out.map((o) => Math.min(Math.abs(o - d), 7 - Math.abs(o - d))))
+  while (out.length < n) {
+    const next = days.filter((d) => !out.includes(d)).sort((a, b) => gap(b) - gap(a) || a - b)[0]
+    out.push(next)
+  }
+  return out.sort((a, b) => a - b)
+}
+
+// Quality types left after the runner's avoid list: no intervals means tempo and progression runs, no tempo means intervals, neither means strides only.
+export function allowedQuality(goal, avoid = []) {
+  const no = new Set(avoid || [])
+  const preferred = goal === '5k' || goal === '10k' ? ['intervals', 'tempo'] : ['tempo', 'intervals']
+  if (no.has('intervals') && no.has('tempo')) return []
+  if (no.has('intervals')) return ['tempo', 'progression']
+  if (no.has('tempo')) return ['intervals']
+  return preferred
 }
 
 // Pick quality days: not the long run day, not the day before it, never next to each other (cyclic, so weeks join safely).
@@ -236,7 +289,7 @@ export function pickQualityDays(days, longIdx, count) {
 function layoutWeek(ctx, { weekStart, km, longKm, qualityCount, qualityTypes, strides, strength, recovery, raceDate, goal }) {
   const { daysPerWeek, longRunDay } = ctx
   const L = DAYS.indexOf(longRunDay)
-  const days = runDays(longRunDay, daysPerWeek)
+  const days = runDays(longRunDay, daysPerWeek, ctx.runDays)
   const qDays = pickQualityDays(days, L, qualityCount)
   const sessions = []
   const raceIdx = raceDate ? diffDays(weekStart, raceDate) : null
@@ -316,12 +369,18 @@ export function sumRunKm(sessions) {
 
 export function generatePlan(opts = {}) {
   const {
-    goal = 'base', raceDate = null, weeks: weeksOpt = null, daysPerWeek: dpwIn = 3, longRunDay = 'sun',
+    goal = 'base', raceDate = null, weeks: weeksOpt = null, daysPerWeek: dpwIn = 3, longRunDay: lrIn = 'sun',
     currentWeeklyKm = 0, longestRecentKm = 0, recent5kS = null, activities = [], includeStrength = false,
+    runDays: runDaysIn = null, avoid: avoidIn = [],
   } = opts
   if (!GOALS.includes(goal)) throw new Error(`Unknown goal: ${goal}`)
   const today = toISO(opts.today ?? Date.now())
-  const daysPerWeek = Math.max(2, Math.min(6, Math.round(dpwIn)))
+  // Specific weekdays win over a plain count; they also settle which day the long run is on.
+  const chosen = normaliseRunDays(runDaysIn, lrIn)
+  const longRunDay = chosen ? chosen.longRunDay : DAYS.includes(lrIn) ? lrIn : 'sun'
+  const daysPerWeek = chosen ? chosen.daysPerWeek : Math.max(2, Math.min(6, Math.round(dpwIn)))
+  const avoid = (Array.isArray(avoidIn) ? avoidIn : []).filter((a) => AVOIDABLE.includes(a))
+  const layout = { daysPerWeek, longRunDay, ...(chosen ? { runDays: chosen.days.map((i) => DAYS[i]) } : {}), ...(avoid.length ? { avoid } : {}) }
   const warnings = []
   const notes = []
   const fitness = estimateFitness(activities, { now: toMs(today) + 86400000, recent5kS })
@@ -334,7 +393,7 @@ export function generatePlan(opts = {}) {
   if (race && diffDays(today, race) < 7 && diffDays(today, race) >= 0) startDate = addDays(mondayOnOrAfter(today), -7 * (dayIndex(today) === 0 ? 0 : 1))
   if (race && diffDays(startDate, race) < 0) startDate = addDays(startDate, -7)
   const planId = `plan-${goal}-${startDate}`
-  const ctx = { planId, week: 0, daysPerWeek, longRunDay, paces: fitness.paces, fitness }
+  const ctx = { planId, week: 0, daysPerWeek, longRunDay, runDays: chosen ? chosen.days : null, paces: fitness.paces, fitness }
 
   let startKm = Math.max(MIN_WEEK_KM, vol.weeklyKm)
   if (vol.weeklyKm < MIN_WEEK_KM && !['return', 'base'].includes(goal)) {
@@ -347,7 +406,7 @@ export function generatePlan(opts = {}) {
   total = Math.max(1, Math.min(52, total))
 
   if (goal === 'return') {
-    return finish(returnPlan(ctx, { startDate, total, startKm: vol.weeklyKm, includeStrength, daysPerWeek }), { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today })
+    return finish(returnPlan(ctx, { startDate, total, startKm: vol.weeklyKm, includeStrength, daysPerWeek }), { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today, layout })
   }
 
   const peak = peakFor(goal, daysPerWeek, startKm)
@@ -369,16 +428,17 @@ export function generatePlan(opts = {}) {
     if (lower) warnings.push(`Or keep the date and aim for the ${GOAL_LABEL[lower]} instead.`)
   }
   if (race && diffDays(today, race) < 0) warnings.push('That race date has already passed.')
+  const qualityTypes = allowedQuality(goal, avoid)
+  if (!qualityTypes.length && goal !== 'base') notes.push(`No tempo or interval sessions, as you asked. Strides each week keep your legs quick.`)
 
   const ramp = buildRamp({ startKm, peakKm: peak, weeks: build, startLongKm: startLong, longCap: LONG_CAP_KM[goal] })
   const weeks = []
-  const qualityTypes = goal === '5k' || goal === '10k' ? ['intervals', 'tempo'] : ['tempo', 'intervals']
   for (let i = 0; i < build; i++) {
     const r = ramp[i]
     ctx.week = i
     // Two quality days only with 5+ run days, so easy running stays about 80% of the week.
-    let q = goal === 'base' ? 0 : daysPerWeek <= 2 ? 0 : daysPerWeek >= 5 && i >= 2 && !r.deload ? 2 : 1
-    const types = q === 1 ? [qualityTypes[i % 2]] : qualityTypes
+    let q = goal === 'base' || !qualityTypes.length ? 0 : daysPerWeek <= 2 ? 0 : daysPerWeek >= 5 && i >= 2 && !r.deload ? 2 : 1
+    const types = q === 1 ? [qualityTypes[i % qualityTypes.length]] : qualityTypes
     const weekStart = addDays(startDate, i * 7)
     const sessions = layoutWeek(ctx, {
       weekStart, km: r.km, longKm: r.longKm, qualityCount: q, qualityTypes: types,
@@ -399,16 +459,21 @@ export function generatePlan(opts = {}) {
     const longKm = r1(Math.min(km * 0.3, LONG_CAP_KM[goal]))
     const sessions = isRaceWeek
       ? layoutWeek(ctx, { weekStart, km: r1(RACE_M[goal] / 1000 + Math.min(km * 0.5, 3 * (daysPerWeek - 1))), longKm, qualityCount: 0, qualityTypes: [], strides: true, strength: 0, recovery: false, raceDate: race, goal })
-      : layoutWeek(ctx, { weekStart, km, longKm, qualityCount: 1, qualityTypes: [goal === 'marathon' || goal === 'half' ? 'tempo' : 'intervals'], strides: false, strength: includeStrength ? 1 : 0, recovery: false, goal })
+      : layoutWeek(ctx, { weekStart, km, longKm, qualityCount: qualityTypes.length ? 1 : 0, qualityTypes: [taperQuality(goal, qualityTypes)], strides: !qualityTypes.length, strength: includeStrength ? 1 : 0, recovery: false, goal })
     weeks.push({ index: i, startDate: weekStart, focus: isRaceWeek ? 'Race week' : 'Taper', deload: false, taper: true, targetKm: sumRunKm(sessions), sessions })
   }
-  return finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today })
+  return finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today, layout })
 }
 
-function finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today }) {
+function taperQuality(goal, allowed) {
+  const want = goal === 'marathon' || goal === 'half' ? 'tempo' : 'intervals'
+  return allowed.includes(want) ? want : allowed[0]
+}
+
+function finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, notes, opts, today, layout }) {
   const last = weeks[weeks.length - 1]
   const endDate = last.sessions.length ? last.sessions[last.sessions.length - 1].date : addDays(last.startDate, 6)
-  const { activities, ...settings } = opts
+  const { activities, runDays: _rd, avoid: _av, ...settings } = opts
   if (fitness.confidence === 'low') notes.push(`We don't have much run history yet, so paces start on the cautious side and will sharpen as you log runs.`)
   return {
     id: planId,
@@ -418,7 +483,7 @@ function finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, 
     startDate,
     endDate,
     raceDate: race,
-    settings: { ...settings, today },
+    settings: { ...settings, ...layout, today },
     fitness: { fiveKS: fitness.fiveKS, confidence: fitness.confidence, source: fitness.source, paces: fitness.paces, predictions: fitness.predictions },
     volume: vol,
     weeks,
@@ -431,7 +496,7 @@ function finish(weeks, { planId, goal, startDate, race, fitness, vol, warnings, 
 function returnPlan(ctx, { startDate, total, startKm, includeStrength, daysPerWeek }) {
   const dpw = Math.min(daysPerWeek, 4)
   const L = DAYS.indexOf(ctx.longRunDay)
-  const days = runDays(ctx.longRunDay, Math.max(2, dpw))
+  const days = ctx.runDays ? spreadDays(ctx.runDays, L, dpw) : runDays(ctx.longRunDay, Math.max(2, dpw))
   const weeks = []
   let minutes = Math.max(15, Math.min(25, startKm ? startKm * 2 : 18)) // per session
   let stage = 0

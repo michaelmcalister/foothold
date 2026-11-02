@@ -38,6 +38,7 @@ APP_URL = "https://foothold.com.au"
 
 # Secrets (set with `npx wrangler secret put NAME`):
 #   TOKEN_KEY  any long random string; encrypts linked FormTrack tokens (AES-GCM)
+#   ANTHROPIC_API_KEY  AI built plans (worker/aiplan.js); optional vars PLAN_MODEL, AI_DAILY_CAP_AUD (default 10)
 
 [triggers]
 # Hourly: end finished battles and send "fading soon" reminders
