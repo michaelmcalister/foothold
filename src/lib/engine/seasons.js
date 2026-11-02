@@ -142,8 +142,8 @@ export function rankIn(gains, userId) {
 // A badge for the season just played, by ground gained. Everyone who
 // took part gets one; there is no badge for losing.
 export const SEASON_BADGES = [
-  { id: 'scout', name: 'Scout', min: 1 },
-  { id: 'pathfinder', name: 'Pathfinder', min: 25 },
+  { id: 'wanderer', name: 'Wanderer', min: 1 },
+  { id: 'explorer', name: 'Explorer', min: 25 },
   { id: 'trailblazer', name: 'Trailblazer', min: 100 },
   { id: 'vanguard', name: 'Vanguard', min: 300 },
 ]

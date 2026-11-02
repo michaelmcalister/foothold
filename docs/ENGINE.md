@@ -151,3 +151,24 @@ km running), 2) come back for more (any outing after it, aiming for within
 4 days), 3) hold your ground (a third outing, aiming for the first 10 days).
 A missed aim never fails a step; it stretches ("No rush. Whenever you're
 ready."). All three earn the Founding foothold badge, kept for good.
+## Weekly divisions
+
+Six tiers: **Scout, Pathfinder, Ranger, Warden, Sentinel, Marshal**. Everyone
+starts as a Scout. Code: `divisions.js`. Tests: `test/divisions.test.js`.
+
+- **Who plays:** anyone with an outing in the last **14 days** is placed each
+  Monday (Sydney). Divisions count **every map** together (run, walk and
+  ride), so the `mode` column is `all`; it is kept for per-map divisions later.
+- **Grouping:** same tier only, about **20** a division (never more than 25).
+  Within a tier players are sorted by last week's score so each division is
+  evenly matched. A city (H3 resolution 4 cell of the last outing) with 15 or
+  more players at a tier gets divisions of its own; the rest share.
+- **Late joiners** (a first outing mid-week, or back after a break) go into a
+  division of their tier with room, their city first, else a new one.
+- **Score:** 1 point for each hex claimed or taken that week, plus **10** for
+  each outing, up to 5 outings. Frequency matters as much as big loops.
+- **End of the week:** the top **5** who scored move up one tier. Ties share
+  a rank, so a tie for 5th moves everyone on it up. **Nobody moves down**, and
+  a week without an outing leaves you where you are. Marshal is the top.
+- **Words:** "You're in a new Pathfinder division this week. Top 5 move up."
+  and "You moved up to Ranger." Never anything about dropping or falling behind.

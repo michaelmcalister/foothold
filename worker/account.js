@@ -14,6 +14,7 @@ export const USER_TABLES = [
   { table: 'hex_losses', col: 'user_id' }, // ground rivals took from you (weekly recap)
   { table: 'personal_bests', col: 'user_id' },
   { table: 'stronghold_efforts', col: 'user_id' },
+  { table: 'division_members', col: 'user_id' }, // weekly divisions: your weeks, scores, ranks and promotions
 ]
 
 export async function exportAccount(env, user) {

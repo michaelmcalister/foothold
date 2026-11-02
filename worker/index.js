@@ -22,6 +22,7 @@ import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
 import { socialRoute, swapStatements, activityCommentDeletes } from './social.js'
 import { exportAccount, deleteAccount } from './account.js'
 import { streak } from './habits.js'
+import { divisionRoute } from './divisions.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -459,6 +460,9 @@ async function route(req, env, url, user, ctx) {
   // Comments, rivals and leagues (worker/social.js)
   const social = await socialRoute({ env, user, url, m, path, body, now, limit, decorateBattles })
   if (social !== undefined) return json(social)
+  // Weekly divisions (worker/divisions.js)
+  const div = await divisionRoute({ env, user, m, path, now })
+  if (div !== undefined) return json(div)
 
   // Profile
   if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
