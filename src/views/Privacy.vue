@@ -42,7 +42,7 @@ import BrandMark from '../components/BrandMark.vue'
       <p>When you watch a recap, the 3D map comes from Google Maps. Your phone asks Google for the imagery of the area the camera shows, the same as any map. Your track is drawn on your phone. We don't send Google your name, your account or your track as a file. Google's privacy policy covers what it does with map requests.</p>
 
       <h2>Spotify and the voice coach</h2>
-      <p>If you connect Spotify, Foothold can see your playlists and start, pause and turn down music on your devices. The Spotify sign-in is kept on your phone, not on our servers, and we don't see your listening history. The voice coach uses your phone's own voices, so what it says isn't sent anywhere.</p>
+      <p>If you connect Spotify, Foothold can see your playlists and start, pause and turn down music on your devices. The Spotify sign-in is kept on your phone, not on our servers, and we don't see your listening history. The voice coach uses the voices built into your phone or browser. Some of these, like Google's online voices in Chrome, are made by the browser's maker, which then sees the words spoken (your distance and pace), not who you are to Foothold.</p>
 
       <h2>Your choices</h2>
       <ul>
