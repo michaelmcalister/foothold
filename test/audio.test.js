@@ -75,7 +75,7 @@ describe('envelopes', () => {
 })
 
 describe('sound effects', () => {
-  const names = ['claim', 'take', 'levelUp', 'pr', 'quest', 'crown', 'start', 'pause', 'resume', 'finish', 'loopReady', 'kudos', 'tap']
+  const names = ['claim', 'take', 'levelUp', 'pr', 'quest', 'crown', 'start', 'pause', 'resume', 'finish', 'loopReady', 'surge', 'surgeDone', 'chapter', 'kudos', 'tap']
 
   it('has every effect, short ones under a second and celebrations about 1.5 s', () => {
     for (const n of names) {

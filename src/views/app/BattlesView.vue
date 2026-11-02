@@ -2,15 +2,19 @@
 // Battles, leaderboards and the local feed. Battles start when you take
 // someone's ground and run for a week; whoever holds more of it wins.
 // Leaderboards come in two kinds: this season's ground gained, and all time.
+// The Division tab is this week's division table (components/DivisionPanel.vue).
 import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import Crest from '../../components/Crest.vue'
+import DivisionPanel from '../../components/DivisionPanel.vue'
 import { api } from '../../lib/api/index.js'
 import { store, toast } from '../../lib/store.js'
 import { km, ago, plural } from '../../lib/format.js'
 import { play } from '../../lib/audio/sfx.js'
 
 const YOU = '#2E55E6'
-const tab = ref('battles')
+const TABS = ['battles', 'division', 'leaders', 'feed']
+const tab = ref(TABS.includes(useRoute().query.tab) ? useRoute().query.tab : 'battles')
 const battles = ref({ live: [], past: [] })
 const board = ref([])
 const kind = ref('season') // 'season' or 'all'
@@ -71,6 +75,7 @@ async function kudos(item) {
       <p v-if="season" class="small muted season-line">{{ season.label }}. {{ daysWord(season.daysLeft) }}.</p>
       <div class="seg" role="group" aria-label="Section">
         <button type="button" :aria-pressed="tab === 'battles'" @click="tab = 'battles'">Battles</button>
+        <button type="button" :aria-pressed="tab === 'division'" @click="tab = 'division'">Division</button>
         <button type="button" :aria-pressed="tab === 'leaders'" @click="tab = 'leaders'">Leaders</button>
         <button type="button" :aria-pressed="tab === 'feed'" @click="tab = 'feed'">Feed</button>
       </div>
@@ -117,6 +122,8 @@ async function kudos(item) {
         </ul>
       </section>
     </template>
+
+    <DivisionPanel v-else-if="tab === 'division'" />
 
     <template v-else-if="tab === 'leaders'">
       <div class="board-picks">

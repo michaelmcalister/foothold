@@ -485,3 +485,14 @@ describe('generatePlan with chosen weekdays and things to avoid', () => {
     }
   })
 })
+
+describe('adapting a plan held on screen', () => {
+  it('works on a Vue reactive plan, the way the Coach screen holds it', async () => {
+    const { reactive } = await import('vue')
+    const { generatePlan, adaptPlan } = await import('../src/lib/coach/index.js')
+    const plan = reactive(generatePlan({ goal: '10k', daysPerWeek: 3, longRunDay: 'sun', currentWeeklyKm: 15, longestRecentKm: 6, today: '2026-11-02' }))
+    const r = adaptPlan(plan, { type: 'sick', days: 3 }, '2026-11-04')
+    expect(r.plan).toBeTruthy()
+    expect(r.changes.length).toBeGreaterThan(0)
+  })
+})

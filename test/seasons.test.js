@@ -114,10 +114,10 @@ describe('ground gained', () => {
   })
   it('gives a badge for taking part, and a summary only when you gained ground', () => {
     expect(seasonBadge(0)).toBeNull()
-    expect(seasonBadge(1).name).toBe('Scout')
+    expect(seasonBadge(1).name).toBe('Wanderer')
     expect(seasonBadge(120).name).toBe('Trailblazer')
     const g = seasonGains(acts, season)
-    expect(seasonSummary(g, 'a', season)).toMatchObject({ gained: 35, rank: 2, players: 2, badge: { id: 'pathfinder' } })
+    expect(seasonSummary(g, 'a', season)).toMatchObject({ gained: 35, rank: 2, players: 2, badge: { id: 'explorer' } })
     expect(seasonSummary(g, 'd', season)).toBeNull()
   })
   it('shows the summary once, early in the next season', () => {

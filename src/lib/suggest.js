@@ -1,17 +1,18 @@
 // Suggests a loop from where you are that captures the most ground for
-// today's distance (the plan's next session, or your usual run).
+// today's distance (the plan's next session, or your usual run), or a
+// distance asked for (the first week's gentle first loop).
 
 import { api } from './api/index.js'
 import { store } from './store.js'
 import { suggestLoop, nextSession, toISO } from './coach/index.js'
 
-export async function suggestLoopFor(centre, mode = 'run') {
+export async function suggestLoopFor(centre, mode = 'run', { targetKm: askedKm = null } = {}) {
   const { plan } = await api.plan()
   const next = plan ? nextSession(plan, toISO(Date.now())) : null
   const { activities } = await api.activities({ limit: 20 })
   const runs = activities.filter((a) => a.mode === mode && !a.rejected)
   const usual = runs.length ? runs.reduce((s, a) => s + a.distanceM, 0) / runs.length / 1000 : { run: 4, walk: 3, ride: 12 }[mode]
-  const targetKm = Math.round(((next?.session?.distanceKm || next?.distanceKm) ?? usual) * 10) / 10
+  const targetKm = askedKm ?? Math.round(((next?.session?.distanceKm || next?.distanceKm) ?? usual) * 10) / 10
   let cells = await api.cellsMap(mode)
   if (!cells) {
     // Server mode: build a map from what's on screen around you

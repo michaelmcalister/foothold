@@ -1,5 +1,6 @@
 // Foothold's sound effects, synthesised with the Web Audio API: claiming
 // ground, taking it from a rival, levelling up, new bests, quests, crowns,
+// moving up a division,
 // the recording controls and a few tiny UI sounds. Also owns the one shared
 // AudioContext (made on the first tap, since phones need a gesture) and the
 // master bus the recap music plays through.
@@ -101,6 +102,19 @@ export const EFFECTS = {
       return t + 1.5
     },
   },
+  promote: {
+    dur: 1.5,
+    celebration: true,
+    build(ctx, out, t) {
+      // Moving up a division: a rising step, then a warm chord
+      ;['D5', 'E5', 'F#5', 'A5'].forEach((n, i) => pluck(ctx, out, t + i * 0.08, N(n), { peak: 0.16, decay: 0.28, bright: 3000 }))
+      const hit = t + 0.34
+      pad(ctx, out, hit, [N('D4'), N('F#4'), N('A4')], { peak: 0.06, attack: 0.04, hold: 0.35, decay: 0.7, cutoff: 1400, to: 2600 })
+      bell(ctx, out, hit, N('D6'), { peak: 0.14, decay: 1.0 })
+      bell(ctx, out, hit + 0.12, N('A6'), { peak: 0.08, decay: 0.9 })
+      return hit + 1.1
+    },
+  },
   start: {
     dur: 0.3,
     build(ctx, out, t) {
@@ -140,6 +154,35 @@ export const EFFECTS = {
       bell(ctx, out, t, N('E6'), { peak: 0.18, decay: 0.22 })
       bell(ctx, out, t + 0.17, N('E6'), { peak: 0.18, decay: 0.3 })
       return t + 0.5
+    },
+  },
+  // Missions: a surge starting (a quick rising call), a surge done (a bright
+  // landing) and a new chapter (a soft two bell turn of the page)
+  surge: {
+    dur: 0.6,
+    build(ctx, out, t) {
+      ;['D5', 'A5', 'D6'].forEach((n, i) => blip(ctx, out, t + i * 0.08, N(n), { peak: 0.14 + i * 0.02, decay: i === 2 ? 0.25 : 0.07 }))
+      kick(ctx, out, t, { peak: 0.12 })
+      noise(ctx, out, t + 0.16, { attack: 0.04, decay: 0.3, peak: 0.03, filter: { type: 'highpass', freq: 6000 } })
+      return t + 0.55
+    },
+  },
+  surgeDone: {
+    dur: 0.8,
+    build(ctx, out, t) {
+      pluck(ctx, out, t, N('A5'), { peak: 0.14, decay: 0.3 })
+      pluck(ctx, out, t + 0.1, N('F#5'), { peak: 0.12, decay: 0.3 })
+      bell(ctx, out, t + 0.2, N('D6'), { peak: 0.14, decay: 0.55 })
+      tone(ctx, out, t + 0.2, { freq: N('D4'), type: 'triangle', attack: 0.01, decay: 0.5, peak: 0.1 })
+      return t + 0.75
+    },
+  },
+  chapter: {
+    dur: 0.7,
+    build(ctx, out, t) {
+      bell(ctx, out, t, N('F#5'), { peak: 0.12, decay: 0.5 })
+      bell(ctx, out, t + 0.2, N('B5'), { peak: 0.12, decay: 0.6 })
+      return t + 0.7
     },
   },
   kudos: {

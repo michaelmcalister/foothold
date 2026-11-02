@@ -10,7 +10,12 @@ const runOpen = (s) => isRun(s) && isOpen(s)
 const COMEBACK = 0.7
 
 function clone(plan) {
-  return typeof structuredClone === 'function' ? structuredClone(plan) : JSON.parse(JSON.stringify(plan))
+  // structuredClone can't copy a Vue reactive proxy (the Coach screen holds
+  // its plan in a ref), so fall back to a plain JSON copy. Plans are plain data.
+  try {
+    if (typeof structuredClone === 'function') return structuredClone(plan)
+  } catch { /* a proxy: copy it the plain way */ }
+  return JSON.parse(JSON.stringify(plan))
 }
 export function allSessions(plan) {
   return plan.weeks.flatMap((w) => w.sessions)
@@ -259,6 +264,25 @@ export function adaptPlan(planIn, event, today = Date.now()) {
           plan.offer.preview = generatePlan({ ...plan.offer.options, today: addDays(t, 7) }).weeks.slice(0, 2).map((w) => ({ index: w.index, targetKm: w.targetKm, focus: w.focus }))
         } catch { /* preview is optional */ }
       }
+      break
+    }
+    case 'tired': {
+      // Runs that keep feeling very hard: the next 4 days go easy at about 80%.
+      const end = addDays(t, 3)
+      let n = 0
+      for (const w of plan.weeks) for (const s of w.sessions) {
+        if (s.date < t || s.date > end || !runOpen(s) || s.type === 'race') continue
+        scale(plan, w, s, 0.8, { easyOnly: true })
+        if (s.type === 'long') rebuild(plan, w, s, 'easy', s.distanceKm, { adapted: true })
+        n++
+      }
+      changes.push(n
+        ? 'A few runs have felt very hard lately, so the next 4 days are easy, at about 80% of the planned distance.'
+        : 'A few runs have felt very hard lately. Keep the next few days easy.')
+      changes.push('Tired legs come good with sleep, food and an easy day or two. Nothing is lost.')
+      refresh(plan)
+      reRamp(plan, Math.max(0, plan.weeks.findIndex((w) => diffDays(w.startDate, end) >= 0 && diffDays(w.startDate, end) < 7)))
+      refresh(plan)
       break
     }
     case 'edit': {

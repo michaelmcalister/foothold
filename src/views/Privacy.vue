@@ -19,7 +19,8 @@ import BrandMark from '../components/BrandMark.vue'
         <li><strong>Routes you plan.</strong> The name, type and line of routes you save in the planner. Only you can see them, and you can delete them any time.</li>
                 <li><strong>Your name on the map</strong> and the colour and crest you pick.</li>
         <li><strong>Heart rate and cadence</strong>, only if your watch sends them, used to check activities are genuine.</li>
-        <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time.</li>
+        <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time. To show your readiness over time, the app keeps one readiness score a day on your device only, and clears it when you unlink.</li>
+        <li><strong>How a run felt</strong>, only if you answer "How did that feel?" after a run: how hard it was, and where something hurt and how badly. It is saved with that activity, only you see it, and the coach uses it to ease your plan. Delete the activity and it goes too.</li>
       </ul>
 
       <h2>What other players see</h2>

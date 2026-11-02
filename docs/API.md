@@ -30,7 +30,11 @@ Activity  { id, userId, mode, source: 'phone'|'watch'|'import', startedAt,
             loops, gain, claimed, reinforced, taken, held,
             trust, flags: [{ type, message }], rejected, rejectReason,
             appeal?: { note, status: 'open'|'upheld'|'declined' }, kudos, comments,
-            bests: { [key]: seconds, longest?: metres } | null }
+            bests: { [key]: seconds, longest?: metres } | null,
+            feel: 1|2|3|4|5|'hurt'|null, hurt: { area, level } | null, checkinAt: number|null }
+            (feel, hurt and checkinAt: your own activities only. feel 1 easy, 2 comfortable,
+            3 hard work, 4 very hard, 5 all out; area foot|shin|calf|knee|hip|hamstring|back|other;
+            level niggle|sore|hurt. checkinAt with a null feel means the prompt was dismissed)
 Cell      { h3, owner, ownerName, ownerColour, ownerCrest, mine, strength, daysToWild,
             flips, heat, lastFlip }   (flips: times taken; heat: recent flips, 0 after 30 quiet days)
 Best      { key, label, kind: 'time'|'dist', value, activityId, at }
@@ -62,6 +66,7 @@ Recap     { week: { key, start, end, current, previous }, distanceM, movingS, ou
             explored, quests: Quest[], questsDone, biggestLoop: { activityId, hexes, mode,
             startedAt, distanceM } | null, best: { activityId, text } | null,
             last: { key, distanceM, movingS, outings }, compare, visited: [h3] (max 3000) }
+Tier      { index: 0..5, id, name, next: { index, id, name } | null }   Scout, Pathfinder, Ranger, Warden, Sentinel, Marshal
 Season    { id: '2026-12', key: 'summer'|'autumn'|'winter'|'spring', name: 'Summer 2026/27',
             label: 'Summer season, Dec to Feb', span: 'Dec to Feb', startsAt, endsAt, daysLeft }
 ```
@@ -76,11 +81,12 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | POST | /api/tts | `{ text, voice? }` (no sign-in needed; max 300 characters; voice is a key from `/api/config` `tts.voices`) | `audio/mpeg` (cached by voice and text; 503 when the voice isn't set up, 429 when an address asks for too many new lines) |
 | GET | /api/me | | `{ user }` |
-| PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen? }` | `{ user }` |
+| PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen?, foundingAt? }` (`foundingAt`: when the Founding foothold badge was earned; set once, never moved or cleared) | `{ user }` (user has `foundingAt`, null until earned) |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
 | GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
 | POST | /api/activities/:id/appeal | `{ note }` | `{ activity }` |
+| POST | /api/activities/:id/checkin | `{ feel, hurt?: { area, level } }` or `{ dismissed: true }` | `{ activity }` (yours only; answering again replaces it) |
 | GET | /api/territory | `?mode=run&bbox=w,s,e,n` | `{ cells: Cell[] }` (others' private hexes left out; max 5000) |
 | GET | /api/stats | `?mode=run` | `{ hexes, km2, level, next, toNext, weekKm: number[5], streakWeeks, fadingSoon: number }` |
 | GET | /api/leaderboard | `?mode=run&scope=local|world|club&board=all|season&lat&lng` | `{ rows: [{ userId, name, colour, crest, hexes, km2, me }], season: Season }`; with `board=season` rows are `{ userId, name, colour, crest, gained, me }`, ranked by hexes claimed or taken this season |
@@ -123,6 +129,9 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
 | GET | /api/quests | | `{ week: Week, quests: Quest[] }` this week's three quests |
 | GET | /api/week | `?w=YYYY-MM-DD` (any day in the week; leave out for this week) | `{ recap: Recap }` |
+| GET | /api/streak | | `{ streak: { current, longest, banked, maxBanked: 3, active, thisWeek: { key, out }, startKey, lastRested, milestone, nextMilestone, weeks: [{ key, state: 'out'\|'rested'\|'missed'\|'now'\|'before', out }] } }` (weeks: the last 16, oldest first) |
+| GET | /api/division | | `{ week: Week, daysLeft, endsAt, tier: Tier, bestTier: Tier, active, division: { id, tier: Tier, size, promoteTop } \| null, table: [{ userId, name, colour, crest, score, hexes, outings, rank, top, promotes, me }], you: { rank, score, hexes, outings, promotes } \| null, promotion: { week, tier: Tier } \| null, last: { week, tier, rank, size, promoted } \| null, scoring: { perHex, perOuting, maxOutings, promoteTop, size, activeDays } }` (`active` false and an empty table until you've had an outing in the last 14 days; `promotion` is set when last week moved you up) |
+| GET | /api/division/history | | `{ history: [{ week, tier: Tier, rank, size, score, hexes, outings, promoted, finalised }], tier: Tier, bestTier: Tier }` (newest first, up to 52) |
 
 ## Personal bests and strongholds
 
@@ -168,6 +177,41 @@ Held hexes in a past week's recap come from today's map, so they count
 ground held then and still held now. On Monday (Sydney) the cron, and the
 practice map's tick, send "Your week in Foothold is ready. Want a look?"
 (kind `week`) to anyone who got out the week before.
+## Weekly streaks and the first week
+
+Rules live in `src/lib/engine/streaks.js` and `firstweek.js`, shared by both
+adapters. A streak counts Sydney weeks (Monday to Sunday) with at least one
+outing that wasn't rejected. Each finished week banks a rest week (up to 3);
+a quiet week spends one and the streak carries on, and only a quiet week with
+none banked ends it. This week is in progress, never missed. Worked out from
+activity start times on every call, so imports fill in old weeks; no table.
+The hourly cron (and the practice map's tick) only ever celebrates
+milestones: 4, 8, 12, 26 and 52 weeks (kind `streak`, once per streak and
+milestone). No reminders or warnings about streaks are sent.
+
+The first week journey is worked out in the app from `GET /api/activities`
+and the user's `createdAt`; once all three steps are done the app saves
+`foundingAt` with `PUT /api/me`.
+## Weekly divisions
+
+Rules in `src/lib/engine/divisions.js` (docs/ENGINE.md), server side in
+`worker/divisions.js`, tables from `migrations/0009_divisions.sql`
+(`divisions`, `division_members`, `division_weeks`). The hourly cron finishes
+any week that has ended, groups the new week once (the first run after
+midnight on Monday, Sydney; a `division_weeks` row stops it running twice) and
+seats late joiners. `GET /api/division` does the same catch-up first, so a
+missed cron hour never leaves anyone out. Scores are worked out from
+activities and cached in `division_members`. Notifications have kind
+`division`. `division_members` is in Download my data and goes with the
+account; a division's `city` (an H3 resolution 4 cell) is never sent to the app.
+Bots: none on the server yet. When they arrive, leave them out where
+`activePlayers` reads activities and seat them after grouping.
+
+The practice map (local.js) builds a division of 20 from the practice rivals
+and named practice players whose scores grow through the week
+(`src/lib/social/divisionPractice.js`); your score is real. Unlike the server,
+practice always places you, so the table is there on day one.
+
 ## Comments, leagues and rivals
 
 - Comments are tidied (spaces squashed, invisible characters dropped),
@@ -212,3 +256,23 @@ Limits: 5 an hour and 15 a day per address, 15 a day per signed-in player
 (429 `rate_limited`), and a global daily spend cap `AI_DAILY_CAP_AUD`
 (default 10, 503 `ai_paused`) counted in the `ai_usage` table, which holds
 token counts and cost only.
+
+## Post-run check-ins and the fitness trend
+
+After a run the app asks once "How did that feel?" (Result screen, and the
+Activity screen for your latest activity). The answer is saved on the
+activity with `POST /api/activities/:id/checkin`; dismissing it saves
+`checkinAt` with no `feel`, so it is never asked again for that activity.
+The rules live in `src/lib/coach/checkin.js` and both adapters use them.
+"Something hurt" with a place and how bad also runs the coach's injury
+adaptation on your plan (`adaptPlan` with `{ type: 'injury' }`). When the last
+3 planned easy runs, or 2 in a week, felt very hard, the plan gets a
+`{ type: 'tired' }` event: the next 4 days are easy at about 80%.
+
+The fitness trend (`/app/fitness`, `src/lib/coach/trend.js`) is worked out
+in the app from your activities: a rolling predicted 5K per week (from the
+8 weeks before it), easy run pace, heartbeats per km on easy runs when the
+track has heart rate, weekly kilometres, and FormTrack readiness. The server
+summary only has today's readiness, so the app keeps one score a day on the
+device (`src/lib/readiness.js`). Resting heart rate is not in the summary, so
+it is not shown.

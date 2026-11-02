@@ -21,6 +21,7 @@ export const router = createRouter({
         { path: 'battles', name: 'battles', component: () => import('./views/app/BattlesView.vue') },
         { path: 'coach', name: 'coach', component: () => import('./views/app/CoachView.vue') },
         { path: 'you', name: 'you', component: () => import('./views/app/YouView.vue') },
+        { path: 'fitness', name: 'fitness', component: () => import('./views/app/FitnessView.vue') },
         { path: 'week', name: 'week', component: () => import('./views/app/WeekView.vue') },
         { path: 'settings', name: 'settings', component: () => import('./views/app/SettingsView.vue') },
         { path: 'notifications', name: 'notifications', component: () => import('./views/app/NotificationsView.vue') },
