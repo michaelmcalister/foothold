@@ -639,7 +639,11 @@ export async function handleApi(req, env, ctx) {
   // Public: what the app needs to start Auth0 sign-in
   if (url.pathname === '/api/config' && req.method === 'GET') {
     const cfg = authConfig(env)
-    res = json(cfg ? { auth0: { domain: cfg.domain, clientId: cfg.clientId, audience: cfg.audience } } : {})
+    const out = cfg ? { auth0: { domain: cfg.domain, clientId: cfg.clientId, audience: cfg.audience } } : {}
+    // Google Maps browser key for run recaps. It is a public key, locked to
+    // this app's addresses in Google Cloud, so it is fine to hand to the app.
+    if (env.GOOGLE_MAPS_KEY) out.maps = { googleKey: String(env.GOOGLE_MAPS_KEY) }
+    res = json(out)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
   }

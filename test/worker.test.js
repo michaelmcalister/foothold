@@ -104,6 +104,9 @@ describe('users', () => {
     expect((await call(null, 'GET', '/api/config')).body).toEqual({})
     Object.assign(env, { AUTH0_DOMAIN: 'https://ft.au.auth0.com/', AUTH0_CLIENT_ID: 'cid', AUTH0_AUDIENCE: 'aud' })
     expect((await call(null, 'GET', '/api/config')).body).toEqual({ auth0: { domain: 'ft.au.auth0.com', clientId: 'cid', audience: 'aud' } })
+    env.GOOGLE_MAPS_KEY = 'browser-key'
+    expect((await call(null, 'GET', '/api/config')).body.maps).toEqual({ googleKey: 'browser-key' })
+    delete env.GOOGLE_MAPS_KEY
   })
   it('hands other paths to the static app', async () => {
     const res = await worker.fetch(new Request('https://foothold.test/map'), env)

@@ -103,6 +103,7 @@ async function remove() {
     </section>
 
     <div class="actions">
+      <RouterLink class="btn" :to="{ name: 'recap', params: { id: a.id } }">Watch recap</RouterLink>
       <button class="btn quiet" type="button" @click="exportGpx">Export GPX</button>
       <button class="btn quiet" type="button" @click="remove">Delete</button>
     </div>

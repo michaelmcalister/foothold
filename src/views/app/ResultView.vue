@@ -142,7 +142,8 @@ async function sendAppeal() {
       <ShareCard v-if="!a.rejected" :activity="a" :new-hexes="newHexes" :taken="takenBy" />
 
       <div class="done">
-        <RouterLink class="btn block" to="/app">Back to the map</RouterLink>
+        <RouterLink v-if="!a.rejected" class="btn block" :to="{ name: 'recap', params: { id: a.id } }">Watch your recap</RouterLink>
+        <RouterLink class="btn secondary block" to="/app">Back to the map</RouterLink>
         <RouterLink class="btn secondary block" :to="{ name: 'activity', params: { id: a.id } }">See activity details</RouterLink>
       </div>
     </div>

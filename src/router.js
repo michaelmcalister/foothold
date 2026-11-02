@@ -15,6 +15,7 @@ export const router = createRouter({
         { path: '', name: 'map', component: () => import('./views/app/MapView.vue') },
         { path: 'record', name: 'record', component: () => import('./views/app/RecordView.vue'), meta: { full: true } },
         { path: 'result/:id', name: 'result', component: () => import('./views/app/ResultView.vue'), meta: { full: true } },
+        { path: 'recap/:id', name: 'recap', component: () => import('./views/app/RecapView.vue'), meta: { full: true } },
         { path: 'activity/:id', name: 'activity', component: () => import('./views/app/ActivityView.vue') },
         { path: 'battles', name: 'battles', component: () => import('./views/app/BattlesView.vue') },
         { path: 'coach', name: 'coach', component: () => import('./views/app/CoachView.vue') },

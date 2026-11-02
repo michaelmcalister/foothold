@@ -66,6 +66,31 @@ Every push to `main` then builds and deploys. The hourly cron in
 `wrangler.toml` ends finished battles and sends the daily "fading soon"
 reminders, with no extra setup.
 
+## Run recaps in 3D (Google Maps)
+
+Recaps fly over Google's photorealistic 3D map when a Google Maps key is set.
+Without one they use the street map with the same camera moves.
+
+1. In Google Cloud, pick or create a project with billing on, then enable
+   **Maps JavaScript API** and **Map Tiles API**.
+2. Create an API key. Under Application restrictions choose Websites and add
+   `https://foothold.michael-0d4.workers.dev/*` (and any custom domain).
+   Under API restrictions allow only those two APIs.
+3. In Cloudflare, add it to the Worker as a variable named `GOOGLE_MAPS_KEY`.
+   The app reads it from `/api/config`. It is a browser key, so it isn't
+   secret, but the website restriction is what stops others using it.
+4. For the GitHub Pages copy, add the same key as a repository variable
+   named `GOOGLE_MAPS_KEY` (Settings, Secrets and variables, Actions,
+   Variables) and add `https://michaelmcalister.github.io/foothold/*` to the
+   key's websites.
+
+Billing: each recap is one 3D map load (Google's Immersive Maps SKU). Google
+lists 5,000 free a month, then about US$7 per 1,000. Set a budget alert in
+Google Cloud.
+
+Google's terms don't allow saving their imagery outside the map, so recaps
+play live in the app and aren't exported as video files.
+
 ## Developing locally
 
 ```bash
