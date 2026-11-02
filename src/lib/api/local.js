@@ -13,6 +13,7 @@ import {
   bestEfforts, mergeBests, rebuildBests, bestsList, prepareStronghold, strongholdsRun, standings, crownStatus, crownMessage,
 } from '../engine/index.js'
 import { isCrest } from '../crests.js'
+import { cleanCheckin } from '../coach/checkin.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
 import { checkText } from '../social/filter.js'
@@ -392,7 +393,10 @@ function practiceComments() {
 
 const hiddenFor = (c) => S.social.reports.some((r) => r.commentId === c.id && r.reporter === S.user.id)
 const visibleComments = (activityId, now = Date.now()) => S.social.comments.filter((c) => c.activityId === activityId && c.at <= now && !hiddenFor(c)).sort((a, b) => a.at - b.at)
-const withCount = (a) => ({ ...a, comments: visibleComments(a.id).length })
+// Your own activities always carry the check-in fields, as the server's do
+const withCount = (a) => (a.userId === S.user.id
+  ? { feel: null, hurt: null, checkinAt: null, ...a, comments: visibleComments(a.id).length }
+  : { ...a, comments: visibleComments(a.id).length })
 function commentOut(c, ownerId) {
   const p = player(c.userId)
   const mine = c.userId === S.user.id
@@ -528,6 +532,18 @@ export const local = {
     a.appeal = { note: String(note || '').slice(0, 500), status: 'open', at: Date.now() }
     await save.activities()
     return { activity: a }
+  },
+
+  // Post-run check-in: how it felt, and anything that hurt. Answering again replaces it.
+  async checkin(id, body) {
+    await state()
+    const a = S.activities.find((x) => x.id === id)
+    if (!a) throw new Error('That activity is gone.')
+    if (a.userId !== S.user.id) throw new Error('You can only check in on your own activities.')
+    const { feel, hurt } = cleanCheckin(body)
+    Object.assign(a, { feel, hurt, checkinAt: Date.now() })
+    await save.activities()
+    return { activity: withCount(a) }
   },
 
   async deleteActivity(id) {

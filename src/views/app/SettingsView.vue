@@ -9,6 +9,7 @@ import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
 import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
 import { auth, login, logout } from '../../lib/auth.js'
+import { recordReadiness, clearReadiness } from '../../lib/readiness.js'
 
 const router = useRouter()
 const name = ref(store.user.name)
@@ -27,7 +28,7 @@ const fbText = ref('')
 const COLOURS = ['#2E55E6', '#1A9E8F', '#8A5CD8', '#D6418E', '#E5604D', '#16302A']
 
 onMounted(async () => {
-  if (store.user.formtrack?.linked) ftSummary.value = await api.formtrackSummary()
+  if (store.user.formtrack?.linked) { ftSummary.value = await api.formtrackSummary(); recordReadiness(ftSummary.value) }
 })
 
 async function saveProfile() {
@@ -58,6 +59,7 @@ async function linkFt() {
   try {
     const r = await api.linkFormtrack(ftTokenValue.value)
     ftSummary.value = r.summary
+    recordReadiness(r.summary)
     ftToken.value = ''
     await refresh()
     toast('FormTrack linked.')
@@ -70,6 +72,7 @@ async function linkFt() {
 async function unlinkFt() {
   await api.unlinkFormtrack()
   ftSummary.value = null
+  clearReadiness()
   await refresh()
 }
 

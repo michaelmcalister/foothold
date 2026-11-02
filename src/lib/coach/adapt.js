@@ -261,6 +261,25 @@ export function adaptPlan(planIn, event, today = Date.now()) {
       }
       break
     }
+    case 'tired': {
+      // Runs that keep feeling very hard: the next 4 days go easy at about 80%.
+      const end = addDays(t, 3)
+      let n = 0
+      for (const w of plan.weeks) for (const s of w.sessions) {
+        if (s.date < t || s.date > end || !runOpen(s) || s.type === 'race') continue
+        scale(plan, w, s, 0.8, { easyOnly: true })
+        if (s.type === 'long') rebuild(plan, w, s, 'easy', s.distanceKm, { adapted: true })
+        n++
+      }
+      changes.push(n
+        ? 'A few runs have felt very hard lately, so the next 4 days are easy, at about 80% of the planned distance.'
+        : 'A few runs have felt very hard lately. Keep the next few days easy.')
+      changes.push('Tired legs come good with sleep, food and an easy day or two. Nothing is lost.')
+      refresh(plan)
+      reRamp(plan, Math.max(0, plan.weeks.findIndex((w) => diffDays(w.startDate, end) >= 0 && diffDays(w.startDate, end) < 7)))
+      refresh(plan)
+      break
+    }
     case 'edit': {
       const { week, session: s } = findSession(plan, ev.sessionId)
       if (!s) { warnings.push("We couldn't find that session."); break }

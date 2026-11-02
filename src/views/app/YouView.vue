@@ -1,12 +1,14 @@
 <script setup>
-// Your numbers: ground held, where you are on the ladder, this week's
-// quests and recap, your weeks, your personal bests, and every activity.
+// Your numbers: ground held, your fitness trend, where you are on the ladder,
+// this week's quests and recap, your weeks, your personal bests, and every activity.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../../lib/api/index.js'
 import { store, refresh } from '../../lib/store.js'
 import { km, pace, ago, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { LEVELS, weekOf, prevWeek, clock } from '../../lib/engine/index.js'
 import QuestList from '../../components/QuestList.vue'
+import TrendChart from '../../components/TrendChart.vue'
+import { fitnessTrend, fiveKSeries, formatTime } from '../../lib/coach/index.js'
 
 const activities = ref([])
 const quests = ref([])
@@ -27,6 +29,9 @@ const bestValue = (b) => (b.kind === 'dist' ? `${km(b.value, 1)} km` : clock(b.v
 const bestDate = (t) => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
 onMounted(load)
 watch(() => store.mode, load)
+
+const fitness = computed(() => fitnessTrend({ activities: activities.value }))
+const fiveKRows = computed(() => fiveKSeries(fitness.value.weeks))
 
 const s = computed(() => store.stats || {})
 const weeks = computed(() => (s.value.weekKm12 || s.value.weekKm || []).slice().reverse())
@@ -58,6 +63,18 @@ const ladderPct = computed(() => {
       <div class="stat"><span class="big-num">{{ s.km2 || 0 }}</span><span class="label">km² of ground</span></div>
       <div class="stat"><span class="big-num">{{ s.streakWeeks || 0 }}</span><span class="label">{{ s.streakWeeks === 1 ? 'week' : 'weeks' }} in a row</span></div>
     </div>
+
+    <RouterLink v-if="fitness.current" class="fitcard" :to="{ name: 'fitness' }" aria-describedby="fit-line">
+      <div class="fittop">
+        <div class="stat">
+          <span class="label">Predicted 5K</span>
+          <span class="big-num">{{ formatTime(fitness.current.fiveKS) }}</span>
+        </div>
+        <TrendChart class="spark" :rows="fiveKRows" spark />
+      </div>
+      <p id="fit-line" class="small">{{ fitness.headline.text }}<template v-if="fitness.current.confidence === 'low'"> {{ fitness.headline.note }}</template></p>
+      <span class="see small">See your fitness</span>
+    </RouterLink>
 
     <section aria-labelledby="ladder">
       <h2 id="ladder">The ladder</h2>
@@ -160,4 +177,8 @@ const ladderPct = computed(() => {
 .shlink > span:last-child { display: grid; gap: 2px; }
 .shlink .crownbadge { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; }
 .chip.claimed { background: rgba(46, 85, 230, 0.12); color: var(--you); }
+.fitcard { display: grid; gap: 8px; text-decoration: none; color: inherit; background: #fff; border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.fitcard p { margin: 0; }
+.fittop { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: end; }
+.fitcard .see { color: var(--you); font-weight: 650; }
 </style>

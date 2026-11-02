@@ -1,6 +1,6 @@
 <script setup>
 // After an activity: what you claimed, what you took and from whom, any
-// battles that started, a level-up, Coach's notes on the run, new personal
+// battles that started, a level-up, "How did that feel?", Coach's notes on the run, new personal
 // bests, strongholds you ran, and a gentle check on this week's load.
 // A fresh result plays its sounds in turn: claim, take, crown, best, level.
 import { ref, computed, onMounted } from 'vue'
@@ -13,6 +13,7 @@ import { km, pace, duration, speedKmh, plural } from '../../lib/format.js'
 import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
+import FeelCheckin from '../../components/FeelCheckin.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 
@@ -26,6 +27,13 @@ const appealNote = ref('')
 const appealSent = ref(false)
 const plan = ref(null)
 const recent = ref([])
+const askFeel = ref(false) // decided once, so the thank you stays after answering
+const CHECKIN = ['feel', 'hurt', 'checkinAt']
+function checkedIn(act) {
+  if (!act || !res.value?.activity) return
+  // A fresh object: the practice adapter may already have changed the shared one in place
+  res.value.activity = { ...res.value.activity, ...Object.fromEntries(CHECKIN.filter((k) => k in act).map((k) => [k, act[k]])) }
+}
 
 const a = computed(() => res.value?.activity)
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
@@ -75,7 +83,9 @@ onMounted(async () => {
   } else {
     const r = await api.activity(route.params.id).catch(() => null)
     track.value = r?.track || []
+    checkedIn(r?.activity)
   }
+  askFeel.value = a.value.mode === 'run' && !a.value.rejected && a.value.checkinAt == null
   const bb = a.value.bbox
   if (bb) {
     const pad = 0.01
@@ -118,6 +128,8 @@ async function sendAppeal() {
         </p>
         <p v-else-if="a.reinforced" class="muted">{{ plural(a.reinforced, 'hex', 'hexes') }} you already held got stronger.</p>
       </header>
+
+      <FeelCheckin v-if="askFeel" :activity="a" :plan="plan" :recent="recent" @saved="checkedIn" @plan="(p) => (plan = p)" />
 
       <CoachNotes :notes="notes" />
 

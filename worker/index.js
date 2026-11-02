@@ -15,6 +15,7 @@ import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
+import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleTts, ttsConfig } from './tts.js'
 import { handleAiPlan, aiConfig } from './aiplan.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
@@ -531,7 +532,7 @@ async function route(req, env, url, user, ctx) {
     ).bind(user.id, user.id, lim).all()).results
     return json({ activities: rows.map((r) => activityOut(r, user.id, r.given)) })
   }
-  const am = path.match(/^\/api\/activities\/([A-Za-z0-9-]{1,64})(\/appeal|\/kudos)?$/)
+  const am = path.match(/^\/api\/activities\/([A-Za-z0-9-]{1,64})(\/appeal|\/kudos|\/checkin)?$/)
   if (am) {
     const id = am[1]
     const sub = am[2] || ''
@@ -563,6 +564,16 @@ async function route(req, env, url, user, ctx) {
       const appeal = { note: note.trim().slice(0, 500), status: 'open', at: now }
       await env.DB.prepare('UPDATE activities SET appeal = ? WHERE id = ?').bind(JSON.stringify(appeal), id).run()
       return json({ activity: { ...activityOut(row, user.id, row.given), appeal } })
+    }
+    if (sub === '/checkin' && m === 'POST') {
+      // How it felt (src/lib/coach/checkin.js). Answering again replaces it; { dismissed: true } stops the prompt.
+      if (!mine) return err('You can only check in on your own activities.', 403)
+      let c
+      try { c = cleanCheckin(body) } catch (e) { bad(e.message, 400, 'bad_checkin') }
+      const feel = c.feel == null ? null : String(c.feel)
+      const hurt = c.hurt ? JSON.stringify(c.hurt) : null
+      await env.DB.prepare('UPDATE activities SET feel = ?, hurt = ?, checkin_at = ? WHERE id = ? AND user_id = ?').bind(feel, hurt, now, id, user.id).run()
+      return json({ activity: activityOut({ ...row, feel, hurt, checkin_at: now }, user.id, row.given) })
     }
     if (sub === '/kudos' && m === 'POST') {
       // A toggle: tap again to take it back

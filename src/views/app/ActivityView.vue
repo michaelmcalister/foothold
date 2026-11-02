@@ -1,6 +1,7 @@
 <script setup>
 // One activity in full: route, ground claimed, splits per kilometre,
 // Coach's notes, anything that was left out and why, plus GPX export.
+// Your latest run asks "How did that feel?" if it wasn't answered yet.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -13,6 +14,7 @@ import { toGpx } from '../../lib/tracks.js'
 import { toISO } from '../../lib/coach/dates.js'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import CoachNotes from '../../components/CoachNotes.vue'
+import FeelCheckin from '../../components/FeelCheckin.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,9 +24,14 @@ const plan = ref(null)
 const recent = ref([])
 const notes = computed(() => a.value ? debrief({ activity: a.value, track: track.value, planned: plannedFor(plan.value, a.value), recent: recent.value, now: a.value.startedAt + 6 * 3600000 }) : [])
 
+const askFeel = ref(false) // decided once, so the thank you stays after answering
+function checkedIn(act) {
+  if (act && a.value) a.value = { ...a.value, ...Object.fromEntries(['feel', 'hurt', 'checkinAt'].filter((k) => k in act).map((k) => [k, act[k]])) }
+}
+
 onMounted(async () => {
   api.plan().then((r) => { plan.value = r.plan }).catch(() => {})
-  api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
+  const mine = api.activities({ limit: 50 }).then((r) => { recent.value = r.activities }).catch(() => {})
   try {
     const r = await api.activity(route.params.id)
     a.value = r.activity
@@ -32,7 +39,11 @@ onMounted(async () => {
   } catch (e) {
     toast(e.message)
     router.replace({ name: 'you' })
+    return
   }
+  await mine
+  // Only your own activities carry checkinAt, so null means yours and not answered
+  askFeel.value = a.value.mode === 'run' && !a.value.rejected && a.value.checkinAt === null && recent.value[0]?.id === a.value.id
 })
 
 const splits = computed(() => {
@@ -89,6 +100,8 @@ async function remove() {
       <div class="stat"><span class="big-num">{{ (a.claimed || 0) + (a.taken || 0) }}</span><span class="label">hexes claimed</span></div>
       <div class="stat"><span class="big-num">{{ a.taken || 0 }}</span><span class="label">taken from rivals</span></div>
     </div>
+
+    <FeelCheckin v-if="askFeel" :activity="a" :plan="plan" :recent="recent" @saved="checkedIn" @plan="(p) => (plan = p)" />
 
     <CoachNotes :notes="notes" />
 
