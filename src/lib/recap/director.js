@@ -20,12 +20,14 @@ export function createDirector(driver, plan, { onShot = () => {}, onProgress = (
         const t = Math.min(1, (now - t0) / ms)
         // Half steady, half eased: a gentle start and finish without crawling
         const f = 0.5 * t + 0.5 * ease(t)
-        driver.setCamera(cam.step(plan.followCamera(f), now - last))
-        driver.setTrail(plan.trailTo(f))
+        try {
+          driver.setCamera(cam.step(plan.followCamera(f), now - last))
+          driver.setTrail(plan.trailTo(f))
+        } catch (e) { console.warn('Recap frame failed', e) } // keep going; the next frame may draw
         onProgress({ shot: 'follow', f, metres: f * plan.total })
         last = now
         if (t < 1) raf = requestAnimationFrame(frame)
-        else { driver.setTrail(fullTrail(), true); resolve(true) }
+        else { try { driver.setTrail(fullTrail(), true) } catch { /* shown in the next shot */ } resolve(true) }
       }
       raf = requestAnimationFrame(frame)
     })
@@ -39,6 +41,15 @@ export function createDirector(driver, plan, { onShot = () => {}, onProgress = (
     for (const id of ids.slice(Math.max(0, ids.indexOf(from)))) {
       if (!live()) return
       onShot(id)
+      // A map hiccup in one shot shouldn't freeze the recap: log it and move on
+      try { await shotFor(id, token, from) } catch (e) { console.warn('Recap shot failed', id, e) }
+    }
+    if (live()) onDone()
+  }
+
+  async function shotFor(id, token, from) {
+    const live = () => token === run
+    {
       if (id === 'flyin') {
         driver.setHexes([])
         driver.setTrail([], true)
@@ -61,7 +72,6 @@ export function createDirector(driver, plan, { onShot = () => {}, onProgress = (
         await driver.flyTo(plan.shots.overview, plan.timeline[3].ms)
       }
     }
-    if (live()) onDone()
   }
 
   function stop() {

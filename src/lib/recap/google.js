@@ -56,7 +56,6 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
     altitudeMode: 'CLAMP_TO_GROUND',
     drawsOccludedSegments: true,
   })
-  map.append(trail)
   let hexEls = []
   let lastTrail = 0
 
@@ -96,7 +95,10 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
       const now = performance.now()
       if (!force && now - lastTrail < 120) return
       lastTrail = now
-      trail.path = points.length > 1 ? points.map((p) => ({ lat: p.lat, lng: p.lng })) : []
+      // Google refuses an empty path, so take the line off the map until there's something to draw
+      if (points.length < 2) { trail.remove(); return }
+      trail.path = points.map((p) => ({ lat: p.lat, lng: p.lng }))
+      if (!trail.isConnected) map.append(trail)
     },
     setHexes(rings) {
       for (const h of hexEls) h.remove()
