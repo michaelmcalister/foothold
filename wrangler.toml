@@ -6,9 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 # Keep variables added in the Cloudflare dashboard when deploying
 keep_vars = true
 
-# Build the app before every deploy (Cloudflare's build step runs only `wrangler deploy`)
+# Build the app before every deploy (Cloudflare's build step runs only `wrangler deploy`).
+# VITE_API_URL=self: this Worker serves the API too, so the app offers sign-in.
 [build]
-command = "npm run build"
+command = "VITE_API_URL=self npm run build"
 
 # The built Vue app is served as static assets. Anything that isn't a file
 # falls back to index.html so client-side routes work. /api goes to the Worker.
@@ -27,10 +28,11 @@ migrations_dir = "migrations"
 [vars]
 FORMTRACK_URL = "https://formtrack.com.au"
 APP_URL = "https://foothold.com.au"
-# Sign-in, same Auth0 tenant as FormTrack (set these here or in the dashboard):
-#   AUTH0_DOMAIN    e.g. "formtrack.au.auth0.com"
-#   AUTH0_CLIENT_ID the Foothold SPA application's client id
-#   AUTH0_AUDIENCE  the API identifier, same one FormTrack uses
+# Sign-in, same Auth0 tenant as FormTrack. None of these are secret: the
+# browser sees them anyway. AUTH0_CLIENT_ID is the "Foothold" SPA application.
+AUTH0_DOMAIN = "dev-dprob3bsr0oj2dsz.us.auth0.com"
+AUTH0_CLIENT_ID = "tgi72m6fOy0uAODE9vkjjlCy5TOGkpWx"
+AUTH0_AUDIENCE = "https://api.formtrk.com"
 # Local development only: ALLOW_DEVICE_IDS = "1" accepts an X-Device-Id header
 # instead of a sign-in. Never set it in production.
 # Extra origins allowed to call the API from a browser (comma separated),
