@@ -1,7 +1,7 @@
 // Synthetic tracks for the demo world and the "simulate a run" button,
 // plus GPX import for runs recorded on a watch or another app.
 
-import { offset } from './engine/geo.js'
+import { offset, distance } from './engine/geo.js'
 
 // Seeded random so the demo world is the same every time for a place.
 export function rng(seed) {
@@ -69,6 +69,33 @@ export function loopTrack({ centre, perimeterKm = 3, kmh = 10.5, startAt = Date.
 }
 
 // Parse a GPX file (Garmin, COROS, Strava exports) into track points.
+// A run along a fixed route (a real loop from an area pack): one point every
+// 2 seconds at the given speed, a metre or two of GPS wobble, either way round.
+export function routeTrack(route, { kmh = 10.5, startAt = Date.now(), seed = 1, reverse = false } = {}) {
+  const rand = rng(seed)
+  const pts = reverse ? route.slice().reverse() : route
+  const step = (kmh / 3.6) * 2 // metres per 2 s fix
+  const out = []
+  let t = startAt
+  let carry = 0
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]
+    const seg = distance(a, b)
+    let d = carry
+    while (d < seg) {
+      const f = d / seg
+      const p = { lat: a.lat + (b.lat - a.lat) * f, lng: a.lng + (b.lng - a.lng) * f }
+      out.push({ ...offset(p, (rand() - 0.5) * 3, (rand() - 0.5) * 3), t: Math.round(t), acc: 5 })
+      t += 2000 * (0.92 + rand() * 0.16)
+      d += step
+    }
+    carry = d - seg
+  }
+  const end = pts[pts.length - 1]
+  out.push({ lat: end.lat, lng: end.lng, t: Math.round(t), acc: 5 })
+  return out
+}
+
 export function parseGpx(text) {
   const doc = new DOMParser().parseFromString(text, 'application/xml')
   if (doc.querySelector('parsererror')) throw new Error("That file isn't a GPX file we can read.")

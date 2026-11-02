@@ -130,10 +130,10 @@ async function kudos(item) {
         <li v-for="item in feed" :key="item.activity.id" class="feed">
           <span class="hexdot" :style="{ background: item.mine ? 'var(--you)' : item.userColour }" aria-hidden="true"></span>
           <div>
-            <span><strong>{{ item.mine ? 'You' : item.userName }}</strong>&nbsp;<span class="muted">{{ item.activity.mode === 'ride' ? 'rode' : item.activity.mode === 'walk' ? 'walked' : 'ran' }} {{ km(item.activity.distanceM) }} km</span></span>
+            <span><strong>{{ item.mine ? 'You' : item.userName }}</strong>&nbsp;<span class="muted">{{ item.activity.mode === 'ride' ? 'rode' : item.activity.mode === 'walk' ? 'walked' : 'ran' }} {{ km(item.activity.distanceM) }} km<template v-if="item.activity.title">, {{ item.activity.title }}</template></span></span>
             <p class="small muted">
               {{ ago(item.activity.startedAt) }}
-              <template v-if="item.activity.claimed || item.activity.taken"> · {{ (item.activity.claimed || 0) + (item.activity.taken || 0) }} hexes claimed</template>
+              <template v-if="item.activity.claimed || item.activity.taken"> · {{ plural((item.activity.claimed || 0) + (item.activity.taken || 0), 'hex', 'hexes') }} claimed</template>
             </p>
           </div>
           <button v-if="!item.mine" class="kudos" type="button" :aria-pressed="!!item.activity.kudosGiven" @click="kudos(item)">

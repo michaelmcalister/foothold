@@ -9,11 +9,11 @@ import {
   weeklyKm, loadCheck, applyClaim, openBattles, battleScore, cellsForLoops, effortGain,
   findLoops, summarise, offset, distance, cellCentre, hexIsPrivate,
 } from '../engine/index.js'
-import { loopTrack, rng } from '../tracks.js'
+import { loopTrack, routeTrack, rng } from '../tracks.js'
 
 const DAY = 86400000
 const ME_DEFAULT_COLOUR = '#2E55E6'
-const WORLD_VERSION = 3 // bump to re-seed the practice rivals after a change
+const WORLD_VERSION = 4 // bump to re-seed the practice rivals after a change
 
 export const RIVALS = [
   { id: 'r-sam', name: 'Sam', colour: '#E8A817' },
@@ -84,6 +84,24 @@ function notify(kind, text, at = Date.now()) {
 }
 
 // ---- demo world ----
+// Area packs: real local loops for places we've mapped. Loaded only when the
+// player is nearby, so everyone else doesn't download them.
+const AREA_PACKS = [{ centre: { lat: -33.735, lng: 150.7 }, radiusM: 15000, load: () => import('./areas/penrith.js') }]
+
+async function areaFor(centre) {
+  const pack = AREA_PACKS.find((p) => distance(p.centre, centre) <= p.radiusM)
+  if (!pack) return null
+  const { AREA, LOOPS, decode } = await pack.load()
+  return { ...AREA, loops: new Map(LOOPS.map((l) => [l.id, { ...l, route: decode(l.line) }])) }
+}
+
+// A rival running one of their regular loops in an area pack
+function areaRun(area, rivalId, loopId, startedAt, rand) {
+  const loop = area.loops.get(loopId)
+  const points = routeTrack(loop.route, { kmh: 9 + rand() * 4, startAt: startedAt, seed: Math.floor(rand() * 1e9), reverse: rand() < 0.4 })
+  return { userId: rivalId, startedAt, points, loopName: loop.name }
+}
+
 // Rival players with a few weeks of history around the player's area.
 export async function ensureWorld(where) {
   await state()
@@ -92,7 +110,17 @@ export async function ensureWorld(where) {
   const rand = rng(`${centre.lat.toFixed(2)},${centre.lng.toFixed(2)}`)
   const now = Date.now()
   const sims = []
-  for (const r of RIVALS) {
+  const area = await areaFor(centre)
+  if (area) {
+    // Each rival runs their regular loops a few times over the past five weeks
+    for (const r of RIVALS) {
+      for (const loopId of area.regulars[r.id] || []) {
+        const runs = 2 + Math.floor(rand() * 3)
+        for (let k = 0; k < runs; k++) sims.push(areaRun(area, r.id, loopId, now - (1 + rand() * 34) * DAY - rand() * DAY * 0.5, rand))
+      }
+    }
+  }
+  for (const r of area ? [] : RIVALS) {
     const n = 2 + Math.floor(rand() * 3)
     // Each rival has a home patch they keep coming back to, spread around
     // the area with wild ground in between
@@ -119,21 +147,22 @@ export async function ensureWorld(where) {
   S.cells.run = new Map([...S.cells.run].filter(([, c]) => c.owner === S.user.id))
   S.activities = S.activities.filter((a) => a.userId === S.user.id)
   for (const s of sims) {
-    const points = loopTrack({ centre: s.centre, perimeterKm: s.perimeterKm, kmh: s.kmh, startAt: s.startedAt, seed: s.seed, stretch: s.stretch, rotate: s.rotate })
-    const res = processActivity({ id: 'sim-' + s.seed, userId: s.userId, mode: 'run', points, source: 'watch', startedAt: s.startedAt }, { cells: S.cells.run, zones: [], battles: [], now: s.startedAt })
+    const points = s.points || loopTrack({ centre: s.centre, perimeterKm: s.perimeterKm, kmh: s.kmh, startAt: s.startedAt, seed: s.seed, stretch: s.stretch, rotate: s.rotate })
+    const res = processActivity({ id: 'sim-' + (s.seed ?? uid().slice(0, 8)), userId: s.userId, mode: 'run', points, source: 'watch', startedAt: s.startedAt }, { cells: S.cells.run, zones: [], battles: [], now: s.startedAt })
+    if (s.loopName) res.activity.title = s.loopName
     for (const [h, c] of res.updated) S.cells.run.set(h, c)
     res.activity.kudos = Math.floor(rand() * 9)
     S.activities.push(res.activity)
   }
-  S.clubs = [
+  S.clubs = (area?.clubs || [
     { id: 'c-iwr', name: 'Inner West Runners', members: ['r-sam', 'r-priya', 'r-tom'] },
     { id: 'c-sunrise', name: 'Sunrise Striders', members: ['r-jess', 'r-mei'] },
     { id: 'c-parkrun', name: 'Saturday parkrunners', members: ['r-lachie'] },
-  ].map((c) => {
+  ]).map((c) => {
     const old = S.clubs.find((o) => o.id === c.id)
     return old ? { ...c, members: [...new Set([...c.members, ...old.members])] } : c
   })
-  S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now }
+  S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null }
   await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world()])
   return S.world
 }
@@ -163,6 +192,24 @@ async function tick() {
       changed = true
     }
   }
+  // In a mapped area, rivals keep running their regular loops between visits
+  if (S.world.area && rand() < 0.5) {
+    const area = await areaFor(S.world.centre)
+    const ids = Object.keys(area?.regulars || {})
+    if (ids.length) {
+      const who = ids[Math.floor(rand() * ids.length)]
+      const loops = area.regulars[who]
+      const run = areaRun(area, who, loops[Math.floor(rand() * loops.length)], now - (0.5 + rand() * 2.5) * 3600000, rand)
+      const res = processActivity({ id: 'sim-' + uid().slice(0, 8), userId: who, mode: 'run', points: run.points, source: 'watch', startedAt: run.startedAt }, { cells: S.cells.run, zones: [], battles: [], now })
+      for (const [h, c] of res.updated) S.cells.run.set(h, c)
+      res.activity.title = run.loopName
+      res.activity.kudos = Math.floor(rand() * 6)
+      S.activities.push(res.activity)
+      const fromMe = res.diff.taken.filter((t) => t.from === S.user.id).length
+      if (fromMe) notify('battle', `${player(who).name} ran the ${run.loopName} and took ${fromMe} of your hexes. Run it back?`, now)
+      changed = true
+    }
+  }
   // Retire finished battles
   for (const b of S.battles) {
     if (!b.endedAt && b.endsAt <= now) {
@@ -188,7 +235,7 @@ async function tick() {
     S.world.fadeNoticeDay = today
   }
   await save.world()
-  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications()])
+  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities()])
 }
 
 // ---- API (docs/API.md) ----
