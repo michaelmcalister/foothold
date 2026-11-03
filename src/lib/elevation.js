@@ -11,7 +11,7 @@ const RAW = import.meta.env.VITE_API_URL || ''
 const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
 export const GRIDS = [0.001, 0.002, 0.004] // degrees; about 100, 200 and 400 m
 export const MAX_NODES = 1000
-const CACHE_PREFIX = 'fh-elev:'
+const CACHE_PREFIX = 'fh-elev2:' // bump when the heights change shape
 const CACHE_KEEP = 30
 
 const snap = (v, g) => Math.round(Math.round(v / g) * g * 1e6) / 1e6
