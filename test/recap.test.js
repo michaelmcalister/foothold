@@ -1,5 +1,6 @@
 // Tests for the run recap planner: shots, follow camera and smoothing.
 import { describe, it, expect } from 'vitest'
+import { offset } from '../src/lib/engine/geo.js'
 import { planRecap, bearing, turn, smoother, eyeOf, zoomForRange } from '../src/lib/recap/plan.js'
 
 import { loopTrack } from '../src/lib/tracks.js'
@@ -38,7 +39,7 @@ describe('recap plan', () => {
     for (const f of [0.1, 0.4, 0.75]) {
       const cam = p.followCamera(f)
       const here = p.at(f)
-      expect(distance(cam, here)).toBeLessThan(1)
+      expect(distance(cam, here)).toBeLessThan(30) // eased round corners, never far off
       const ahead = p.at(f + 40 / p.total)
       expect(Math.abs(turn(cam.heading, bearing(here, ahead)))).toBeLessThan(60)
     }
@@ -87,6 +88,28 @@ describe('camera smoothing', () => {
     const c = s.step({ lat: 0, lng: 0, heading: 10, tilt: 60, range: 200 }, 100)
     expect(turn(350, c.heading)).toBeGreaterThan(0)
     expect(Math.abs(turn(350, c.heading))).toBeLessThanOrEqual(7.001)
+  })
+
+  it('settles on a new heading without overshooting or snapping', () => {
+    const s = smoother()
+    s.reset({ lat: 0, lng: 0, heading: 0, tilt: 60, range: 200 })
+    const seen = []
+    for (let k = 0; k < 120; k++) seen.push(s.step({ lat: 0, lng: 0, heading: 90, tilt: 60, range: 200 }, 16).heading)
+    const steps = seen.map((h, i) => (i ? h - seen[i - 1] : h))
+    expect(Math.max(...steps)).toBeLessThan(60 * 0.016 + 0.001) // never faster than the limit
+    expect(Math.max(...seen)).toBeLessThanOrEqual(90.5) // no overshoot
+    expect(seen[seen.length - 1]).toBeGreaterThan(85) // gets there
+  })
+
+  it('plans a course with no sudden heading changes, even through a hairpin', () => {
+    // Out 600 m east, a tight turn, back 600 m west a few metres north
+    const pts = []
+    for (let m = 0; m <= 600; m += 10) pts.push({ ...offset({ lat: -33.85, lng: 151.2 }, m, 0), t: m * 300 })
+    for (let m = 600; m >= 0; m -= 10) pts.push({ ...offset({ lat: -33.85, lng: 151.2 }, m, 40), t: (1200 - m) * 300 })
+    const p = planRecap(pts)
+    let worst = 0
+    for (let f = 0; f < 1; f += 0.002) worst = Math.max(worst, Math.abs(turn(p.followCamera(f).heading, p.followCamera(f + 0.002).heading)))
+    expect(worst).toBeLessThan(6) // degrees per 0.2% of the route
   })
 })
 

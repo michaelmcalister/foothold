@@ -27,6 +27,25 @@ export function bearing(a, b) {
 // Smallest signed turn from heading a to heading b, in degrees (-180..180)
 export const turn = (a, b) => ((((b - a) % 360) + 540) % 360) - 180
 
+// Gaussian smoothing of values spaced along a route by distance (metres)
+export function smoothAlong(values, along, sigma) {
+  if (!(sigma > 0)) return values.slice()
+  const out = []
+  let lo = 0
+  for (let i = 0; i < values.length; i++) {
+    while (along[lo] < along[i] - sigma * 2.5) lo++
+    let sum = 0, wsum = 0
+    for (let j = lo; j < values.length && along[j] <= along[i] + sigma * 2.5; j++) {
+      const z = (along[j] - along[i]) / sigma
+      const w = Math.exp(-0.5 * z * z)
+      sum += values[j] * w
+      wsum += w
+    }
+    out.push(sum / wsum)
+  }
+  return out
+}
+
 // Middle value, ignoring missing ones
 function median(xs) {
   const v = xs.filter((x) => Number.isFinite(x)).sort((a, b) => a - b)
@@ -86,15 +105,41 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
     return { lat: lerp(path[i - 1].lat, path[i].lat, k), lng: lerp(path[i - 1].lng, path[i].lng, k), i, d }
   }
 
-  // Direction of travel, averaged over the next stretch so GPS wobble and
-  // tight corners don't whip the camera around
-  function headingAt(f) {
-    const here = at(f)
-    const ahead = at(f + follow.lookAheadM * 2 / total)
-    const behind = at(f - follow.lookAheadM / total)
-    if (distance(behind, ahead) < 5) return bearing(path[0], path[Math.min(path.length - 1, 3)])
-    return bearing(behind, ahead)
+  // The camera's course, worked out once for the whole route. Headings are
+  // taken across a wide stretch (wider on longer routes, which play faster),
+  // unwrapped so 359 to 1 degree isn't a full spin, then smoothed along the
+  // route. The point the camera looks at is smoothed too, so corners, stairs
+  // and GPS wobble become one gentle curve. The runner and trail stay exact.
+  const win = clamp(total * 0.035, follow.lookAheadM * 2, 650)
+  const atD = (d) => at(d / total)
+  const rawH = []
+  for (let i = 0; i < path.length; i++) {
+    const a = atD(along[i] - win / 2)
+    const b = atD(along[i] + win / 2)
+    rawH.push(distance(a, b) < 5 ? null : bearing(a, b))
   }
+  const firstH = rawH.find((h) => h != null) ?? 0
+  const unwrapped = []
+  let prevH = firstH
+  for (const h of rawH) {
+    const v = h == null ? prevH : prevH + turn(prevH, h)
+    unwrapped.push(v)
+    prevH = v
+  }
+  const course = {
+    heading: smoothAlong(unwrapped, along, win * 0.6),
+    lat: smoothAlong(path.map((q) => q.lat), along, win * 0.2),
+    lng: smoothAlong(path.map((q) => q.lng), along, win * 0.2),
+  }
+  // A value from the course at a fraction of the way round
+  function courseAt(key, f) {
+    const p = at(f)
+    const i = p.i
+    const seg = along[i] - along[i - 1] || 1
+    const k = clamp((p.d - along[i - 1]) / seg, 0, 1)
+    return lerp(course[key][i - 1], course[key][i], k)
+  }
+  const headingAt = (f) => ((courseAt('heading', f) % 360) + 360) % 360
 
   const startHeading = headingAt(0)
   const shots = {
@@ -110,8 +155,7 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
   }
 
   function followCamera(f) {
-    const p = at(f)
-    return { lat: p.lat, lng: p.lng, alt, heading: headingAt(f), tilt: followTilt, range: followRange }
+    return { lat: courseAt('lat', f), lng: courseAt('lng', f), alt, heading: headingAt(f), tilt: followTilt, range: followRange }
   }
 
   return {
@@ -146,23 +190,24 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
 export const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2)
 
 /**
- * Chase camera that eases towards where it should be instead of snapping,
- * so heading changes read as a smooth turn. Call step(target, dtMs).
+ * Chase camera: the heading follows its target like a damped spring, so a
+ * turn starts gently, carries through and settles without a snap, and never
+ * swings faster than `headingPerSec`. Position follows the target directly
+ * (the plan has already smoothed it). Call step(target, dtMs).
  */
-export function smoother({ headingPerSec = 120 } = {}) {
+export function smoother({ headingPerSec = 60, settleMs = 450 } = {}) {
   let cam = null
+  let rate = 0 // degrees per second
   return {
-    reset(c) { cam = { ...c } },
+    reset(c) { cam = { ...c }; rate = 0 },
     step(target, dt) {
       if (!cam) { cam = { ...target }; return cam }
-      // Stay right on the runner; only the turn is eased, which is what reads as smooth
-      const k = 1 - Math.exp(-dt / 350)
-      const maxTurn = (headingPerSec * dt) / 1000
-      const dh = clamp(turn(cam.heading, target.heading) * Math.min(1, k * 2), -maxTurn, maxTurn)
-      cam = {
-        ...target,
-        heading: (cam.heading + dh + 360) % 360,
-      }
+      const s = Math.min(dt, 100) / 1000 // a dropped frame shouldn't fling the camera
+      const w = 2 / (settleMs / 1000) // critically damped spring
+      const err = turn(cam.heading, target.heading)
+      rate += (w * w * err - 2 * w * rate) * s
+      rate = clamp(rate, -headingPerSec, headingPerSec)
+      cam = { ...target, heading: (cam.heading + rate * s + 360) % 360 }
       return cam
     },
   }
