@@ -1,7 +1,8 @@
 <script setup>
 // After an activity: what you claimed, what you took and from whom, any
 // battles that started, a level-up, "How did that feel?", Coach's notes on the run, new personal
-// bests, strongholds you ran, and a gentle check on this week's load.
+// bests, strongholds you ran, the run stats (elevation, pace and heart rate
+// charts, splits), and a gentle check on this week's load.
 // New players see which first week step it finished, with a one-tap
 // calendar reminder for the next outing after step 1.
 // A fresh result plays its sounds in turn: claim, take, crown, best, level.
@@ -17,6 +18,7 @@ import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import FeelCheckin from '../../components/FeelCheckin.vue'
+import RunStats from '../../components/RunStats.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 import { loadJourney, freshSteps, markCheered, cheerSound, remindSecondOuting } from '../../lib/journey.js'
@@ -177,6 +179,8 @@ async function sendAppeal() {
         <strong>{{ res.prs.length === 1 ? 'A new personal best.' : `${res.prs.length} new personal bests.` }}</strong>
         <ul><li v-for="p in res.prs" :key="p.key">{{ bestMessage(p) }}.</li></ul>
       </div>
+
+      <RunStats v-if="track.length > 1 && !a.rejected" :activity="a" :track="track" />
 
       <RouterLink v-for="s in res.strongholds || []" :key="s.id" class="notice shnote" :class="{ held: s.holds }" :to="{ name: 'strongholds', params: { id: s.id } }">
         <span class="crownbadge" aria-hidden="true">

@@ -128,6 +128,19 @@ hour per address. Without the key, the app uses the phone's own voice.
    (Settings, Variables and secrets, Add, type Secret), or run
    `npx wrangler secret put ELEVENLABS_API_KEY`.
 
+## Elevation charts (Open-Meteo)
+
+Run reports draw an elevation chart. Watch imports use the watch's heights.
+Everything else asks `POST /api/elevation` for terrain heights (the 90 m
+Copernicus model, through Open-Meteo). The app sends only corners of a
+100 m grid around the route, the Worker looks them up in batches of 100,
+Cloudflare's cache answers repeats, and fresh lookups are limited to 60 an
+hour per address. Nothing to set up for testing.
+
+Open-Meteo's free API is for non-commercial use. Before Foothold charges
+anyone, buy an Open-Meteo API plan and add the key to the Worker as a secret
+named `OPEN_METEO_KEY`; the Worker then uses Open-Meteo's customer endpoint.
+
 ## AI built plans (Claude)
 
 The coach can build a plan from the runner's own words through

@@ -16,8 +16,8 @@ const route = useRoute()
 const router = useRouter()
 const full = computed(() => !!route.meta.full)
 
-// Screens anyone can open before setting up: onboarding itself and the demo recap
-const openWithoutSetup = (r) => r.name === 'onboarding' || (r.name === 'recap' && r.params.id === 'demo')
+// Screens anyone can open before setting up: onboarding itself, the demo recap and the "try it now" demo
+const openWithoutSetup = (r) => r.name === 'onboarding' || (r.name === 'recap' && r.params.id === 'demo') || String(r.name || '').startsWith('try')
 
 // A link with ?signin=1 (from the landing page, say) goes straight to sign-in
 watch(() => route.query.signin, (v) => {

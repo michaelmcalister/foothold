@@ -17,6 +17,7 @@ import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleTts, ttsConfig } from './tts.js'
+import { handleElevation } from './elevation.js'
 import { handleAiPlan, aiConfig } from './aiplan.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
 import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
@@ -798,6 +799,12 @@ export async function handleApi(req, env, ctx) {
   // Public, rate limited: the voice coach speaks on the practice map too
   if (url.pathname === '/api/tts' && req.method === 'POST') {
     res = await handleTts(req, env)
+    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+    return res
+  }
+  // Public, rate limited: heights for the elevation chart (grid corners only, never the route)
+  if (url.pathname === '/api/elevation' && req.method === 'POST') {
+    res = await handleElevation(req, env)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
   }

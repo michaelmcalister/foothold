@@ -80,6 +80,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | --- | --- | --- | --- |
 | GET | /api/config | (no sign-in needed) | `{ auth0: { domain, clientId, audience } }` when Auth0 is set up, else `{}` |
 | POST | /api/tts | `{ text, voice? }` (no sign-in needed; max 300 characters; voice is a key from `/api/config` `tts.voices`) | `audio/mpeg` (cached by voice and text; 503 when the voice isn't set up, 429 when an address asks for too many new lines) |
+| POST | /api/elevation | `{ grid: 0.001 \| 0.002 \| 0.004, nodes: [[lat, lng]] }` (no sign-in needed; up to 1000 nodes, each on the grid, never route points) | `{ elev: number[] }` terrain heights in metres, one per node (cached by batch; 400 when a node is off the grid, 429 when an address asks for too many fresh lookups, 502 when the lookup fails) |
 | GET | /api/me | | `{ user }` |
 | PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen?, foundingAt? }` (`foundingAt`: when the Founding foothold badge was earned; set once, never moved or cleared) | `{ user }` (user has `foundingAt`, null until earned) |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |

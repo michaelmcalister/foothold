@@ -7,9 +7,8 @@ export function km(m, dp = 2) {
 
 export function pace(sPerKm) {
   if (!sPerKm || !Number.isFinite(sPerKm) || sPerKm > 3600) return '--:--'
-  const m = Math.floor(sPerKm / 60)
-  const s = Math.round(sPerKm % 60)
-  return `${m}:${String(s === 60 ? 0 : s).padStart(2, '0')}`
+  const whole = Math.round(sPerKm) // round first, so 5:59.6 shows as 6:00, not 5:00
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
 }
 
 export function speedKmh(sPerKm) {

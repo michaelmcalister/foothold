@@ -6,6 +6,8 @@
 // A generative score (lib/audio/score.js) follows the shots; the speaker
 // button mutes it, and a "Tap for sound" chip shows if the phone hasn't
 // allowed sound yet.
+// The "try it now" demo (#/try/flyover) plays the demo run here too, and
+// ends on a button to its run report instead of "Done".
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cellToBoundary } from 'h3-js'
@@ -21,8 +23,13 @@ import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
 import { createScore } from '../../lib/audio/score.js'
 
+const props = defineProps({
+  id: { type: String, default: '' }, // set by the demo route; otherwise from the URL
+  trial: { type: Boolean, default: false }, // part of the "try it now" demo
+})
 const route = useRoute()
 const router = useRouter()
+const rid = computed(() => props.id || route.params.id)
 const el = ref(null)
 const activity = ref(null)
 const state = ref('loading') // loading | playing | done | empty | error
@@ -44,9 +51,10 @@ const shots = computed(() => plan?.timeline || [])
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function back() {
-  if (window.history.state?.back) router.back()
-  else if (route.params.id === 'demo') router.replace(store.user?.onboarded ? { name: 'record' } : { name: 'onboarding' })
-  else router.replace({ name: 'activity', params: { id: route.params.id } })
+  if (props.trial) router.replace({ name: 'try' })
+  else if (window.history.state?.back) router.back()
+  else if (rid.value === 'demo') router.replace(store.user?.onboarded ? { name: 'record' } : { name: 'onboarding' })
+  else router.replace({ name: 'activity', params: { id: rid.value } })
 }
 
 async function makeDriver(start) {
@@ -110,8 +118,8 @@ function play(from = 'flyin') {
 
 onMounted(async () => {
   try {
-    const isDemo = route.params.id === 'demo'
-    const r = isDemo ? demoRun() : await api.activity(route.params.id)
+    const isDemo = rid.value === 'demo'
+    const r = isDemo ? demoRun() : await api.activity(rid.value)
     activity.value = r.activity
     const track = r.track || []
     const loops = findLoops(track)
@@ -196,7 +204,7 @@ onBeforeUnmount(() => {
           <polygon class="draw" points="32,4 56,18 56,46 32,60 8,46 8,18" pathLength="100" />
         </svg>
         <strong>Loading your flyover</strong>
-        <span>{{ route.params.id === 'demo' ? 'Lining up the cameras over the harbour' : 'Lining up the cameras over your loop' }}</span>
+        <span>{{ rid === 'demo' ? 'Lining up the cameras over the harbour' : 'Lining up the cameras over your loop' }}</span>
       </div>
     </Transition>
     <div v-if="state === 'empty'" class="middle card">
@@ -225,7 +233,11 @@ onBeforeUnmount(() => {
         <div v-if="activity.mode !== 'ride'"><span class="num">{{ pace(activity.paceSPerKm) }}</span><span class="lbl">per km</span></div>
         <div><span class="num">{{ hexCount }}</span><span class="lbl">{{ hexCount === 1 ? 'hex' : 'hexes' }}</span></div>
       </div>
-      <div class="actions">
+      <div v-if="trial" class="actions">
+        <RouterLink class="btn" :to="{ name: 'try-report' }">See your run report</RouterLink>
+        <button class="btn ghost" type="button" @click="play()">Watch again</button>
+      </div>
+      <div v-else class="actions">
         <button class="btn" type="button" @click="play()">Watch again</button>
         <button class="btn ghost" type="button" @click="back">Done</button>
       </div>

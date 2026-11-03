@@ -40,6 +40,7 @@ AUTH0_AUDIENCE = "https://api.formtrk.com"
 
 # Secrets (set with `npx wrangler secret put NAME`):
 #   TOKEN_KEY  any long random string; encrypts linked FormTrack tokens (AES-GCM)
+#   OPEN_METEO_KEY  optional, a paid Open-Meteo key for elevation charts once Foothold is commercial
 #   ANTHROPIC_API_KEY  AI built plans (worker/aiplan.js); optional vars PLAN_MODEL, AI_DAILY_CAP_AUD (default 10)
 
 [triggers]

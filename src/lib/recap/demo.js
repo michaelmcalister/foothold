@@ -1,8 +1,12 @@
 // A sample run for the demo recap (#/app/recap/demo): about 4.5 km around
 // Sydney Harbour from Circular Quay, past the Opera House, along Farm Cove to
 // Mrs Macquarie's Chair and back through the Domain. Lets people see a recap
-// before they've recorded anything. Waypoints are smoothed and spaced every
-// few metres at an easy 5:40 per km.
+// before they've recorded anything, and feeds the "try it now" demo report.
+// Waypoints are smoothed and spaced every few metres at about 5:40 per km,
+// with a quicker stretch along Farm Cove, a slower climb through the Domain,
+// a short wait at the lights and sample heart rate and cadence, so the report
+// has something to show. It's clearly labelled as a demo wherever it appears.
+// Heights aren't baked in: the report looks them up like any other run.
 import { distance, summarise } from '../engine/index.js'
 
 const WAYPOINTS = [
@@ -54,13 +58,32 @@ function smooth(pts, per = 8) {
 }
 
 export function demoRun(now = Date.now()) {
-  const pace = 340 // seconds per km
   const start = now - 2 * 3600000
   const pts = smooth(WAYPOINTS)
+  const total = pts.reduce((d, p, i) => d + (i ? distance(pts[i - 1], p) : 0), 0)
   let t = start
-  const track = pts.map((p, i) => {
-    if (i) t += (distance(pts[i - 1], p) / 1000) * pace * 1000
-    return { ...p, t: Math.round(t), alt: 5 }
+  let d = 0
+  let stopped = false
+  const track = []
+  pts.forEach((p, i) => {
+    if (i) {
+      const step = distance(pts[i - 1], p)
+      d += step
+      const f = d / total
+      // Easy start, quicker by the water, slower up through the Domain, a kick home
+      const pace = f < 0.15 ? 350 : f < 0.45 ? 322 : f < 0.62 ? 336 : f < 0.85 ? 346 : 312
+      t += (step / 1000) * pace * 1000
+    }
+    const f = d / total
+    const hr = Math.round(128 + 26 * Math.min(1, f * 2.2) + (f > 0.62 && f < 0.85 ? 8 : 0) + (f > 0.85 ? 10 : 0) + Math.sin(i / 3) * 2)
+    const cad = Math.round(f > 0.85 ? 176 : f > 0.62 ? 164 : 170) + (i % 3) - 1
+    track.push({ ...p, t: Math.round(t), hr, cad })
+    // Lights at Art Gallery Road: about 40 seconds standing, a little GPS drift
+    if (!stopped && f > 0.7) {
+      stopped = true
+      for (let k = 1; k <= 8; k++) track.push({ lat: p.lat + k * 2e-7, lng: p.lng - k * 1e-7, t: Math.round(t + k * 5000), hr: hr - k * 2, cad: 0 })
+      t += 40000
+    }
   })
   const s = summarise(track)
   return {
@@ -71,7 +94,7 @@ export function demoRun(now = Date.now()) {
       distanceM: s.distanceM,
       durationS: s.durationS,
       movingS: s.movingS ?? s.durationS,
-      paceSPerKm: s.paceSPerKm ?? pace,
+      paceSPerKm: s.paceSPerKm ?? 340,
       demo: true,
     },
     track,

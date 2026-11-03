@@ -31,9 +31,14 @@ export const router = createRouter({
         { path: 'leagues', name: 'leagues', component: () => import('./views/app/LeaguesView.vue') },
         { path: 'leagues/join/:code', name: 'league-join', component: () => import('./views/app/LeaguesView.vue') },
         { path: 'leagues/:id', name: 'league', component: () => import('./views/app/LeagueView.vue') },
+        // "Try it now": a demo run's flyover and full report, then sign up. No account needed.
+        { path: 'try', name: 'try', component: () => import('./views/try/TryView.vue'), meta: { full: true } },
+        { path: 'try/flyover', name: 'try-flyover', component: () => import('./views/app/RecapView.vue'), props: { id: 'demo', trial: true }, meta: { full: true } },
+        { path: 'try/report', name: 'try-report', component: () => import('./views/try/TryReport.vue'), meta: { full: true } },
         { path: 'welcome', name: 'onboarding', component: () => import('./views/app/OnboardingView.vue'), meta: { full: true } },
       ],
     },
+    { path: '/try', redirect: '/app/try' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

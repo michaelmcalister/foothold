@@ -72,11 +72,26 @@ export function summarise(points) {
     const dt = (points[i].t - points[i - 1].t) / 1000
     const d = distance(points[i - 1], points[i])
     if (dt > 0 && d / dt > 0.5) movingS += dt
-    const dz = (points[i].alt ?? 0) - (points[i - 1].alt ?? 0)
-    if (points[i].alt != null && points[i - 1].alt != null && dz > 0) elevGainM += dz
   }
+  elevGainM = climb(points.map((p) => p.alt)).gain
   const paceSPerKm = distanceM > 50 && movingS > 0 ? movingS / (distanceM / 1000) : null
   return { distanceM, durationS, movingS, paceSPerKm, elevGainM: Math.round(elevGainM) }
+}
+
+// Metres climbed and descended. Heights wobble by a few metres from fix to
+// fix (GPS most of all), so a change only counts once it passes `threshold`;
+// adding up every wobble would turn a flat park loop into a hill session.
+export function climb(alts, threshold = 3) {
+  let gain = 0
+  let loss = 0
+  let ref = null
+  for (const a of alts || []) {
+    if (!Number.isFinite(a)) continue
+    if (ref == null) { ref = a; continue }
+    if (a - ref >= threshold) { gain += a - ref; ref = a }
+    else if (ref - a >= threshold) { loss += ref - a; ref = a }
+  }
+  return { gain: Math.round(gain), loss: Math.round(loss) }
 }
 
 export function bbox(points) {
