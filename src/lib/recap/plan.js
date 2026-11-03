@@ -64,6 +64,11 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
   const km = total / 1000
   // (slow enough for the 3D imagery to load as the camera moves)
   const followMs = Math.round(clamp(10000 + km * 1800, 12000, 26000))
+  // Longer routes move faster on screen, so the follow camera sits higher and
+  // flatter: it keeps up, and clears city towers (Sydney's CBD tops 250 m)
+  const lift = clamp(km / 5, 1, 1.7)
+  const followRange = follow.range * lift
+  const followTilt = Math.max(50, follow.tilt - (lift - 1) * 10)
   // Fit the whole area with some room around it. The map's field of view is
   // about 35 degrees top to bottom; on a portrait phone the narrow side is
   // across, so fit to whichever is tighter.
@@ -106,7 +111,7 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
 
   function followCamera(f) {
     const p = at(f)
-    return { lat: p.lat, lng: p.lng, alt, heading: headingAt(f), tilt: follow.tilt, range: follow.range }
+    return { lat: p.lat, lng: p.lng, alt, heading: headingAt(f), tilt: followTilt, range: followRange }
   }
 
   return {
