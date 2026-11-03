@@ -39,6 +39,7 @@ export const router = createRouter({
       ],
     },
     { path: '/try', redirect: '/app/try' },
+    { path: '/try/:rest(.*)', redirect: (to) => `/app/try/${to.params.rest}` },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

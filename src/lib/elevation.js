@@ -81,7 +81,8 @@ async function terrain(samples, fetcher) {
   if (!res.ok) return null
   const { elev } = await res.json()
   if (!Array.isArray(elev) || elev.length !== plan.nodes.length) return null
-  const alts = blend(plan, elev)
+  // The terrain model has 90 m cells, so ease the steps between them
+  const alts = smoothByDistance(blend(plan, elev), samples.map((s) => s.d), 80)
   return coverage(alts.map((alt) => ({ alt })), 'alt') > 0.9 ? alts : null
 }
 
