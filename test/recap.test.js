@@ -100,12 +100,12 @@ describe('MapLibre zoom from range', () => {
 })
 
 describe('demo run', () => {
-  it('is a closed harbour loop of a few km that takes hexes', async () => {
+  it('is a closed harbour run over the bridge that takes hexes', async () => {
     const { demoRun } = await import('../src/lib/recap/demo.js')
     const { findLoops, cellsForLoops, checkActivity } = await import('../src/lib/engine/index.js')
     const { activity, track } = demoRun(Date.parse('2026-11-02T05:00:00Z'))
     expect(activity.distanceM).toBeGreaterThan(3500)
-    expect(activity.distanceM).toBeLessThan(6000)
+    expect(activity.distanceM).toBeLessThan(12000)
     expect(distance(track[0], track[track.length - 1])).toBeLessThan(30)
     expect(cellsForLoops(findLoops(track)).length).toBeGreaterThan(20)
     expect(checkActivity(track, 'run').flags || []).toEqual([])

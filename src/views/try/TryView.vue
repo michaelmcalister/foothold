@@ -1,6 +1,6 @@
 <script setup>
 // "Try it now": the start of the no-account demo. One tap runs the demo loop
-// around Sydney Harbour as a flyover (#/try/flyover), which leads to the full
+// over the Sydney Harbour Bridge as a flyover (#/try/flyover), which leads to the full
 // run report (#/try/report) and then the sign up. The tap also lets the phone
 // play the flyover's music.
 import { computed } from 'vue'
@@ -51,10 +51,11 @@ function signUp() {
         </circle>
       </svg>
 
-      <h1>Take a run around Sydney Harbour</h1>
+      <h1>Run over the Harbour Bridge</h1>
       <p class="lede">
-        No account and no running shoes. In about a minute you'll fly over a {{ km(demo.activity.distanceM, 1) }} km loop
-        past the Opera House, watch the ground inside it turn your colour, then get the full run report.
+        No account and no running shoes. In about a minute you'll fly over a {{ km(demo.activity.distanceM, 1) }} km run from
+        Circular Quay, across the bridge to Kirribilli and back round the Opera House. Watch the ground
+        it takes turn your colour, then get the full run report.
       </p>
       <button class="btn go" type="button" @click="start">Start the demo run</button>
       <RouterLink class="skip" :to="{ name: 'try-report' }">Skip to the run report</RouterLink>

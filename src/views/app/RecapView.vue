@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
       </button>
       <div v-if="activity" class="when">
-        <template v-if="activity.demo"><strong>Demo run</strong><span>Around Sydney Harbour</span></template>
+        <template v-if="activity.demo"><strong>Demo run</strong><span>Over the Harbour Bridge</span></template>
         <template v-else>
           <strong>Your {{ MODE_VERB[activity.mode] || 'run' }}</strong>
           <span>{{ dateLong(activity.startedAt) }}</span>
@@ -204,7 +204,7 @@ onBeforeUnmount(() => {
           <polygon class="draw" points="32,4 56,18 56,46 32,60 8,46 8,18" pathLength="100" />
         </svg>
         <strong>Loading your flyover</strong>
-        <span>{{ rid === 'demo' ? 'Lining up the cameras over the harbour' : 'Lining up the cameras over your loop' }}</span>
+        <span>{{ rid === 'demo' ? 'Lining up the cameras over the Harbour Bridge' : 'Lining up the cameras over your loop' }}</span>
       </div>
     </Transition>
     <div v-if="state === 'empty'" class="middle card">

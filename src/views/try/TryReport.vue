@@ -39,7 +39,7 @@ function signUp() {
 
     <div class="screen">
       <header class="screen-head">
-        <p class="chip">Demo run around Sydney Harbour</p>
+        <p class="chip">Demo run over the Harbour Bridge</p>
         <h1>Loop closed. {{ plural(hexes.length, 'hex', 'hexes') }} are yours.</h1>
         <p class="muted">On a real run, this ground turns your colour on the map until a rival runs it back.</p>
       </header>

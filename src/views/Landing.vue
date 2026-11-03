@@ -15,9 +15,12 @@ import RampVignette from '../components/landing/RampVignette.vue'
 import RouteVignette from '../components/landing/RouteVignette.vue'
 import FlyoverVignette from '../components/landing/FlyoverVignette.vue'
 import PrivacyVignette from '../components/landing/PrivacyVignette.vue'
+import ReportVignette from '../components/landing/ReportVignette.vue'
+import DemoBand from '../components/landing/DemoBand.vue'
 import '../components/landing/landing.css'
 
 const chapters = [
+  { id: 'demo', name: 'Demo run' },
   { id: 'game', name: 'The game' },
   { id: 'friends', name: 'Run with friends' },
   { id: 'coach', name: 'The coach' },
@@ -70,6 +73,9 @@ const rivals = [
         </div>
         <HeroMap class="hero-map" />
       </section>
+
+      <!-- The demo run, straight after the hero -->
+      <DemoBand />
 
       <nav class="lp-index" aria-label="What's on this page">
         <ul>
@@ -257,29 +263,40 @@ const rivals = [
 
       <!-- After the run -->
       <section id="after" class="lp-chapter lp-split lp-split-media" tabindex="-1" aria-labelledby="after-title">
-        <FlyoverVignette class="lp-flyover" />
+        <div class="lp-after-media">
+          <FlyoverVignette class="lp-flyover" />
+          <ReportVignette class="lp-report" />
+        </div>
         <div>
           <header class="lp-head">
             <h2 id="after-title">After the run</h2>
             <p>
               Watch a 3D flyover of your run on Google's photorealistic map. It flies in, follows
-              your route, then circles the ground you took. Where the 3D map isn't available,
-              the recap plays on a flat street map.
+              your route, then circles the ground you took. Then open the run report and see how
+              every kilometre went.
             </p>
           </header>
-          <a class="lp-button-quiet" href="#/app/recap/demo">Watch a flyover</a>
+          <a class="lp-button-quiet" href="#/try">Try the demo run</a>
           <dl class="lp-list lp-list-single">
+            <div>
+              <dt>Elevation, pace and heart rate</dt>
+              <dd>Charts along your route. Touch any point and all three show what was happening there.</dd>
+            </div>
+            <div>
+              <dt>Splits</dt>
+              <dd>Every kilometre's pace, the metres you climbed or dropped, and your heart rate.</dd>
+            </div>
+            <div>
+              <dt>The numbers</dt>
+              <dd>Elapsed and stopped time, fastest km, metres climbed, highest point and cadence.</dd>
+            </div>
             <div>
               <dt>Personal bests</dt>
               <dd>From 400 metres to the marathon on foot, and 10 to 40 kilometres on the bike.</dd>
             </div>
             <div>
-              <dt>Weekly recap</dt>
-              <dd>Your distance, ground taken and held, and quests done, next to last week.</dd>
-            </div>
-            <div>
-              <dt>Share card</dt>
-              <dd>A clean picture of your loop and your ground, ready to post.</dd>
+              <dt>Weekly recap and share card</dt>
+              <dd>Your week next to last week, and a clean picture of your loop and ground, ready to post.</dd>
             </div>
           </dl>
         </div>

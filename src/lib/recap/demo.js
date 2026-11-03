@@ -1,65 +1,49 @@
-// A sample run for the demo recap (#/app/recap/demo): about 4.5 km around
-// Sydney Harbour from Circular Quay, past the Opera House, along Farm Cove to
-// Mrs Macquarie's Chair and back through the Domain. Lets people see a recap
-// before they've recorded anything, and feeds the "try it now" demo report.
-// Waypoints are smoothed and spaced every few metres at about 5:40 per km,
-// with a quicker stretch along Farm Cove, a slower climb through the Domain,
-// a short wait at the lights and sample heart rate and cadence, so the report
-// has something to show. It's clearly labelled as a demo wherever it appears.
-// Heights aren't baked in: the report looks them up like any other run.
+// A sample run for the demo recap and the "try it now" demo (#/try): about
+// 11 km from Circular Quay, up through The Rocks and over the Sydney Harbour
+// Bridge, a loop of Kirribilli, back over the bridge, a loop of the Royal
+// Botanic Garden by Farm Cove, then a lap of the Opera House and home. The route was traced on
+// OpenStreetMap footpaths (© OpenStreetMap contributors, ODbL) with the
+// FOSSGIS foot router and stored as an encoded polyline.
+// The run has a slower climb up the bridge stairs, a quicker stretch on the
+// way back, a short wait at the lights and sample heart rate and cadence, so
+// the report has something to show. It's labelled as a demo wherever it
+// appears. Heights aren't baked in: the report looks them up like any run.
 import { distance, summarise } from '../engine/index.js'
+import { decodePolyline } from '../engine/strongholds.js'
 
-const WAYPOINTS = [
-  [-33.8609, 151.2129], // Circular Quay, east side
-  [-33.8597, 151.2133],
-  [-33.8586, 151.2138], // Opera House forecourt
-  [-33.8576, 151.2146],
-  [-33.8573, 151.2153],
-  [-33.8579, 151.2158],
-  [-33.8590, 151.2160],
-  [-33.8599, 151.2162], // Botanic Garden gate
-  [-33.8608, 151.2166],
-  [-33.8616, 151.2173], // Farm Cove seawall
-  [-33.8621, 151.2183],
-  [-33.8622, 151.2195],
-  [-33.8616, 151.2206],
-  [-33.8606, 151.2214],
-  [-33.8598, 151.2222], // Mrs Macquarie's Chair
-  [-33.8602, 151.2231],
-  [-33.8614, 151.2233],
-  [-33.8628, 151.2228],
-  [-33.8643, 151.2222], // Mrs Macquaries Road
-  [-33.8657, 151.2212],
-  [-33.8670, 151.2197],
-  [-33.8681, 151.2180], // Art Gallery
-  [-33.8684, 151.2163],
-  [-33.8679, 151.2148], // The Domain
-  [-33.8668, 151.2137],
-  [-33.8655, 151.2130], // Macquarie Street
-  [-33.8640, 151.2127],
-  [-33.8625, 151.2126],
-  [-33.8614, 151.2127],
-  [-33.8609, 151.2129], // back to the Quay
-]
+const ROUTE = "|ntmEgk|y[B?J@?LGdA?LAPE`AANANAVAFADEFGFE@IBKBQ?OAOA[Cc@CuAKWEe@GQCCZA@A^?D?D?B?B?DOnA@D@@?D?BSAAH?FGj@AJK`A@FE@EBCDCBCFAB?B?BE`@MpACAKK?BDH?B?BQGk@Sj@RPFB@^J@@B@BBBBXH?@CJAHABOEGCOG_@KOGADALCH?@ENSKaAk@iR_KuA}@g@WqIsEmOiIe@UYM[My@Ym@KwAWmBK{ABo@Fk@Dq@HcALAIA?C???DA?AFAN@`@Gv@I@?JCLCDATE?HE@FrAGsADA?If@IrAWjCW?G?GAG?GHCFAK}ADAj@ErAMD?FAB?FCB@?C\\PFUGT]Q?BCA@]Fc@BKFGBGD]DM@CJa@DM?AFSFS?EBIDQ@O?E?E@C@EDC@ABGBA@ABCBCJE@??ABEJMBGWSCICKAEjBgA{Ai@HEKENQT_AMETaAH[l@_CmD_A]Ga@Go@IKJk@v@g@j@KKEC_@[^ZELEHFDFFk@fACDOVaAbBa@v@u@fAGHEHGHAB}@lAi@r@IJLvBJrBHALtB?J@LH|A@J?D@@?J@L@DTE?HE@FrAGsADA?IUDE@MBKBA?w@Ha@FOAG@?@E@??B?@?@HbAMp@Ij@En@GzAClBJvAVl@Jx@XZLXLd@TlOhIpIrEf@VtA|@hR~J`Aj@RJDO?ABI@M@ENF^JNFFBND@C@IBK?AYICCCCCAAA_@KCAQGk@Sj@RPF?C?CEI?CJJB@LqADa@?C?C@CBGBCBEDCDAAGJaA@KFk@?G@IR@?C?EAAAENoA?E?CB@N?XMJ@H??T?UBYhCL?G?A?KZBN@N@P?JCHCDAFGDG@E@G@W@O@ODaA@Q?MFeA?M@ODeA@S@IHcBM?]AKBJC\\@L?DYESIUIQ^k@@G?A?CAA@[@WBA?Co@E@C@OQAsAKOAqBQg@CIAH@f@BpBPN@@Y?GqCSaCWu@W]UW]a@q@Wi@CEUg@ACCKCI?G?G?E@K@CHq@AUR_@?SPQXa@V]V_@LYJUHMFGFKPQVUx@g@XOBA\\M\\Gr@C\\@h@D`@FlCd@NBVBV?|BpBVEVC@?\\G@HBFFD@BGHEDKFKBCAGRu@OA?Cf@@XDRHTHNJL?PC?A@A@AB?B?@@B@BQf@m@v@c@b@_@\\MLOJ^JP?BFz@KRAS@{@JCGQ?_@KQLSFGHGLWAM@k@?ILKPcA~ACBED?FAXOAqBQg@CIAH@f@BpBPN@@Y?GqCSaCWu@W]UW]a@q@Wi@CEUg@ACCKCI?G?G?E@K@CHq@AUa@GGCAWq@JC?eCg@a@GSQMMk@KGHMHQFODKJINENCVCT@P@PDVF`@BLCTLBvCj@fARB@d@Hn@LBUBOP_BNsADYFB`@F@TIp@ABAJ?D?F?FBHBJ@BTf@BDVh@`@p@V\\\\Tt@V`CVpCR?FAXOAqBQg@CIAH@f@BpBPN@rAJP@ANABn@D?BC@AVAZ@@?B?@AF_@j@HPHTDREXIbBAHAREdAANKAC?"
 
-// Catmull-Rom through the waypoints so corners are curves, not kinks
-function smooth(pts, per = 8) {
-  const out = []
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)]
-    for (let k = 0; k < per; k++) {
-      const t = k / per, t2 = t * t, t3 = t2 * t
-      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3)
-      out.push({ lat: f(p0[0], p1[0], p2[0], p3[0]), lng: f(p0[1], p1[1], p2[1], p3[1]) })
-    }
+export const DEMO_PLACE = 'Over the Harbour Bridge'
+
+// One point every few metres along the route, like a phone recording
+function densify(pts, step = 8) {
+  const out = [pts[0]]
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]
+    const d = distance(a, b)
+    const n = Math.max(1, Math.round(d / step))
+    for (let k = 1; k <= n; k++) out.push({ lat: a.lat + ((b.lat - a.lat) * k) / n, lng: a.lng + ((b.lng - a.lng) * k) / n })
   }
-  out.push({ lat: pts[pts.length - 1][0], lng: pts[pts.length - 1][1] })
-  return out
+  return out.filter((p, i) => i === 0 || p.lat !== out[i - 1].lat || p.lng !== out[i - 1].lng)
+}
+
+// Seconds per km by how far round: The Rocks, the bridge stairs, the deck,
+// Kirribilli's hills, back over the bridge, the garden, the Opera House, home
+function paceAt(f) {
+  if (f < 0.055) return 345
+  if (f < 0.085) return 400
+  if (f < 0.17) return 330
+  if (f < 0.36) return 344
+  if (f < 0.46) return 322
+  if (f < 0.53) return 330
+  if (f < 0.73) return 336
+  if (f < 0.88) return 328
+  return 310
 }
 
 export function demoRun(now = Date.now()) {
   const start = now - 2 * 3600000
-  const pts = smooth(WAYPOINTS)
+  const pts = densify(decodePolyline(ROUTE))
   const total = pts.reduce((d, p, i) => d + (i ? distance(pts[i - 1], p) : 0), 0)
   let t = start
   let d = 0
@@ -69,17 +53,14 @@ export function demoRun(now = Date.now()) {
     if (i) {
       const step = distance(pts[i - 1], p)
       d += step
-      const f = d / total
-      // Easy start, quicker by the water, slower up through the Domain, a kick home
-      const pace = f < 0.15 ? 350 : f < 0.45 ? 322 : f < 0.62 ? 336 : f < 0.85 ? 346 : 312
-      t += (step / 1000) * pace * 1000
+      t += (step / 1000) * paceAt(d / total) * 1000
     }
     const f = d / total
-    const hr = Math.round(128 + 26 * Math.min(1, f * 2.2) + (f > 0.62 && f < 0.85 ? 8 : 0) + (f > 0.85 ? 10 : 0) + Math.sin(i / 3) * 2)
-    const cad = Math.round(f > 0.85 ? 176 : f > 0.62 ? 164 : 170) + (i % 3) - 1
+    const hr = Math.round(130 + 22 * Math.min(1, f * 3) + (f > 0.055 && f < 0.17 ? 9 : 0) + (f > 0.17 && f < 0.36 ? 5 : 0) + (f > 0.88 ? 10 : 0) + Math.sin(i / 4) * 2)
+    const cad = (f > 0.88 ? 176 : f > 0.055 && f < 0.085 ? 150 : 170) + (i % 3) - 1
     track.push({ ...p, t: Math.round(t), hr, cad })
-    // Lights at Art Gallery Road: about 40 seconds standing, a little GPS drift
-    if (!stopped && f > 0.7) {
+    // Lights by Circular Quay: about 40 seconds standing, a little GPS drift
+    if (!stopped && f > 0.5) {
       stopped = true
       for (let k = 1; k <= 8; k++) track.push({ lat: p.lat + k * 2e-7, lng: p.lng - k * 1e-7, t: Math.round(t + k * 5000), hr: hr - k * 2, cad: 0 })
       t += 40000
@@ -94,7 +75,7 @@ export function demoRun(now = Date.now()) {
       distanceM: s.distanceM,
       durationS: s.durationS,
       movingS: s.movingS ?? s.durationS,
-      paceSPerKm: s.paceSPerKm ?? 340,
+      paceSPerKm: s.paceSPerKm ?? 335,
       demo: true,
     },
     track,

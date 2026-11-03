@@ -172,7 +172,13 @@
 .lp-voice .lp-voice-loop { color: #8FA8FF; justify-self: end; text-align: right; }
 
 /* After the run */
+.lp-after-media { display: grid; gap: clamp(28px, 4vw, 44px); justify-items: center; min-width: 0; }
 .lp-flyover { max-width: 560px; justify-self: center; width: 100%; }
+.lp-report { max-width: 420px; width: 100%; }
+.v-elev { fill: var(--you-fill); }
+.v-splitbar { fill: #AFC0F7; }
+.v-curve.thin { stroke-width: 2; }
+.v-label.strong { fill: var(--ink); font-weight: 750; }
 .lp-button-quiet {
   justify-self: start;
   font-weight: 700;
