@@ -79,10 +79,11 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
   const radius = Math.max(150, ...all.map((p) => distance(centre, p)))
 
   const follow = FOLLOW[mode] || FOLLOW.run
-  // One clip length whatever the distance: longer runs just move faster
+  // Longer runs get a longer clip, so the camera covers ground at a similar
+  // pace whatever the distance (slow enough for the 3D imagery to load).
+  // Very long routes are capped and move a little faster.
   const km = total / 1000
-  // (slow enough for the 3D imagery to load as the camera moves)
-  const followMs = Math.round(clamp(10000 + km * 1800, 12000, 26000))
+  const followMs = Math.round(clamp(8000 + km * 3000, 12000, 45000))
   // Longer routes move faster on screen, so the follow camera sits higher and
   // flatter: it keeps up, and clears city towers (Sydney's CBD tops 250 m)
   const lift = clamp(km / 5, 1, 1.7)
@@ -184,6 +185,20 @@ export function planRecap(points, { mode = 'run', hexRings = [], aspect = 0.5 } 
       return [...path.slice(0, p.i), { lat: p.lat, lng: p.lng }]
     },
   }
+}
+
+/**
+ * How far along the route (0 to 1) the follow shot is after `t` ms of `ms`:
+ * a steady speed the whole way, with a short ease in and out at the ends
+ * (`rampMs`) so it doesn't lurch into motion.
+ */
+export function cruise(t, ms, rampMs = 1200) {
+  const r = Math.min(rampMs, ms * 0.15)
+  const x = clamp(t, 0, ms)
+  const v = 1 / (ms - r) // fraction per ms at full speed
+  if (x < r) return (0.5 * v * x * x) / r
+  if (x > ms - r) { const y = ms - x; return 1 - (0.5 * v * y * y) / r }
+  return v * (x - r / 2)
 }
 
 // Smooth step for camera moves: slow out, slow in

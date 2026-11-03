@@ -1,7 +1,7 @@
 // Plays a recap plan on a map driver, shot by shot: fly in from above,
 // follow the runner as the trail draws, reveal the hexes and orbit them, then
 // settle on an overview. play(from) can start at any shot; stop() cancels.
-import { ease, smoother } from './plan.js'
+import { cruise, smoother } from './plan.js'
 
 export function createDirector(driver, plan, { onShot = () => {}, onProgress = () => {}, onDone = () => {} } = {}) {
   let run = 0 // bumps on every play/stop so stale loops quit
@@ -18,8 +18,8 @@ export function createDirector(driver, plan, { onShot = () => {}, onProgress = (
       const frame = (now) => {
         if (token !== run) return resolve(false)
         const t = Math.min(1, Math.max(0, (now - t0) / ms)) // the first frame can be stamped a touch before t0
-        // Half steady, half eased: a gentle start and finish without crawling
-        const f = 0.5 * t + 0.5 * ease(t)
+        // Steady speed along the route, easing in and out only at the very ends
+        const f = cruise(t * ms, ms)
         try {
           driver.setCamera(cam.step(plan.followCamera(f), now - last))
           driver.setTrail(plan.trailTo(f))

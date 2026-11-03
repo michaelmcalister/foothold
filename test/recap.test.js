@@ -1,7 +1,7 @@
 // Tests for the run recap planner: shots, follow camera and smoothing.
 import { describe, it, expect } from 'vitest'
 import { offset } from '../src/lib/engine/geo.js'
-import { planRecap, bearing, turn, smoother, eyeOf, zoomForRange } from '../src/lib/recap/plan.js'
+import { planRecap, bearing, turn, smoother, eyeOf, zoomForRange, cruise } from '../src/lib/recap/plan.js'
 
 import { loopTrack } from '../src/lib/tracks.js'
 import { distance } from '../src/lib/engine/index.js'
@@ -78,6 +78,28 @@ describe('recap plan', () => {
 
   it('rides get a higher follow camera than runs', () => {
     expect(planRecap(loop(), { mode: 'ride' }).shots.start.range).toBeGreaterThan(planRecap(loop(), { mode: 'run' }).shots.start.range)
+  })
+})
+
+describe('follow speed', () => {
+  it('moves at a steady speed between short ease in and out', () => {
+    const ms = 30000
+    expect(cruise(0, ms)).toBe(0)
+    expect(cruise(ms, ms)).toBeCloseTo(1, 9)
+    const speeds = []
+    for (let t = 1500; t < ms - 1500; t += 500) speeds.push(cruise(t + 500, ms) - cruise(t, ms))
+    expect(Math.max(...speeds) - Math.min(...speeds)).toBeLessThan(1e-9)
+    let last = 0
+    for (let t = 0; t <= ms; t += 100) { const f = cruise(t, ms); expect(f).toBeGreaterThanOrEqual(last); last = f }
+  })
+  it('gives longer runs a longer clip, so ground speed stays similar', () => {
+    const lap = (km) => {
+      const pts = []
+      for (let m = 0; m <= km * 1000; m += 10) pts.push({ ...offset({ lat: -33.85, lng: 151.2 }, m, 0), t: m * 300 })
+      const p = planRecap(pts)
+      return p.total / p.timeline.find((s) => s.id === 'follow').ms
+    }
+    expect(lap(10) / lap(4)).toBeLessThan(1.5)
   })
 })
 
