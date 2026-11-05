@@ -43,7 +43,7 @@ import BrandMark from '../components/BrandMark.vue'
       </ul>
 
       <h2>Where it's kept</h2>
-      <p>On Cloudflare's network, with data kept in Australia where the service allows. In the practice map (before you sign in), everything stays on your device.</p>
+      <p>On Cloudflare's network, with data kept in Australia where the service allows. In the practice map (before you sign in), everything stays on your device. When you sign up, we ask whether to move your practice runs to your account; they only move if you say yes. Made-up practice loops never move.</p>
 
       <h2>Run recaps</h2>
       <p>When you watch a recap, the 3D map comes from Google Maps. Your phone asks Google for the imagery of the area the camera shows, the same as any map. Your track is drawn on your phone. We don't send Google your name, your account or your track as a file. Google's privacy policy covers what it does with map requests.</p>

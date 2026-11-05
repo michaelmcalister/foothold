@@ -11,6 +11,7 @@ import { auth, login } from '../lib/auth.js'
 import { api } from '../lib/api/index.js'
 import { freshPromotion, markPromotionSeen } from '../lib/divisionSeen.js'
 import { play } from '../lib/audio/sfx.js'
+import CarryOver from '../components/CarryOver.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,7 +26,7 @@ watch(() => route.query.signin, (v) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  if (auth.error) toast(`Sign-in didn't finish: ${auth.error}`)
+  if (auth.error) toast(auth.error, 7000)
   await boot()
   if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
   // Moved up a division last week: say so once, with its sound, the next time the app opens
@@ -69,6 +70,7 @@ const tabs = [
     </header>
 
     <main class="body" :class="{ full }">
+      <CarryOver v-if="auth.loggedIn && store.ready && store.user.onboarded && !full && route.name === 'map'" />
       <RouterView v-if="store.ready" v-slot="{ Component }">
         <component :is="Component" />
       </RouterView>

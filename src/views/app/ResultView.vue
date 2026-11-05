@@ -19,6 +19,7 @@ import ShareCard from '../../components/ShareCard.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import FeelCheckin from '../../components/FeelCheckin.vue'
 import RunStats from '../../components/RunStats.vue'
+import PracticeSignup from '../../components/PracticeSignup.vue'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 import { loadJourney, freshSteps, markCheered, cheerSound, remindSecondOuting } from '../../lib/journey.js'
@@ -225,6 +226,8 @@ async function sendAppeal() {
       </div>
 
       <ShareCard v-if="!a.rejected" :activity="a" :new-hexes="newHexes" :taken="takenBy" />
+
+      <PracticeSignup v-if="!a.rejected" :simulated="!!a.simulated" />
 
       <div class="done">
         <RouterLink v-if="!a.rejected" class="btn block" :to="{ name: 'recap', params: { id: a.id } }">Watch your recap</RouterLink>

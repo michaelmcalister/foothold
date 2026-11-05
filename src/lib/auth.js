@@ -33,12 +33,17 @@ export async function initAuth() {
       authorizationParams: { redirect_uri: home(), audience: cfg.audience, scope: 'openid profile email offline_access' },
     })
     const q = new URLSearchParams(location.search)
-    if (q.has('code') && q.has('state')) {
+    if (q.has('error') && q.has('state')) {
+      // Auth0 sent the visitor back with a refusal instead of a sign-in
+      console.warn('Sign-in refused', q.get('error'), q.get('error_description'))
+      auth.error = signInTrouble(q.get('error_description') || q.get('error'))
+      history.replaceState(null, '', home() + '#/app')
+    } else if (q.has('code') && q.has('state')) {
       try {
         const { appState } = await client.handleRedirectCallback()
         history.replaceState(null, '', home() + (appState?.returnTo || '#/app'))
       } catch (e) {
-        auth.error = e.error_description || e.message
+        auth.error = signInTrouble(e.error_description || e.message)
         history.replaceState(null, '', home() + '#/app')
       }
     }
@@ -49,6 +54,12 @@ export async function initAuth() {
   } finally {
     auth.ready = true
   }
+}
+
+// What to tell someone whose sign-in didn't work, in plain words
+function signInTrouble(detail = '') {
+  if (/not authorized to access resource server/i.test(detail)) return "Sign-in isn't switched on yet, so you're on the practice map. Your runs save on this phone for now."
+  return `Sign-in didn't finish (${String(detail).slice(0, 120)}). You're on the practice map for now.`
 }
 
 export function login({ signup = false, returnTo } = {}) {

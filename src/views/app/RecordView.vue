@@ -113,7 +113,7 @@ async function simulate() {
   const r = 300 + Math.random() * 500
   const centre = { lat: store.centre.lat + (Math.sin(angle) * r) / 111000, lng: store.centre.lng + (Math.cos(angle) * r) / (111000 * Math.cos((store.centre.lat * Math.PI) / 180)) }
   const points = loopTrack({ centre, perimeterKm, kmh, startAt, seed: Math.floor(Math.random() * 1e9), stretch: 0.8 + Math.random() * 0.6, rotate: Math.random() * Math.PI })
-  await save({ mode: mode.value, source: 'phone', startedAt: startAt, points }, 'Running your practice loop')
+  await save({ mode: mode.value, source: 'phone', startedAt: startAt, points, simulated: true }, 'Running your practice loop')
 }
 
 async function onFile(e) {

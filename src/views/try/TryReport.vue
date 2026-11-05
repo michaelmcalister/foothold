@@ -57,9 +57,9 @@ function signUp() {
 
       <section class="ask" aria-labelledby="ask-h">
         <h2 id="ask-h">Now take your own ground</h2>
-        <p>Sign up free and record your first run. Close a loop and it turns your colour for everyone nearby to see.</p>
+        <p>Sign up free and record your first run. Close a loop and it turns your colour for everyone nearby to see. Or record a test run first: it stays on your phone, and comes across when you sign up.</p>
         <button class="btn block" type="button" @click="signUp">Sign up free</button>
-        <RouterLink class="btn secondary block" to="/app">Try the practice map first</RouterLink>
+        <RouterLink class="btn secondary block" to="/app">Record a test run first</RouterLink>
         <RouterLink class="again" :to="{ name: 'try-flyover' }">Watch the flyover again</RouterLink>
       </section>
     </div>

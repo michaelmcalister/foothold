@@ -18,6 +18,7 @@ import { findLoops, cellsForLoops } from '../../lib/engine/index.js'
 import { planRecap } from '../../lib/recap/plan.js'
 import { createDirector } from '../../lib/recap/director.js'
 import { mapsKey } from '../../lib/recap/config.js'
+import PracticeSignup from '../../components/PracticeSignup.vue'
 import { demoRun } from '../../lib/recap/demo.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
@@ -239,8 +240,9 @@ onBeforeUnmount(() => {
       </div>
       <div v-else class="actions">
         <button class="btn" type="button" @click="play()">Watch again</button>
-        <button class="btn ghost" type="button" @click="back">Done</button>
+        <button class="btn ghost" type="button" @click="back">{{ rid === 'demo' ? 'Done' : 'See your run report' }}</button>
       </div>
+      <PracticeSignup v-if="rid !== 'demo'" dark class="keep" :simulated="!!activity?.simulated" />
       <p v-if="engine === 'google'" class="credit">3D imagery from Google</p>
     </section>
   </div>
@@ -332,6 +334,7 @@ onBeforeUnmount(() => {
 .stats .num { font-weight: 850; font-stretch: 112%; font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .stats .lbl { font-size: 0.82rem; opacity: 0.75; }
 .actions { display: flex; gap: 10px; }
+.keep { margin-top: 14px; }
 .actions .btn { flex: 1; }
 .btn.ghost { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; }
 .credit { font-size: 0.75rem; opacity: 0.6; }

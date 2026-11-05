@@ -65,7 +65,7 @@ onMounted(async () => {
         <a class="button lp-demo-go" href="#/try">Start the demo run</a>
         <a class="link lp-demo-link" href="#/try/report">See the run report</a>
       </div>
-      <p class="lp-demo-note">About a minute, no account needed. Sound on for the music.</p>
+      <p class="lp-demo-note">About a minute, no account needed. Sound on for the music. Then <a href="#/app">record a test run of your own</a>: you get the same flyover and report.</p>
     </div>
 
     <a class="lp-demo-map" href="#/try" aria-label="Start the demo run over the Harbour Bridge">
@@ -116,7 +116,8 @@ h2 {
 .lp-demo-stats dt { color: var(--on-ink-muted); font-weight: 650; }
 .lp-demo-go { font-size: 1.1rem; padding: 16px 26px; }
 .lp-demo-link { color: var(--on-ink); }
-.lp-demo-note { margin: 0; font-size: 0.9rem; color: var(--on-ink-muted); }
+.lp-demo-note { margin: 0; font-size: 0.9rem; color: var(--on-ink-muted); max-width: 46ch; }
+.lp-demo-note a { color: var(--on-ink); font-weight: 650; }
 .lp-demo-map {
   position: relative;
   display: block;

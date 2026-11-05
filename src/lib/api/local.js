@@ -511,7 +511,7 @@ export const local = {
     return { user: S.user }
   },
 
-  async postActivity({ mode = 'run', source = 'phone', startedAt, points }) {
+  async postActivity({ mode = 'run', source = 'phone', startedAt, points, simulated = false }) {
     await state()
     if (!Array.isArray(points) || points.length < 10) throw new Error('That activity is too short to save.')
     const now = Date.now()
@@ -524,6 +524,7 @@ export const local = {
     )
     for (const [h, c] of res.updated) cells.set(h, c)
     res.activity.kudos = 0
+    if (simulated) res.activity.simulated = true // made up, so it never moves to a real account
     // Personal bests and strongholds
     let prs = []
     if (!res.activity.rejected) {

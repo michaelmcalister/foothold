@@ -69,7 +69,7 @@ const rivals = [
             <a class="button" href="#/try">Try a demo run</a>
             <a class="link" href="#/app?signin=1&amp;signup=1">Sign up free</a>
           </div>
-          <p class="lp-small">The demo takes a minute and needs no account. Or <a href="#/app">open the practice map</a>.</p>
+          <p class="lp-small">The demo takes a minute and needs no account. Or <a href="#/app">record a test run of your own</a> first.</p>
         </div>
         <HeroMap class="hero-map" />
       </section>
@@ -365,7 +365,7 @@ const rivals = [
         <div class="hero-actions">
           <a class="button" href="#/try">Try a demo run</a>
           <a class="link" href="#/app?signin=1&amp;signup=1">Sign up free</a>
-          <a class="link" href="#/app">Open the practice map</a>
+          <a class="link" href="#/app">Record a test run</a>
         </div>
       </section>
     </main>
