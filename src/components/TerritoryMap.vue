@@ -196,7 +196,8 @@ onMounted(async () => {
     m.addLayer({ id: 'suggest', type: 'line', source: 'suggest', paint: { 'line-color': '#16302A', 'line-width': 3, 'line-dasharray': [1.5, 1.2] } })
     m.addLayer({ id: 'shroute', type: 'line', source: 'shroute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4, 'line-dasharray': [1, 1.4], 'line-opacity': 0.85 } })
     m.addLayer({ id: 'loops', type: 'line', source: 'loops', paint: { 'line-color': '#2E55E6', 'line-width': 3 } })
-    m.addLayer({ id: 'track', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4 } })
+    m.addLayer({ id: 'track-case', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 8 } })
+    m.addLayer({ id: 'track', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4.5 } })
     m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 14, 'circle-color': '#2E55E6', 'circle-opacity': 0.18 } })
     m.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2E55E6', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
     m.on('click', 'cells-fill', (e) => {

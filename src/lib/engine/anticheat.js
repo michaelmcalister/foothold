@@ -78,7 +78,7 @@ export function checkActivity(points, mode = 'run', { deviceSource = 'phone' } =
   return {
     ok: !rejected,
     rejected,
-    reason: rejected ? `More than ${Math.round(badShare * 100)}% of this activity looked like a vehicle or a GPS fault, so it can't claim ground. You can appeal it.` : null,
+    reason: rejected ? `${badShare >= 0.995 ? 'All' : `More than ${Math.floor(badShare * 100)}%`} of this activity looked like a vehicle or a GPS fault, so it can't claim ground. You can appeal it.` : null,
     flags,
     cleaned,
     trust: Math.round(trust * 100) / 100,

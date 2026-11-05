@@ -12,6 +12,7 @@ import { api } from '../lib/api/index.js'
 import { freshPromotion, markPromotionSeen } from '../lib/divisionSeen.js'
 import { play } from '../lib/audio/sfx.js'
 import CarryOver from '../components/CarryOver.vue'
+import { rec } from '../lib/recorder.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -70,6 +71,9 @@ const tabs = [
     </header>
 
     <main class="body" :class="{ full }">
+      <RouterLink v-if="rec.status !== 'idle' && route.name !== 'record'" class="recbar" :to="{ name: 'record' }">
+        <span class="dot" aria-hidden="true"></span> Recording your {{ rec.mode }}. Back to it
+      </RouterLink>
       <CarryOver v-if="auth.loggedIn && store.ready && store.user.onboarded && !full && route.name === 'map'" />
       <RouterView v-if="store.ready" v-slot="{ Component }">
         <component :is="Component" />
@@ -135,4 +139,8 @@ const tabs = [
   z-index: 50; background: var(--ink); color: var(--on-ink); padding: 12px 18px; border-radius: 12px;
   font-weight: 600; max-width: calc(100% - 32px); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.5);
 }
+.recbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #C8341F; color: #fff; font-weight: 700; text-decoration: none; }
+.recbar .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: recblink 1.2s ease-in-out infinite; }
+@keyframes recblink { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .recbar .dot { animation: none; } }
 </style>

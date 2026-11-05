@@ -8,7 +8,7 @@
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
-import { rec, start, pause, resume, stop } from '../../lib/recorder.js'
+import { rec, start, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -77,6 +77,7 @@ async function save(payload, label = 'Saving', missionSummary = null) {
   error.value = null
   try {
     const res = await api.postActivity(payload)
+    if (payload.source === 'phone' && !payload.simulated) forgetUnfinished()
     setLastResult(res)
     if (missionSummary) saveResult(res.activity.id, missionSummary)
     await refresh()
@@ -88,20 +89,56 @@ async function save(payload, label = 'Saving', missionSummary = null) {
   }
 }
 
+// Why a recording couldn't be saved, in plain words
+function tooShort(gpsPoints, elapsedS) {
+  if (elapsedS > 120 && gpsPoints < 20) {
+    return `Only ${gpsPoints} GPS ${gpsPoints === 1 ? 'point' : 'points'} came through in ${Math.round(elapsedS / 60)} minutes, so there's nothing to save. Phones stop GPS when the screen locks or another app is in front. Keep Foothold open with the screen on while you go.`
+  }
+  return 'That was too short to save. Nothing was recorded.'
+}
+
 async function finish() {
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   const out = stop()
   const missionSummary = finishRun(totals)
-  if (out.points.length < 10) {
-    toast('That was too short to save. Nothing was recorded.')
+  await saveRecording(out, totals.elapsedS, missionSummary)
+}
+
+async function saveRecording(out, elapsedS, missionSummary = null) {
+  // Join any stretch where GPS went quiet, so it still counts and a loop can close
+  const points = bridgeGaps(out.points, { mode: out.mode })
+  if (points.length < 10 || (out.distanceM ?? 1e9) < 30) {
+    forgetUnfinished()
+    error.value = tooShort(out.points.length, elapsedS)
     return
   }
-  await save({ ...out, source: 'phone' }, 'Saving', missionSummary)
+  await save({ mode: out.mode, startedAt: out.startedAt, points, source: 'phone' }, 'Saving', missionSummary)
+}
+
+// A run from before the page was closed, waiting to be saved
+const leftover = ref(unfinished())
+const leftoverText = computed(() => {
+  const u = leftover.value
+  if (!u) return ''
+  const when = new Date(u.startedAt || u.points[0].t).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+  let m = 0
+  for (let i = 1; i < u.points.length; i++) m += Math.hypot((u.points[i].lat - u.points[i - 1].lat) * 111320, (u.points[i].lng - u.points[i - 1].lng) * 111320 * Math.cos((u.points[i].lat * Math.PI) / 180))
+  return `You have an unsaved ${u.mode} from ${when}, ${km(m)} km so far.`
+})
+async function saveLeftover() {
+  const u = leftover.value
+  leftover.value = null
+  const t0 = u.startedAt || u.points[0].t
+  await saveRecording({ ...u, distanceM: null }, Math.round((u.points[u.points.length - 1].t - t0) / 1000))
+}
+function dropLeftover() {
+  forgetUnfinished()
+  leftover.value = null
 }
 
 function cancel() {
   if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
-  stop()
+  discard()
   endRun()
 }
 
@@ -166,11 +203,9 @@ async function onFile(e) {
   }
 }
 
-onBeforeUnmount(() => {
-  // Leaving mid-recording keeps the recording going only if we're still on screen;
-  // a route change stops it so GPS isn't left running.
-  if (rec.status !== 'idle') { stop(); endRun() }
-})
+// Leaving this screen mid-recording keeps it going: the app shows a bar to
+// come back, and the recording is saved on the device as it goes.
+onBeforeUnmount(() => {})
 </script>
 
 <template>
@@ -205,8 +240,16 @@ onBeforeUnmount(() => {
           Keep Foothold open on screen while you {{ mode }}. Browsers pause GPS when the phone locks.
           Close a loop of at least 400 m and everything inside is yours.
         </p>
+        <div v-if="leftover" class="notice leftover">
+          <p>{{ leftoverText }} Save it now?</p>
+          <div class="row">
+            <button class="btn small" type="button" @click="saveLeftover">Save it</button>
+            <button class="btn quiet small" type="button" @click="dropLeftover">Discard</button>
+          </div>
+        </div>
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
-        <div v-if="rec.error || error" class="notice bad">{{ rec.error || error }}</div>
+        <div v-if="error" class="notice bad">{{ error }}</div>
+        <div v-else-if="rec.error" class="notice bad">{{ rec.error }}</div>
         <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
         <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
         <div class="alt">
@@ -223,6 +266,7 @@ onBeforeUnmount(() => {
           <span>Finding GPS<template v-if="rec.accuracy"> (±{{ rec.accuracy }} m)</template></span>
         </div>
         <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
+        <div v-if="rec.notice" class="notice gap" role="status">{{ rec.notice }}</div>
         <div class="live">
           <div class="stat"><span class="big-num">{{ duration(rec.elapsedS) }}</span><span class="label">Time</span></div>
           <div class="stat"><span class="big-num">{{ km(rec.distanceM) }}</span><span class="label">km</span></div>
@@ -287,4 +331,8 @@ onBeforeUnmount(() => {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .audioline { justify-self: center; color: var(--ink-60); text-decoration: underline; text-underline-offset: 3px; }
+.leftover { display: grid; gap: 8px; }
+.leftover p { margin: 0; }
+.leftover .row { display: flex; gap: 8px; }
+.notice.gap { font-size: 0.9rem; }
 </style>

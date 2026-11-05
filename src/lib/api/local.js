@@ -544,7 +544,7 @@ export const local = {
       return { ...out, message: crownMessage(out) }
     })
     S.activities.unshift(res.activity)
-    recordSwaps(res.diff.taken, S.user.id, now, res.activity.id)
+    recordSwaps(res.diff?.taken || [], S.user.id, now, res.activity.id) // a rejected activity has no diff
     await kv.set(`track:${res.activity.id}`, res.track)
     if (!res.activity.rejected) S.visited[res.activity.id] = { at: res.activity.startedAt, mode, cells: visitedCells(res.track) }
     for (const b of res.battles) {
