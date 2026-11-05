@@ -5,7 +5,12 @@ import { router } from './router.js'
 import { initAuth } from './lib/auth.js'
 
 // Finish any Auth0 sign-in before the routes run (no-op in the practice map)
-initAuth().finally(() => createApp(App).use(router).mount('#app'))
+// The router read the address when it loaded; sign-in may have changed it since
+// (back from Auth0 to #/app), so start the routes from where we are now.
+initAuth().finally(async () => {
+  await router.replace(location.hash.slice(1) || '/').catch(() => {})
+  createApp(App).use(router).mount('#app')
+})
 
 // Offline support and home-screen install (production builds only)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
