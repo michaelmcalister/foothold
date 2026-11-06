@@ -16,8 +16,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>What we collect</h2>
       <ul>
         <li><strong>Your routes.</strong> GPS points from runs, walks and rides you record or import, with times. This is how loops and ground are worked out.</li>
-        <li><strong>Routes you plan.</strong> The name, type and line of routes you save in the planner. Only you can see them, and you can delete them any time.</li>
-                <li><strong>Your name on the map</strong> and the colour and crest you pick.</li>
+        <li><strong>Routes you plan.</strong> The name, type and line of routes you save in the planner, and the day and time you plan them for. Only you can see them, and you can delete them any time.</li>
+        <li><strong>Routes you send.</strong> When you send a route to someone, we copy its name, type, line, distance and any day and time to them, and tell them who sent it. You can only send routes to people in your clubs and leagues. Their copy stays the same if you change or delete yours. They can hide it, and deleting your account removes the copies you sent.</li>
+        <li><strong>Your name on the map</strong> and the colour and crest you pick.</li>
         <li><strong>Heart rate and cadence</strong>, only if your watch sends them, used to check activities are genuine.</li>
         <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time. To show your readiness over time, the app keeps one readiness score a day on your device only, and clears it when you unlink.</li>
         <li><strong>How a run felt</strong>, only if you answer "How did that feel?" after a run: how hard it was, and where something hurt and how badly. It is saved with that activity, only you see it, and the coach uses it to ease your plan. Delete the activity and it goes too.</li>
@@ -30,6 +31,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li>Never where you are right now. Claims show up after a delay, not live.</li>
         <li>Comments you leave on an activity, with your name, to anyone who can see that activity. Deleting an activity deletes its comments.</li>
         <li>In a private league, the other members see your name, colour and how many hexes you hold and gained this week. Ground inside your privacy zones is never counted.</li>
+        <li>People in your clubs and leagues see your name, colour and crest when they choose who to send a route to. A route you send goes only to the people you pick.</li>
       </ul>
 
       <h2>Reports</h2>
@@ -63,7 +65,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li>Delete an activity, or your whole account, at any time.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
-      <p class="small muted">Last updated 3 November 2026. This is a draft for review before launch.</p>
+      <p class="small muted">Last updated 6 November 2026. This is a draft for review before launch.</p>
     </main>
   </div>
 </template>
