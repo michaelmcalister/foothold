@@ -24,6 +24,7 @@ const chapters = [
   { id: 'game', name: 'The game' },
   { id: 'friends', name: 'Run with friends' },
   { id: 'coach', name: 'The coach' },
+  { id: 'plan', name: 'Route planner' },
   { id: 'run', name: 'On the run' },
   { id: 'after', name: 'After the run' },
   { id: 'history', name: 'Bring your history' },
@@ -213,7 +214,7 @@ const rivals = [
           <article class="lp-feature">
             <RouteVignette />
             <h3>Find a loop that takes ground</h3>
-            <p>Turn today's session into a route near you. Or draw your own in the route planner and see which hexes it would take, and whose, before you head out.</p>
+            <p>Turn today's session into a route near you. Or plan your own and see which hexes it would take, and whose, before you head out.</p>
           </article>
         </div>
 
@@ -229,6 +230,40 @@ const rivals = [
           <div>
             <dt>Coach's notes</dt>
             <dd>A short note after every run on how it went and what comes next.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Route planner -->
+      <section id="plan" class="lp-chapter" tabindex="-1" aria-labelledby="plan-title">
+        <header class="lp-head">
+          <h2 id="plan-title">Plan your next route</h2>
+          <p>Drop a few points and the route follows the paths you can actually run.</p>
+        </header>
+        <dl class="lp-list">
+          <div>
+            <dt>Follows the paths</dt>
+            <dd>Tap the map and the line snaps to streets and footpaths. Drag a point and only that stretch reroutes.</dd>
+          </div>
+          <div>
+            <dt>Every climb before you start</dt>
+            <dd>An elevation chart, the highest point and the metres you'll climb. Prefer it flat? Filter your routes by climb.</dd>
+          </div>
+          <div>
+            <dt>One tap, route done</dt>
+            <dd>Auto-build a loop from where you are, aimed at ground worth taking. Don't like it? Ask for another.</dd>
+          </div>
+          <div>
+            <dt>Take it back</dt>
+            <dd>Someone took your ground? Copy the edge of their patch as a route and run it to win it back.</dd>
+          </div>
+          <div>
+            <dt>Plan it, send it</dt>
+            <dd>Send a route to people in your clubs and leagues, put a day and time on it, and add it to your calendar.</dd>
+          </div>
+          <div>
+            <dt>On your watch</dt>
+            <dd>Export any route as a GPX file for your watch, or run it in the app with the voice coach keeping you on line.</dd>
           </div>
         </dl>
       </section>

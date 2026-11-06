@@ -18,6 +18,7 @@ import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleTts, ttsConfig } from './tts.js'
 import { handleElevation } from './elevation.js'
+import { handleRoute } from './routing.js'
 import { handleAiPlan, aiConfig } from './aiplan.js'
 import { weekStatements, explored, quests, week } from './weekly.js'
 import { afterActivity, afterDelete, strongholdRoutes } from './strongholds.js'
@@ -25,6 +26,8 @@ import { socialRoute, swapStatements, activityCommentDeletes } from './social.js
 import { exportAccount, deleteAccount } from './account.js'
 import { streak } from './habits.js'
 import { divisionRoute } from './divisions.js'
+import { routeShareRoute } from './routeShares.js'
+import { cleanPlannedAt } from '../src/lib/routeShare.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -429,7 +432,7 @@ async function feed(env, user) {
   return { items: rows.map((r) => ({ activity: activityOut(r, user.id, r.given), userName: r.user_name, userColour: r.user_colour, userCrest: r.user_crest || null, mine: r.user_id === user.id })) }
 }
 
-const routeOut = (r) => ({ id: r.id, name: r.name, mode: r.mode, ring: parse(r.ring, []), distanceM: r.distance_m, createdAt: r.created_at, updatedAt: r.updated_at })
+const routeOut = (r) => ({ id: r.id, name: r.name, mode: r.mode, ring: parse(r.ring, []), distanceM: r.distance_m, waypoints: parse(r.waypoints, null), climbM: r.climb_m ?? null, plannedAt: r.planned_at ?? null, createdAt: r.created_at, updatedAt: r.updated_at })
 
 async function route(req, env, url, user, ctx) {
   const path = url.pathname
@@ -465,6 +468,9 @@ async function route(req, env, url, user, ctx) {
   // Weekly divisions (worker/divisions.js)
   const div = await divisionRoute({ env, user, m, path, now })
   if (div !== undefined) return json(div)
+  // Routes sent to your crew (worker/routeShares.js)
+  const shared = await routeShareRoute({ env, user, m, path, body, now, limit })
+  if (shared !== undefined) return json(shared)
 
   // Profile
   if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
@@ -694,18 +700,25 @@ async function route(req, env, url, user, ctx) {
   if (path === '/api/routes' && m === 'POST') {
     let r
     try { r = cleanRoute(body) } catch (e) { bad(e.message) }
+    // A day and time for it (ms or null). Left out, an update keeps the one it has, so older apps don't clear it.
+    let plannedAt
+    try { plannedAt = 'plannedAt' in body ? cleanPlannedAt(body.plannedAt, now) : undefined } catch (e) { bad(e.message) }
     const id = body.id == null ? null : String(body.id)
     if (id) {
-      const res = await env.DB.prepare('UPDATE routes SET name = ?, mode = ?, ring = ?, distance_m = ?, updated_at = ? WHERE id = ? AND user_id = ?')
-        .bind(r.name, r.mode, JSON.stringify(r.ring), r.distanceM, now, id, user.id).run()
+      const wps = r.waypoints ? JSON.stringify(r.waypoints) : null
+      const res = await (plannedAt === undefined
+        ? env.DB.prepare('UPDATE routes SET name = ?, mode = ?, ring = ?, distance_m = ?, waypoints = ?, climb_m = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+          .bind(r.name, r.mode, JSON.stringify(r.ring), r.distanceM, wps, r.climbM, now, id, user.id)
+        : env.DB.prepare('UPDATE routes SET name = ?, mode = ?, ring = ?, distance_m = ?, waypoints = ?, climb_m = ?, planned_at = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+          .bind(r.name, r.mode, JSON.stringify(r.ring), r.distanceM, wps, r.climbM, plannedAt, now, id, user.id)).run()
       if (!res.meta?.changes) return err('That route is gone.', 404, 'not_found')
       return json({ route: routeOut(await env.DB.prepare('SELECT * FROM routes WHERE id = ?').bind(id).first()) })
     }
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM routes WHERE user_id = ?').bind(user.id).first()
     if ((n?.n || 0) >= MAX_ROUTES) bad(`You have ${MAX_ROUTES} saved routes. Delete one to save another.`, 409, 'too_many_routes')
     const newId = uid()
-    await env.DB.prepare('INSERT INTO routes (id, user_id, name, mode, ring, distance_m, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(newId, user.id, r.name, r.mode, JSON.stringify(r.ring), r.distanceM, now, now).run()
+    await env.DB.prepare('INSERT INTO routes (id, user_id, name, mode, ring, distance_m, waypoints, climb_m, planned_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(newId, user.id, r.name, r.mode, JSON.stringify(r.ring), r.distanceM, r.waypoints ? JSON.stringify(r.waypoints) : null, r.climbM, plannedAt ?? null, now, now).run()
     return json({ route: routeOut(await env.DB.prepare('SELECT * FROM routes WHERE id = ?').bind(newId).first()) })
   }
   const rm = path.match(/^\/api\/routes\/([A-Za-z0-9-]{1,64})$/)
@@ -803,6 +816,12 @@ export async function handleApi(req, env, ctx) {
     return res
   }
   // Public, rate limited: heights for the elevation chart (grid corners only, never the route)
+  // Public, rate limited: snap a drawn route to paths you can run
+  if (url.pathname === '/api/route' && req.method === 'POST') {
+    res = await handleRoute(req, env)
+    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+    return res
+  }
   if (url.pathname === '/api/elevation' && req.method === 'POST') {
     res = await handleElevation(req, env)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)

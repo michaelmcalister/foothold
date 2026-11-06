@@ -17,6 +17,7 @@ import { isCrest } from '../crests.js'
 import { cleanCheckin } from '../coach/checkin.js'
 import { loopTrack, routeTrack, rng } from '../tracks.js'
 import { cleanRoute, MAX_ROUTES } from '../planner.js'
+import { cleanPlannedAt } from '../routeShare.js'
 import { checkText } from '../social/filter.js'
 import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, groundOf } from '../social/leagues.js'
 import { practiceCommentsFor } from '../social/practice.js'
@@ -104,6 +105,29 @@ const save = {
 function player(id) {
   if (id === S.user.id) return { id, name: S.user.name || 'You', colour: S.user.colour, crest: S.user.crest || null }
   return RIVALS.find((r) => r.id === id) || { id, name: 'Someone', colour: '#888', crest: null }
+}
+
+// The practice map's one example of a route sent by a friend: Sam's loop near
+// where the practice map is, planned for the next Saturday at 7 am.
+const PRACTICE_SHARE_ID = 'practice-share-sam'
+const PRACTICE_CENTRE = { lat: -33.9115, lng: 151.1555 } // Marrickville, before the practice map has a place
+function practiceShare(now) {
+  const c = offset(S.world?.centre || PRACTICE_CENTRE, 350, 250)
+  const corners = [[-450, -300], [450, -300], [450, 300], [-450, 300], [-450, -300]]
+  const route = cleanRoute({ name: "Sam's park loop (practice example)", mode: 'run', ring: corners.map(([x, y]) => { const p = offset(c, x, y); return [p.lng, p.lat] }) })
+  const at = new Date(now + 12 * 3600000)
+  at.setDate(at.getDate() + ((6 - at.getDay() + 7) % 7))
+  at.setHours(7, 0, 0, 0)
+  if (at.getTime() < now + 3600000) at.setDate(at.getDate() + 7)
+  const sam = RIVALS[0]
+  return {
+    id: PRACTICE_SHARE_ID,
+    route,
+    from: { id: sam.id, name: sam.name, colour: sam.colour, crest: sam.crest },
+    plannedAt: at.getTime(),
+    sharedAt: S.world?.seededAt || now - 2 * 3600000,
+    practice: true,
+  }
 }
 
 function notify(kind, text, at = Date.now()) {
@@ -1078,6 +1102,8 @@ export const local = {
     await state()
     const r = cleanRoute(body)
     const now = Date.now()
+    // A day and time (ms or null); left out, an update keeps the one it has
+    if (body && 'plannedAt' in body) r.plannedAt = cleanPlannedAt(body.plannedAt, now)
     if (body?.id != null) {
       const old = S.routes.find((x) => x.id === body.id)
       if (!old) throw new Error('That route is gone.')
@@ -1086,7 +1112,7 @@ export const local = {
       return { route: { ...old } }
     }
     if (S.routes.length >= MAX_ROUTES) throw new Error(`You have ${MAX_ROUTES} saved routes. Delete one to save another.`)
-    const route = { id: uid(), ...r, createdAt: now, updatedAt: now }
+    const route = { id: uid(), plannedAt: null, ...r, createdAt: now, updatedAt: now }
     S.routes.push(route)
     await save.routes()
     return { route: { ...route } }
@@ -1097,6 +1123,27 @@ export const local = {
     S.routes = S.routes.filter((x) => x.id !== id)
     if (S.routes.length === n) throw new Error('That route is gone.')
     await save.routes()
+    return { ok: true }
+  },
+
+  // Sending routes to your crew needs real friends, so the practice map has
+  // no crew. One made-up share from a practice rival shows how it looks.
+  async crew() {
+    return { crew: [] }
+  },
+  async shareRoute() {
+    throw new Error('Sign up to send routes to friends.')
+  },
+  async sharedRoutes() {
+    await state()
+    const hidden = S.social.hiddenShares || []
+    return { shared: hidden.includes(PRACTICE_SHARE_ID) ? [] : [practiceShare(Date.now())] }
+  },
+  async hideSharedRoute(id) {
+    await state()
+    if (id !== PRACTICE_SHARE_ID || (S.social.hiddenShares || []).includes(id)) throw new Error('That shared route is gone.')
+    S.social.hiddenShares = [...(S.social.hiddenShares || []), id]
+    await save.social()
     return { ok: true }
   },
 

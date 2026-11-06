@@ -253,7 +253,10 @@ async function suggest() {
           </div>
           <button class="close" type="button" aria-label="Close" @click="picked = null">×</button>
         </div>
-        <RouterLink class="btn block" :to="{ name: 'record' }">{{ picked.mine ? 'Run it again' : 'Go take it' }}</RouterLink>
+        <div class="two-btn">
+          <RouterLink class="btn" :to="{ name: 'record' }">{{ picked.mine ? 'Run it again' : 'Go take it' }}</RouterLink>
+          <RouterLink v-if="picked.h3" class="btn secondary" :to="{ name: 'plan', query: { copy: picked.h3 } }">{{ picked.mine ? 'Route round it' : 'Copy their line' }}</RouterLink>
+        </div>
       </template>
       <template v-else-if="hot">
         <div class="hot-head">
@@ -402,4 +405,6 @@ async function suggest() {
 .heat { width: 18px; height: 16px; background: #E5604D; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
 .season-sum p + p { margin-top: 4px; }
 .close { border: 0; background: var(--soft); width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--ink); }
+.two-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.two-btn .btn { justify-content: center; text-align: center; }
 </style>

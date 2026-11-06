@@ -4,6 +4,7 @@ import { userOut, activityOut, ACTIVITY_COLS, unpackTrack, parse, batched } from
 import { socialExport, socialDeleteStatements } from './social.js'
 
 // Tables keyed by the player, beyond users and activities. Add new ones here.
+// `key` names the export field when one table appears twice (keyed by two columns).
 export const USER_TABLES = [
   { table: 'club_members', col: 'user_id' },
   { table: 'kudos', col: 'user_id' },
@@ -15,6 +16,8 @@ export const USER_TABLES = [
   { table: 'personal_bests', col: 'user_id' },
   { table: 'stronghold_efforts', col: 'user_id' },
   { table: 'division_members', col: 'user_id' }, // weekly divisions: your weeks, scores, ranks and promotions
+  { table: 'route_shares', col: 'from_user', key: 'route_shares_sent' }, // routes you sent your crew (their copies go too)
+  { table: 'route_shares', col: 'to_user', key: 'route_shares_received' }, // routes your crew sent you
 ]
 
 export async function exportAccount(env, user) {
@@ -23,9 +26,10 @@ export async function exportAccount(env, user) {
     user: userOut(user),
     activities: rows.map((r) => ({ ...activityOut(r, user.id), track: unpackTrack(r.track) })),
   }
-  for (const { table, col } of USER_TABLES) {
-    out[table] = (await env.DB.prepare(`SELECT * FROM ${table} WHERE ${col} = ?`).bind(user.id).all()).results
+  for (const { table, col, key } of USER_TABLES) {
+    out[key || table] = (await env.DB.prepare(`SELECT * FROM ${table} WHERE ${col} = ?`).bind(user.id).all()).results
   }
+  for (const k of ['route_shares_sent', 'route_shares_received']) out[k] = out[k].map((s) => ({ ...s, ring: parse(s.ring, []) }))
   if (out.plans?.[0]) out.plans = out.plans.map((p) => ({ ...p, plan: parse(p.plan, null) }))
   Object.assign(out, await socialExport(env, user.id))
   return out

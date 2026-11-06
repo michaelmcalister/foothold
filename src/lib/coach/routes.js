@@ -79,6 +79,30 @@ function noteFor(heading, est, owners, names) {
 }
 
 // start {lat,lng}, targetKm, cells Map(h3 -> cell), me (user id), names optional Map or object of id -> display name.
+/**
+ * Several loop shapes from a start, best first: each heading, then the same
+ * headings a little longer and shorter, so "Try another" never runs dry.
+ * Returns [{ ring, heading, headingDeg, km, s }].
+ */
+export function loopOptions({ start, targetKm = 5, cells = new Map(), me = null, now = Date.now(), mode = 'run', headings = 8 } = {}) {
+  const out = []
+  for (const scale of [1, 1.15, 0.87]) {
+    const km = Math.max(0.5, targetKm * scale)
+    const gain = effortGain({ distanceM: km * 1000, movingS: km * 360, mode })
+    const perimeterM = (km * 1000) / ROAD_FACTOR
+    const n = Math.max(1, Math.min(16, headings))
+    const group = []
+    for (let i = 0; i < n; i++) {
+      const deg = (360 / n) * i + (scale === 1 ? 0 : 180 / n)
+      const ring = loopRing(start, perimeterM, deg)
+      group.push({ ring, headingDeg: deg, heading: n === 8 && scale === 1 ? HEADINGS[i] : `${Math.round(deg)} degrees`, km, s: scoreRing(ring, { cells, me, now, gain }) })
+    }
+    group.sort((a, b) => b.s.score - a.s.score || a.headingDeg - b.headingDeg)
+    out.push(...group)
+  }
+  return out
+}
+
 export function suggestLoop({ start, targetKm = 5, cells = new Map(), me = null, now = Date.now(), names = null, mode = 'run', headings = 8 } = {}) {
   if (!start || !Number.isFinite(start.lat) || !Number.isFinite(start.lng)) throw new Error('suggestLoop needs a start point')
   const km = Math.max(0.5, targetKm)

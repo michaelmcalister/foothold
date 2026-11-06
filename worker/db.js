@@ -235,6 +235,7 @@ export const LIMITS = {
   write: { max: 60, sec: 60 }, // any POST, PUT or DELETE
   activity: { max: 40, sec: 86400 }, // recorded on the phone
   import: { max: 400, sec: 86400 }, // from a watch or a Strava export, which can be years of runs at once
+  route: { max: 400, sec: 3600 }, // fresh path lookups per address per hour (drawing makes many)
   elevation: { max: 60, sec: 3600 }, // fresh height lookups per address per hour (repeats come from the cache)
   tts: { max: 150, sec: 3600 }, // new voice lines per address per hour (repeats come from the cache)
   feedback: { max: 10, sec: 86400 },
@@ -244,6 +245,7 @@ export const LIMITS = {
   report: { max: 20, sec: 86400 },
   league: { max: 10, sec: 86400 },
   leagueJoin: { max: 20, sec: 3600 },
+  routeShare: { max: 30, sec: 86400 }, // routes sent to your crew (each send is up to 20 people)
   aiPlanHour: { max: 5, sec: 3600 }, // AI plan builds per address
   aiPlanDay: { max: 15, sec: 86400 },
   aiPlanUser: { max: 15, sec: 86400 }, // per signed-in player
