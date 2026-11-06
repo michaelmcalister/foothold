@@ -1,12 +1,18 @@
-// Route planner logic: turns tapped waypoints into a line, checks it closes a loop the engine would count, and previews which hexes it would take.
+// Route planner logic: turns tapped waypoints into a line (straight, or along
+// the paths the server found between each pair), checks it closes a loop the
+// engine would count, previews which hexes it would take, and helps build
+// routes: simplifying a long line into draggable points, and outlining a
+// rival's ground so you can run it back.
 import { distance, ringArea, toRad } from './engine/geo.js'
 import { findLoops, LOOP_DEFAULTS } from './engine/loops.js'
 import { cellsForLoops, effortGain, applyClaim, MODES } from './engine/territory.js'
+import { cellsToMultiPolygon, gridDisk, cellArea } from 'h3-js'
 
 // Usual pace when there is no history to go on, in seconds per km
 export const FALLBACK_PACE = { run: 360, walk: 720, ride: 150 }
 export const MAX_ROUTE_POINTS = 2000
 export const MAX_ROUTES = 200
+export const MAX_WAYPOINTS = 80
 
 const ll = ([lng, lat]) => ({ lat, lng })
 const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1]
@@ -17,6 +23,93 @@ export function routeLine(waypoints, closed = true) {
   if (closed && pts.length >= 3 && !same(pts[0], pts[pts.length - 1])) pts.push(pts[0].slice())
   return pts
 }
+
+// The pairs of points the route joins, in order (including back to the start when closed).
+export function routePairs(waypoints, closed = true) {
+  const line = routeLine(waypoints, closed)
+  const out = []
+  for (let i = 1; i < line.length; i++) out.push([line[i - 1], line[i]])
+  return out
+}
+export const pairKey = (a, b, mode) => `${mode}:${a[0].toFixed(5)},${a[1].toFixed(5)}>${b[0].toFixed(5)},${b[1].toFixed(5)}`
+
+/**
+ * The line along the paths: each pair's path when one is known (`paths`, a
+ * Map from pairKey to [[lng, lat], ...]), a straight line where not.
+ */
+export function pathLine(waypoints, closed, mode, paths = new Map()) {
+  const pairs = routePairs(waypoints, closed)
+  if (!pairs.length) return routeLine(waypoints, closed)
+  const out = [pairs[0][0]]
+  for (const [a, b] of pairs) {
+    const seg = paths.get(pairKey(a, b, mode))
+    if (seg && seg.length > 1) out.push(...seg.slice(1))
+    else out.push(b)
+  }
+  return out
+}
+
+/** Fewer points along a line (Douglas-Peucker in metres), keeping its shape. */
+export function simplify(line, toleranceM = 15) {
+  if (line.length < 3) return line.slice()
+  const lat0 = line[0][1]
+  const kx = 111320 * Math.cos(toRad(lat0)), ky = 110540
+  const xy = (p) => [p[0] * kx, p[1] * ky]
+  const keep = new Uint8Array(line.length)
+  keep[0] = keep[line.length - 1] = 1
+  const stack = [[0, line.length - 1]]
+  while (stack.length) {
+    const [i, j] = stack.pop()
+    const [ax, ay] = xy(line[i]), [bx, by] = xy(line[j])
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy
+    let best = -1, at = -1
+    for (let k = i + 1; k < j; k++) {
+      const [px, py] = xy(line[k])
+      const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0
+      const d = Math.hypot(px - ax - t * dx, py - ay - t * dy)
+      if (d > best) { best = d; at = k }
+    }
+    if (best > toleranceM) { keep[at] = 1; stack.push([i, at], [at, j]) }
+  }
+  return line.filter((_, k) => keep[k])
+}
+
+/** About `n` draggable points for a line, chosen to keep its shape. */
+export function pointsFor(line, n = 12) {
+  let tol = 10
+  let out = simplify(line, tol)
+  while (out.length > n && tol < 2000) { tol *= 1.5; out = simplify(line, tol) }
+  return out
+}
+
+/**
+ * The outline of someone's ground around a hex: the connected patch they hold
+ * there, traced as a loop you could run to take it back. Returns
+ * { ring: [[lng, lat], ...], hexes } or null.
+ *   cells: [{ h3, owner, mine }] as the territory call returns them
+ */
+export function groundOutline(cells, startH3, { maxHexes = 400 } = {}) {
+  const byId = new Map(cells.map((c) => [c.h3, c]))
+  const first = byId.get(startH3)
+  if (!first) return null
+  const owner = (c) => (c.mine ? 'me' : c.owner)
+  const who = owner(first)
+  const seen = new Set([startH3])
+  const queue = [startH3]
+  while (queue.length && seen.size < maxHexes) {
+    for (const n of gridDisk(queue.shift(), 1)) {
+      const c = byId.get(n)
+      if (c && !seen.has(n) && owner(c) === who) { seen.add(n); queue.push(n) }
+    }
+  }
+  const polys = cellsToMultiPolygon([...seen], true) // [[outer, ...holes], ...] as [lng, lat]
+  if (!polys.length) return null
+  const outer = polys.map((p) => p[0]).sort((a, b) => b.length - a.length)[0]
+  return { ring: outer, hexes: [...seen] }
+}
+
+/** Ground area of some hexes in square kilometres. */
+export const areaKm2 = (hexes) => hexes.reduce((s, h) => s + cellArea(h, 'km2'), 0)
 
 export function lineLength(line) {
   let d = 0
@@ -69,8 +162,8 @@ function whyNot(waypoints, closed, line) {
 // Everything the planner shows for a set of waypoints.
 //   cells: Map h3 -> { owner, strength, lastVisit } for this mode
 //   me: your user id; names: Map id -> { name, colour }
-export function planRoute({ waypoints = [], closed = true, mode = 'run', paceSPerKm, cells = new Map(), me = null, names = new Map(), now = Date.now() } = {}) {
-  const line = routeLine(waypoints, closed)
+export function planRoute({ waypoints = [], closed = true, mode = 'run', paceSPerKm, cells = new Map(), me = null, names = new Map(), now = Date.now(), paths = null } = {}) {
+  const line = paths ? pathLine(waypoints, closed, mode, paths) : routeLine(waypoints, closed)
   const distanceM = lineLength(line)
   const pace = paceSPerKm || FALLBACK_PACE[mode] || FALLBACK_PACE.run
   const timeS = (distanceM / 1000) * pace
@@ -96,6 +189,7 @@ export function planRoute({ waypoints = [], closed = true, mode = 'run', paceSPe
   for (const h of diff.held) rival(h.owner).hold.push(h.h3)
   out.capture = {
     total: hexes.length,
+    areaKm2: areaKm2(hexes),
     wild: diff.claimed,
     mine: diff.reinforced,
     rivals: [...rivals.values()]
@@ -178,5 +272,14 @@ export function cleanRoute(body) {
   }
   const distanceM = Math.round(lineLength(clean))
   if (distanceM > 300000) throw new Error('That route is longer than 300 km. Try a shorter one.')
-  return { name: name || 'My route', mode, ring: clean, distanceM }
+  // The points you drew, if the line follows paths between them (optional)
+  let waypoints = null
+  if (Array.isArray(b.waypoints) && b.waypoints.length >= 2 && b.waypoints.length <= MAX_WAYPOINTS) {
+    waypoints = b.waypoints
+      .filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[1]) <= 90 && Math.abs(p[0]) <= 180)
+      .map(([lng, lat]) => [Math.round(lng * 1e6) / 1e6, Math.round(lat * 1e6) / 1e6])
+    if (waypoints.length < 2) waypoints = null
+  }
+  const climbM = Number.isFinite(b.climbM) && b.climbM >= 0 && b.climbM < 20000 ? Math.round(b.climbM) : null
+  return { name: name || 'My route', mode, ring: clean, distanceM, waypoints, climbM }
 }

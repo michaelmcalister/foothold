@@ -235,6 +235,7 @@ export const LIMITS = {
   write: { max: 60, sec: 60 }, // any POST, PUT or DELETE
   activity: { max: 40, sec: 86400 }, // recorded on the phone
   import: { max: 400, sec: 86400 }, // from a watch or a Strava export, which can be years of runs at once
+  route: { max: 400, sec: 3600 }, // fresh path lookups per address per hour (drawing makes many)
   elevation: { max: 60, sec: 3600 }, // fresh height lookups per address per hour (repeats come from the cache)
   tts: { max: 150, sec: 3600 }, // new voice lines per address per hour (repeats come from the cache)
   feedback: { max: 10, sec: 86400 },
