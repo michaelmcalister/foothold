@@ -48,6 +48,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Run recaps</h2>
       <p>When you watch a recap, the 3D map comes from Google Maps. Your phone asks Google for the imagery of the area the camera shows, the same as any map. Your track is drawn on your phone. We don't send Google your name, your account or your track as a file. Google's privacy policy covers what it does with map requests.</p>
 
+      <h2>Routes that follow paths</h2>
+      <p>When the route planner follows paths, our server asks a routing service for the way between the points you drop: Openrouteservice or Google if we've set one up, otherwise the OpenStreetMap routing service run by FOSSGIS. They get the points and whether it's a run, walk or ride, never your name or account, and they see our server rather than your phone. Turn off Follow paths and nothing is sent.</p>
+
       <h2>Elevation charts</h2>
       <p>To draw the hills on your run report, Foothold looks up ground heights from Open-Meteo, a weather and terrain service. Your phone never sends them your route. It sends our server the corners of a 100 m grid around your route, and our server asks Open-Meteo for those heights, so they don't see your phone, your name or your account. The heights are kept on your device so a run doesn't need looking up twice. Runs imported from a watch use the watch's own heights instead.</p>
 

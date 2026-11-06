@@ -128,6 +128,21 @@ hour per address. Without the key, the app uses the phone's own voice.
    (Settings, Variables and secrets, Add, type Secret), or run
    `npx wrangler secret put ELEVENLABS_API_KEY`.
 
+## Routes that follow paths (route planner)
+
+The planner snaps drawn routes to paths through `POST /api/route`. With no
+key it uses the FOSSGIS OpenStreetMap router (routing.openstreetmap.de),
+which is fine for testing but asks for light use only. Before launch add
+one of these Worker secrets:
+
+- `ORS_API_KEY`: a free Openrouteservice key (openrouteservice.org, 2,000
+  routes a day free). Used first when set.
+- `GOOGLE_ROUTES_KEY`: a server key with the Routes API enabled (not the
+  browser maps key, which is locked to the website).
+
+Answers are cached for a week and fresh lookups are limited to 400 an hour
+per address. Routes that need a ferry are refused.
+
 ## Elevation charts (Open-Meteo)
 
 Run reports draw an elevation chart. Watch imports use the watch's heights.
