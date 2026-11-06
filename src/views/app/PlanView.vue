@@ -18,6 +18,10 @@ import { fillPaths, knownPaths, canSnap } from '../../lib/paths.js'
 import { withDistance, sampleByDistance, heights } from '../../lib/runStats.js'
 import { elevationFor } from '../../lib/elevation.js'
 import ProfileChart from '../../components/ProfileChart.vue'
+import SendRouteSheet from '../../components/SendRouteSheet.vue'
+import SharedRoutes from '../../components/SharedRoutes.vue'
+import RouteWhen from '../../components/RouteWhen.vue'
+import { addRouteToCalendar } from '../../lib/routeShare.js'
 import { cellToLatLng } from 'h3-js'
 import { toGpx } from '../../lib/tracks.js'
 import { setPlanned } from '../../lib/plannedRoute.js'
@@ -43,6 +47,8 @@ const pathsTick = ref(0) // bumps as paths arrive, so the line redraws
 const finding = ref(false)
 const elev = ref(null) // { ds, alts } for the route on screen
 const climbFilter = ref('any')
+const plannedAt = ref(null) // a day and time to run it (ms) or null
+const sending = ref(null) // the saved route being sent to the crew
 let markers = []
 let moveTimer = 0
 
@@ -90,6 +96,7 @@ function clearAll() {
   commit([])
   editingId.value = null
   name.value = ''
+  plannedAt.value = null
 }
 
 function onMapClick(e) {
@@ -279,6 +286,7 @@ async function save() {
     const { route: r } = await api.saveRoute({
       id: editingId.value || undefined, name: name.value, mode: mode.value, ring: plan.value.line.slice(0, 2000),
       waypoints: follow.value ? routeLine(waypoints.value, false) : null, climbM: climb.value ? climb.value.gain : null,
+      plannedAt: plannedAt.value,
     })
     editingId.value = r.id
     name.value = r.name
@@ -300,6 +308,7 @@ function openSaved(r) {
   mode.value = r.mode
   name.value = r.name
   editingId.value = r.id
+  plannedAt.value = r.plannedAt ?? null
   const body = isClosed ? ring.slice(0, -1) : ring.slice()
   if (r.waypoints?.length >= 2) { follow.value = canSnap(); commit(r.waypoints.slice()) } // drawn on paths: the same points snap the same way
   else if (body.length > 40) { follow.value = canSnap(); commit(pointsFor(body, 14)) } // a long line: a few points to drag
@@ -307,6 +316,24 @@ function openSaved(r) {
   fitRoute()
   open.value = false
 }
+// A route someone sent you: opens like a saved one, and Save makes it yours
+function openShared(r) {
+  const ring = r.ring
+  const isClosed = ring.length > 3 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]
+  closed.value = isClosed
+  mode.value = r.mode
+  name.value = r.name
+  plannedAt.value = r.plannedAt ?? null
+  editingId.value = null
+  const body = isClosed ? ring.slice(0, -1) : ring.slice()
+  if (body.length > 40) { follow.value = canSnap(); commit(pointsFor(body, 14)) } else { follow.value = false; commit(body) }
+  fitRoute()
+  open.value = false
+}
+function addToCalendar() {
+  addRouteToCalendar({ id: editingId.value, name: name.value || 'Planned route', mode: mode.value, distanceM: plan.value.distanceM, plannedAt: plannedAt.value })
+}
+
 const CLIMBS = { any: Infinity, 25: 25, 50: 50, 100: 100 }
 const shownSaved = computed(() => {
   const max = CLIMBS[climbFilter.value]
@@ -409,10 +436,16 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
           <label for="route-name">Name</label>
           <input id="route-name" v-model="name" maxlength="60" placeholder="Park loop" autocomplete="off" />
         </div>
+        <RouteWhen v-model="plannedAt" id-prefix="plan" />
+        <button v-if="plannedAt != null" class="btn quiet block" type="button" @click="addToCalendar">Add to calendar</button>
         <div class="two">
           <button class="btn secondary" type="button" :disabled="busy || plan.line.length < 2" @click="save">{{ editingId ? 'Save changes' : 'Save route' }}</button>
           <button class="btn secondary" type="button" :disabled="plan.line.length < 2" @click="exportGpx">Export GPX</button>
         </div>
+
+        <button v-if="editingId" class="btn quiet block" type="button" @click="sending = saved.find((x) => x.id === editingId) || null">Send to your crew</button>
+
+        <SharedRoutes @open="openShared" />
 
         <div v-if="saved.length" class="saved">
           <div class="savedhead">
@@ -434,7 +467,10 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
                 <strong>{{ r.name }}</strong>
                 <span class="small muted">{{ MODE_LABEL[r.mode] }}, {{ km(r.distanceM) }} km<template v-if="r.climbM != null">, {{ r.climbM }} m up</template></span>
               </button>
-              <button class="del" type="button" :aria-label="`Delete ${r.name}`" @click="removeSaved(r)">Delete</button>
+              <span class="rowbtns">
+                <button class="del" type="button" :aria-label="`Send ${r.name}`" @click="sending = r">Send</button>
+                <button class="del" type="button" :aria-label="`Delete ${r.name}`" @click="removeSaved(r)">Delete</button>
+              </span>
             </li>
           </ul>
         </div>
@@ -454,6 +490,7 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
       </div>
       <button class="btn block go" type="button" :disabled="plan.line.length < 2" @click="runIt">Run this route</button>
     </section>
+    <SendRouteSheet v-if="sending" :route="sending" @close="sending = null" @sent="loadSaved" />
   </div>
 </template>
 
@@ -504,6 +541,7 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
 .savedhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .savedhead h3 { margin: 0; }
 .climbf { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
+.rowbtns { display: inline-flex; gap: 6px; }
 .climbf select { font: inherit; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 0.95rem; min-height: 44px; cursor: pointer; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--you); }

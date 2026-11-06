@@ -245,6 +245,7 @@ export const LIMITS = {
   report: { max: 20, sec: 86400 },
   league: { max: 10, sec: 86400 },
   leagueJoin: { max: 20, sec: 3600 },
+  routeShare: { max: 30, sec: 86400 }, // routes sent to your crew (each send is up to 20 people)
   aiPlanHour: { max: 5, sec: 3600 }, // AI plan builds per address
   aiPlanDay: { max: 15, sec: 86400 },
   aiPlanUser: { max: 15, sec: 86400 }, // per signed-in player

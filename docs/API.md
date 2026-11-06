@@ -55,8 +55,13 @@ Battle    { id, attacker, defender, attackerName, defenderName, attackerColour, 
             attackerCrest, defenderCrest, hexes: [h3],
             startedAt, endsAt, endedAt?, winner?,
             score: { attacker, defender, leader } }
-Route     { id, name, mode, ring: [[lng, lat], ...], distanceM, createdAt, updatedAt }
-            (a planned route; a closed loop's ring ends where it starts; private to its owner)
+Route     { id, name, mode, ring: [[lng, lat], ...], distanceM, plannedAt: number|null, createdAt, updatedAt }
+            (a planned route; a closed loop's ring ends where it starts; private to its owner;
+            plannedAt: the day and time it's planned for, null when none)
+Crew      { id, name, colour, crest }   (someone in your club or one of your private leagues, never you)
+SharedRoute { id (the share's id), route: { name, mode, ring, distanceM },
+            from: { id, name, colour, crest }, plannedAt: number|null, sharedAt }
+            (a copy taken when it was sent: the sender's later edits or delete don't change it)
 Week      { key: 'YYYY-MM-DD' (its Monday), start, end }   Monday to Sunday, Sydney time
 Quest     { id, kind: 'take'|'loops'|'outings'|'explore'|'newground'|'hold'|'takeback'|'raid',
             title, detail, target, count, progress, done, pending }
@@ -119,13 +124,17 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | DELETE | /api/integrations/formtrack | | `{ linked: false }` |
 | GET | /api/integrations/formtrack/summary | | `{ today, readiness, strengthThisWeek }` |
 | GET | /api/routes | | `{ routes: Route[] }` (yours, newest first, max 200) |
-| POST | /api/routes | `{ id?, name, mode, ring }` (2 to 2000 points; with `id`, updates that route) | `{ route }` |
+| POST | /api/routes | `{ id?, name, mode, ring, plannedAt? }` (2 to 2000 points; with `id`, updates that route; `plannedAt` epoch ms or null, left out on an update keeps the one it has) | `{ route }` |
 | DELETE | /api/routes/:id | | `{ ok }` |
+| GET | /api/crew | | `{ crew: Crew[] }` (everyone in your club and your leagues, by name, without you; max 500) |
+| POST | /api/routes/:id/share | `{ to: [userId], plannedAt? }` (your own route only; 1 to 20 people, all in your crew; `plannedAt` left out uses the route's own) | `{ ok, sent: [userId], plannedAt }` (404 not your route, 403 `not_crew`, 400 `too_many_recipients`, 429 after 30 sends a day; each person gets a `route` notification) |
+| GET | /api/routes/shared | | `{ shared: SharedRoute[] }` (sent to you, newest first, max 100, hidden ones left out) |
+| DELETE | /api/routes/shared/:shareId | | `{ ok }` (hides it from your list; yours only) |
 | GET | /api/bests | `?mode=run` | `{ bests: Best[] }` (your records on that map, in distance order) |
 | GET | /api/strongholds | `?mode=run&bbox=w,s,e,n` | `{ strongholds: Stronghold[] }` (no bbox: around your last activity) |
 | GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
 | GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
-| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, comments, reports, leagues, swaps }` |
+| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, routes, route_shares_sent, route_shares_received, comments, reports, leagues, swaps, ... }` |
 | DELETE | /api/me | | `{ ok }` (removes the account and all of the above; held ground goes wild) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
@@ -166,6 +175,27 @@ decides whether it counts, `cellsForLoops` the hexes and `applyClaim` whether
 each is wild, yours or a rival's you would take or only weaken. The server
 checks routes with the same `cleanRoute` the app uses. Routes need
 `migrations/0005_routes.sql`, and they are included in Download my data.
+
+### A day and time, and sending to your crew
+
+`plannedAt` on a route, and route sharing, need `migrations/0011_route_shares.sql`.
+`plannedAt` is checked by `cleanPlannedAt` in `src/lib/routeShare.js` (null, or
+a time from 2020 to two years ahead). "Add to calendar" builds a one-event
+.ics with a one hour alarm (`routeIcs`, on `reminderIcs` in `src/lib/calendar.js`)
+and runs nowhere but the phone.
+
+Your crew is everyone in your club and your private leagues (`worker/routeShares.js`).
+Sending copies the route's name, mode, ring and distance into `route_shares`
+for each person, and notifies them: "{name} sent you a route: {route name}",
+plus " for Sat 7 Nov, 7:00 am" (Sydney time) when it has a time. Sending the
+same route to the same person again replaces their copy. To keep one, the app
+saves it with `POST /api/routes` (`copySharedRoute` in `src/lib/sharedRoutes.js`).
+Shares you sent and shares you received are in Download my data, and deleting
+your account removes both, including the copies you sent.
+
+The practice map (local.js) has no crew: `crew()` is empty, `shareRoute` asks
+you to sign up, and `sharedRoutes()` holds one made-up example from Sam,
+labelled as a practice example, that can be hidden.
 
 ## Quests, explored map and weekly recap
 

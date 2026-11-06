@@ -77,6 +77,11 @@ export const remote = {
   routes: () => call('GET', '/api/routes'),
   saveRoute: (body) => call('POST', '/api/routes', body),
   deleteRoute: (id) => call('DELETE', `/api/routes/${encodeURIComponent(id)}`),
+  // Sending routes to your crew (people in your clubs and leagues)
+  crew: () => call('GET', '/api/crew'),
+  shareRoute: (id, { to, plannedAt } = {}) => call('POST', `/api/routes/${encodeURIComponent(id)}/share`, plannedAt === undefined ? { to } : { to, plannedAt }),
+  sharedRoutes: () => call('GET', '/api/routes/shared'),
+  hideSharedRoute: (id) => call('DELETE', `/api/routes/shared/${encodeURIComponent(id)}`),
   explored: ({ mode } = {}) => call('GET', '/api/explored' + q({ mode })),
   quests: () => call('GET', '/api/quests'),
   week: ({ w } = {}) => call('GET', '/api/week' + q({ w })),
