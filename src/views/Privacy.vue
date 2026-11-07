@@ -53,6 +53,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Routes that follow paths</h2>
       <p>When the route planner follows paths, our server asks a routing service for the way between the points you drop: Openrouteservice or Google if we've set one up, otherwise the OpenStreetMap routing service run by FOSSGIS. They get the points and whether it's a run, walk or ride, never your name or account, and they see our server rather than your phone. Turn off Follow paths and nothing is sent.</p>
 
+      <h2>Ghost runs</h2>
+      <p>When you race a ghost, it's one of your own past runs, or a route at a pace you pick. The result and the ghost's line are kept on your phone so the recap can show both of you. Nothing about it is sent anywhere.</p>
+
       <h2>Elevation charts</h2>
       <p>To draw the hills on your run report, Foothold looks up ground heights from Open-Meteo, a weather and terrain service. Your phone never sends them your route. It sends our server the corners of a 100 m grid around your route, and our server asks Open-Meteo for those heights, so they don't see your phone, your name or your account. The heights are kept on your device so a run doesn't need looking up twice. Runs imported from a watch use the watch's own heights instead.</p>
 

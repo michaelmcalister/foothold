@@ -36,6 +36,7 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
   await loadScript(key)
   const lib = await google.maps.importLibrary('maps3d')
   const { Map3DElement, Polyline3DElement, Polygon3DElement } = lib
+  const Marker3D = lib.Marker3DElement
   if (failed) throw failed
 
   const map = new Map3DElement({
@@ -57,6 +58,8 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
     drawsOccludedSegments: true,
   })
   let hexEls = []
+  let ghostEl = null
+  let lastGhost = 0
   let lastTrail = 0
 
   // Resolve when Google says the move finished, or a little after it should have
@@ -116,6 +119,17 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
       if (points.length < 2) { trail.remove(); return }
       trail.path = points.map((p) => ({ lat: p.lat, lng: p.lng }))
       if (!trail.isConnected) map.append(trail)
+    },
+    // The ghost you raced, as a marker beside the trail (null hides it)
+    setGhost(p) {
+      if (!Marker3D) return
+      const now = performance.now()
+      if (p && now - lastGhost < 120) return
+      lastGhost = now
+      if (!p) { ghostEl?.remove(); return }
+      if (!ghostEl) ghostEl = new Marker3D({ altitudeMode: 'CLAMP_TO_GROUND', label: 'Ghost' })
+      ghostEl.position = { lat: p.lat, lng: p.lng }
+      if (!ghostEl.isConnected) map.append(ghostEl)
     },
     setHexes(rings) {
       for (const h of hexEls) h.remove()

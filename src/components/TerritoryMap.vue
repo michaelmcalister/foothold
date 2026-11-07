@@ -24,6 +24,7 @@ const props = defineProps({
   suggestion: { type: Array, default: null }, // ring
   zones: { type: Array, default: () => [] },
   me: { type: Object, default: null }, // live position dot
+  ghost: { type: Object, default: null }, // the ghost you're racing: { lat, lng }
   follow: { type: Boolean, default: false },
   fit: { type: Boolean, default: false }, // fit to track/loops when they load
   interactive: { type: Boolean, default: true },
@@ -130,6 +131,7 @@ function syncAll() {
   setData('suggest', props.suggestion ? rings([props.suggestion]) : empty)
   setData('zones', rings(props.zones.map(circle)))
   setData('me', props.me ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [props.me.lng, props.me.lat] } } : empty)
+  setData('ghost', props.ghost ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [props.ghost.lng, props.ghost.lat] } } : empty)
   setData('fog', props.explored ? fogMask(props.explored, props.centre) : empty)
   setData('shroute', props.strongholdRoute?.length > 1 ? line(props.strongholdRoute) : empty)
   syncStrongholds()
@@ -181,6 +183,7 @@ onMounted(async () => {
     m.addSource('suggest', { type: 'geojson', data: empty })
     m.addSource('zones', { type: 'geojson', data: empty })
     m.addSource('me', { type: 'geojson', data: empty })
+    m.addSource('ghost', { type: 'geojson', data: empty })
     m.addSource('fog', { type: 'geojson', data: empty })
     m.addLayer({ id: 'fog', type: 'fill', source: 'fog', paint: { 'fill-color': '#16302A', 'fill-opacity': 0.42 } })
     m.addSource('shroute', { type: 'geojson', data: empty })
@@ -198,6 +201,7 @@ onMounted(async () => {
     m.addLayer({ id: 'loops', type: 'line', source: 'loops', paint: { 'line-color': '#2E55E6', 'line-width': 3 } })
     m.addLayer({ id: 'track-case', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 8 } })
     m.addLayer({ id: 'track', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4.5 } })
+    m.addLayer({ id: 'ghost', type: 'circle', source: 'ghost', paint: { 'circle-radius': 8, 'circle-color': '#FFFFFF', 'circle-opacity': 0.85, 'circle-stroke-color': '#16302A', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6 } })
     m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 14, 'circle-color': '#2E55E6', 'circle-opacity': 0.18 } })
     m.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2E55E6', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
     m.on('click', 'cells-fill', (e) => {
@@ -246,6 +250,7 @@ watch(() => props.centre, (c) => {
 })
 
 defineExpose({ map, fitTo })
+watch(() => props.ghost, (g) => setData('ghost', g ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [g.lng, g.lat] } } : empty))
 </script>
 
 <template>

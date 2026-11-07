@@ -30,6 +30,9 @@ const MISSION_SFX = { 'surge-start': 'surge', 'surge-end': 'surgeDone', chapter:
 // The regular update's first sentence ("2 kilometres."), for when the mission has the floor
 const headline = (line) => (line.match(/^[^.]*\./) || [line])[0]
 
+/** Have the voice coach say a line (if the voice is on), ducking the music like any update. */
+export function coachSays(text) { say(text) }
+
 function say(text) {
   if (!text || !audio.voice) return
   enqueue(() => spotify.aroundSpeech(() => speak(text, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo }))

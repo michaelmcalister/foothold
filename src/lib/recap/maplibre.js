@@ -32,10 +32,12 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
   map.addSource('hexes', { type: 'geojson', data: empty })
   map.addSource('trail', { type: 'geojson', data: empty })
   map.addSource('runner', { type: 'geojson', data: empty })
+  map.addSource('ghost', { type: 'geojson', data: empty })
   map.addLayer({ id: 'hex-fill', type: 'fill', source: 'hexes', paint: { 'fill-color': colour, 'fill-opacity': 0.32 } })
   map.addLayer({ id: 'hex-line', type: 'line', source: 'hexes', paint: { 'line-color': colour, 'line-width': 1.2, 'line-opacity': 0.8 } })
   map.addLayer({ id: 'trail-halo', type: 'line', source: 'trail', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 9 } })
   map.addLayer({ id: 'trail', type: 'line', source: 'trail', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': colour, 'line-width': 5 } })
+  map.addLayer({ id: 'ghost', type: 'circle', source: 'ghost', paint: { 'circle-radius': 7, 'circle-color': '#FFFFFF', 'circle-opacity': 0.85, 'circle-stroke-width': 2, 'circle-stroke-color': '#16302A' } })
   map.addLayer({ id: 'runner', type: 'circle', source: 'runner', paint: { 'circle-radius': 7, 'circle-color': colour, 'circle-stroke-width': 3, 'circle-stroke-color': '#FFFFFF' } })
 
   let raf = 0
@@ -87,6 +89,10 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
         : empty)
       const last = points[points.length - 1]
       map.getSource('runner')?.setData(last ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [last.lng, last.lat] } } : empty)
+    },
+    // The ghost you raced, as a pale dot (null hides it)
+    setGhost(p) {
+      map.getSource('ghost')?.setData(p ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } } : empty)
     },
     setHexes(rings) {
       map.getSource('hexes')?.setData({ type: 'FeatureCollection', features: rings.map((r) => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [r] } })) })

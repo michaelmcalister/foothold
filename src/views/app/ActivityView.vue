@@ -100,6 +100,7 @@ async function remove() {
 
     <div class="actions">
       <RouterLink class="btn" :to="{ name: 'recap', params: { id: a.id } }">Watch recap</RouterLink>
+      <RouterLink v-if="a.mine !== false && !a.rejected" class="btn secondary" :to="{ name: 'record', query: { ghost: a.id } }">Race this {{ a.mode === 'ride' ? 'ride' : a.mode }}</RouterLink>
       <button class="btn quiet" type="button" @click="exportGpx">Export GPX</button>
       <button class="btn quiet" type="button" @click="remove">Delete</button>
     </div>

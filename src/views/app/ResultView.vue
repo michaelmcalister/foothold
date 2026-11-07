@@ -20,6 +20,7 @@ import CoachNotes from '../../components/CoachNotes.vue'
 import FeelCheckin from '../../components/FeelCheckin.vue'
 import RunStats from '../../components/RunStats.vue'
 import PracticeSignup from '../../components/PracticeSignup.vue'
+import { ghostRace } from '../../lib/ghostRace.js'
 import { debrief, plannedFor } from '../../lib/coach/debrief.js'
 import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 import { loadJourney, freshSteps, markCheered, cheerSound, remindSecondOuting } from '../../lib/journey.js'
@@ -47,6 +48,7 @@ function checkedIn(act) {
 }
 
 const a = computed(() => res.value?.activity)
+const race = computed(() => (a.value ? ghostRace(a.value.id) : null))
 const mission = computed(() => resultFor(route.params.id))
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
 const newHexes = computed(() => (res.value?.diff?.claimed.length || 0) + (res.value?.diff?.taken.length || 0))
@@ -165,6 +167,7 @@ async function sendAppeal() {
       </div>
       <FeelCheckin v-if="askFeel" :activity="a" :plan="plan" :recent="recent" @saved="checkedIn" @plan="(p) => (plan = p)" />
 
+      <div v-if="race" class="ghostres" :class="{ won: race.beat }" role="status"><span class="g" aria-hidden="true"></span><p>{{ race.text }}</p></div>
       <CoachNotes :notes="notes" />
 
       <div class="stat-row">
@@ -255,4 +258,8 @@ async function sendAppeal() {
 .shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
 .shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }
 .shnote .see { display: block; margin-top: 4px; color: var(--you); font-weight: 650; font-size: 0.9rem; }
+.ghostres { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--soft); font-weight: 700; }
+.ghostres.won { background: #E3F3E6; }
+.ghostres p { margin: 0; }
+.ghostres .g { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
 </style>
