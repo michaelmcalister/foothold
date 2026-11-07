@@ -22,6 +22,7 @@ import { checkText } from '../social/filter.js'
 import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode, rankTable, rivalSums, sortRivals, groundOf } from '../social/leagues.js'
 import { practiceCommentsFor } from '../social/practice.js'
 import { practiceDivision } from '../social/divisionPractice.js'
+import { yearBounds, yearOf } from '../wrapped.js'
 import { weekScore, tierOut, clampTier, daysLeftIn, placedText, promotedText, ACTIVE_DAYS, PROMOTE_TOP, PER_HEX, PER_OUTING, MAX_OUTINGS, DIVISION_SIZE } from '../engine/divisions.js'
 
 const DAY = 86400000
@@ -1155,6 +1156,35 @@ export const local = {
   async cellsMap(mode = 'run') {
     await state()
     return S.cells[mode]
+  },
+  // Foothold Wrapped (same shape as GET /api/me/year): your year's activities,
+  // who you swapped ground with, and your records. Swaps are kept for a month
+  // here, so battles and the log of lost hexes fill in the rest of the year.
+  async year({ year } = {}) {
+    await state()
+    year = Number(year) || yearOf()
+    const { start, end } = yearBounds(year)
+    const me = S.user.id
+    const inYear = (t) => t >= start && t < end
+    const sums = new Map()
+    const get = (id) => sums.get(id) || sums.set(id, { swapsThem: 0, swapsYou: 0, battlesThem: 0, lostYou: 0 }).get(id)
+    for (const x of S.social.swaps) {
+      if (!inYear(x.at)) continue
+      if (x.taker === me && x.loser !== me) get(x.loser).swapsThem += x.n
+      else if (x.loser === me && x.taker !== me) get(x.taker).swapsYou += x.n
+    }
+    for (const b of S.battles) if (b.attacker === me && b.defender !== me && inYear(b.startedAt)) get(b.defender).battlesThem += (b.hexes || []).length
+    for (const l of S.losses) if (l.by && l.by !== me && inYear(l.at)) get(l.by).lostYou++
+    const rivals = [...sums].map(([id, r]) => {
+      const p = player(id)
+      return { userId: id, name: p.name, colour: p.colour, crest: p.crest || null, tookFromThem: Math.max(r.swapsThem, r.battlesThem), tookFromYou: Math.max(r.swapsYou, r.lostYou) }
+    })
+    return {
+      year, start, end,
+      activities: S.activities.filter((a) => a.userId === me && !a.rejected && inYear(a.startedAt)),
+      rivals,
+      bests: Object.fromEntries(MODES.map((m) => [m, bestsList(S.bests[m], m)])),
+    }
   },
   async exportData() {
     await state()

@@ -1,5 +1,5 @@
 <script setup>
-// Your numbers: ground held, your fitness trend, where you are on the ladder,
+// Your numbers: the way into your year in review (Wrapped), ground held, your fitness trend, where you are on the ladder,
 // the first week journey (new players), your weekly streak and badges, this
 // week's quests and recap, your division tier, your weeks, your personal
 // bests, and every activity.
@@ -16,6 +16,7 @@ import { FOUNDING_BADGE } from '../../lib/engine/firstweek.js'
 import TierBadge from '../../components/TierBadge.vue'
 import { TIERS } from '../../lib/engine/divisions.js'
 import TrendChart from '../../components/TrendChart.vue'
+import WrappedEntry from '../../components/wrapped/WrappedEntry.vue'
 import { fitnessTrend, fiveKSeries, formatTime } from '../../lib/coach/index.js'
 
 const activities = ref([])
@@ -76,6 +77,8 @@ const ladderPct = computed(() => {
       <RouterLink class="btn quiet small" :to="{ name: 'leagues' }">Private leagues</RouterLink>
       <RouterLink class="btn quiet small" :to="{ name: 'rivals' }">Your rivals</RouterLink>
     </nav>
+
+    <WrappedEntry />
 
     <div class="stat-row">
       <div class="stat"><span class="big-num">{{ s.hexes || 0 }}</span><span class="label">hexes held</span></div>

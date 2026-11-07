@@ -96,6 +96,8 @@ export const remote = {
   loadFor: async () => null,
   cellsMap: async () => null,
   exportData: () => call('GET', '/api/me/export'),
+  // Foothold Wrapped: your year's activities, who you swapped ground with, and your records
+  year: ({ year } = {}) => call('GET', '/api/me/year' + q({ year })),
   deleteAccount: () => call('DELETE', '/api/me'),
   reset: async () => ({ ok: true }),
 }
