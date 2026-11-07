@@ -135,6 +135,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
 | GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
 | GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, routes, route_shares_sent, route_shares_received, comments, reports, leagues, swaps, ... }` |
+| GET | /api/me/year | `?year=2026` (default this year, Sydney time) | Foothold Wrapped: `{ year, start, end, activities: [{ id, mode, startedAt, distanceM, movingS, elevGainM, loops, claimed, taken, bests }], rivals: [{ userId, name, colour, crest, tookFromThem, tookFromYou }], bests: { run, walk, ride } }` (yours only, no tracks; the phone reads tracks for the map film) |
 | DELETE | /api/me | | `{ ok }` (removes the account and all of the above; held ground goes wild) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |

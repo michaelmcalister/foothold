@@ -27,6 +27,7 @@ import { exportAccount, deleteAccount } from './account.js'
 import { streak } from './habits.js'
 import { divisionRoute } from './divisions.js'
 import { routeShareRoute } from './routeShares.js'
+import { yearInReview } from './wrapped.js'
 import { cleanPlannedAt } from '../src/lib/routeShare.js'
 
 const DAY = 86400000
@@ -475,6 +476,7 @@ async function route(req, env, url, user, ctx) {
   // Profile
   if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
   if (path === '/api/me/export' && m === 'GET') return json(await exportAccount(env, user))
+  if (path === '/api/me/year' && m === 'GET') return json(await yearInReview(env, user, url, now)) // Foothold Wrapped (worker/wrapped.js)
   if (path === '/api/me' && m === 'DELETE') return json(await deleteAccount(env, user))
   if (path === '/api/me' && m === 'PUT') {
     const sets = []
