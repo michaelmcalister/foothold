@@ -25,6 +25,7 @@ export const router = createRouter({
         { path: 'week', name: 'week', component: () => import('./views/app/WeekView.vue') },
         { path: 'settings', name: 'settings', component: () => import('./views/app/SettingsView.vue') },
         { path: 'notifications', name: 'notifications', component: () => import('./views/app/NotificationsView.vue') },
+        { path: 'hill/:id', name: 'hill', component: () => import('./views/app/HillView.vue') },
         { path: 'strongholds/:id?', name: 'strongholds', component: () => import('./views/app/StrongholdsView.vue') },
         { path: 'clubs', name: 'clubs', component: () => import('./views/app/ClubsView.vue') },
         { path: 'rivals', name: 'rivals', component: () => import('./views/app/RivalsView.vue') },

@@ -91,6 +91,9 @@ export const remote = {
   bests: ({ mode = 'run' } = {}) => call('GET', '/api/bests' + q({ mode })),
   strongholds: ({ mode = 'run', bbox } = {}) => call('GET', '/api/strongholds' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
   stronghold: (id, { mode = 'run' } = {}) => call('GET', `/api/strongholds/${encodeURIComponent(id)}` + q({ mode })),
+  // King of the hill
+  hills: ({ mode = 'run', bbox } = {}) => call('GET', '/api/hills' + q({ mode, bbox: bbox?.map((n) => n.toFixed(5)).join(',') })),
+  hill: (id) => call('GET', `/api/hills/${encodeURIComponent(id)}`),
   // The server holds the world; nothing to seed.
   ensureWorld: async () => null,
   loadFor: async () => null,
