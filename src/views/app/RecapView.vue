@@ -8,6 +8,7 @@
 // allowed sound yet.
 // The "try it now" demo (#/try/flyover) plays the demo run here too, and
 // ends on a button to its run report instead of "Done".
+// "Make a reel" (ReelMaker) turns the flyover into a short video to share.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cellToBoundary } from 'h3-js'
@@ -22,6 +23,7 @@ import PracticeSignup from '../../components/PracticeSignup.vue'
 import { ghostRace } from '../../lib/ghostRace.js'
 import { ghostAt } from '../../lib/ghost.js'
 import { withDistance } from '../../lib/runStats.js'
+import ReelMaker from '../../components/ReelMaker.vue'
 import { demoRun } from '../../lib/recap/demo.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
@@ -42,6 +44,7 @@ const shot = ref('flyin')
 const metres = ref(0)
 const hexCount = ref(0)
 const engine = ref('')
+const reelTrack = ref([]) // kept for the reel
 let driver = null
 let director = null
 let plan = null
@@ -138,7 +141,7 @@ onMounted(async () => {
     const isDemo = rid.value === 'demo'
     const r = isDemo ? demoRun() : await api.activity(rid.value)
     activity.value = r.activity
-    const track = r.track || []
+    const track = (reelTrack.value = r.track || [])
     const race = isDemo ? null : ghostRace(rid.value)
     if (race?.ghost?.length > 1 && track.every((q) => Number.isFinite(q.t))) {
       raceGhost = { pts: race.ghost.map(([lat, lng, s]) => ({ lat, lng, s })), totalS: race.totalS }
@@ -258,9 +261,11 @@ onBeforeUnmount(() => {
       <div v-if="trial" class="actions">
         <RouterLink class="btn" :to="{ name: 'try-report' }">See your run report</RouterLink>
         <button class="btn ghost" type="button" @click="play()">Watch again</button>
+        <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
       </div>
       <div v-else class="actions">
         <button class="btn" type="button" @click="play()">Watch again</button>
+        <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
         <button class="btn ghost" type="button" @click="back">{{ rid === 'demo' ? 'Done' : 'See your run report' }}</button>
       </div>
       <PracticeSignup v-if="rid !== 'demo'" dark class="keep" :simulated="!!activity?.simulated" />
@@ -354,9 +359,10 @@ onBeforeUnmount(() => {
 .stats div { display: grid; gap: 2px; }
 .stats .num { font-weight: 850; font-stretch: 112%; font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .stats .lbl { font-size: 0.82rem; opacity: 0.75; }
-.actions { display: flex; gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .keep { margin-top: 14px; }
 .actions .btn { flex: 1; }
+.actions .reelbtn { flex-basis: 100%; }
 .btn.ghost { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; }
 .credit { font-size: 0.75rem; opacity: 0.6; }
 </style>

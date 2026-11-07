@@ -23,7 +23,7 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
   const style = await loadStyle()
   const view = (c) => ({
     center: [c.lng, c.lat],
-    zoom: Math.min(19, zoomForRange(c.range, c.lat, el.clientHeight)),
+    zoom: Math.min(19, zoomForRange(c.range, c.lat, el.clientHeight) - 1), // zoomForRange counts 256 px tiles; MapLibre draws 512 px ones
     bearing: c.heading,
     pitch: Math.min(75, c.tilt),
   })

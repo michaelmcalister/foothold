@@ -16,6 +16,7 @@ import { lastResult } from '../../lib/lastResult.js'
 import { km, pace, duration, speedKmh, plural } from '../../lib/format.js'
 import { loadMessage, levelFor, bestMessage } from '../../lib/engine/index.js'
 import ShareCard from '../../components/ShareCard.vue'
+import ReelMaker from '../../components/ReelMaker.vue'
 import CoachNotes from '../../components/CoachNotes.vue'
 import FeelCheckin from '../../components/FeelCheckin.vue'
 import RunStats from '../../components/RunStats.vue'
@@ -229,6 +230,7 @@ async function sendAppeal() {
       </div>
 
       <ShareCard v-if="!a.rejected" :activity="a" :new-hexes="newHexes" :taken="takenBy" />
+      <ReelMaker v-if="!a.rejected && track.length > 1" class="btn quiet" :activity="a" :track="track" />
 
       <PracticeSignup v-if="!a.rejected" :simulated="!!a.simulated" />
 
