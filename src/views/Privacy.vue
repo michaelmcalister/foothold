@@ -49,6 +49,7 @@ import BrandMark from '../components/BrandMark.vue'
 
       <h2>Run recaps</h2>
       <p>When you watch a recap, the 3D map comes from Google Maps. Your phone asks Google for the imagery of the area the camera shows, the same as any map. Your track is drawn on your phone. We don't send Google your name, your account or your track as a file. Google's privacy policy covers what it does with map requests.</p>
+      <p>When you make a reel from a recap, your phone makes the video itself, with the street map. Nothing is uploaded: the video stays on your phone until you share or save it. The trail leaves out the start and end of your route inside your privacy zones, and ground inside a zone isn't shown. Your name is only on it if you turn on Show my name.</p>
 
       <h2>Routes that follow paths</h2>
       <p>When the route planner follows paths, our server asks a routing service for the way between the points you drop: Openrouteservice or Google if we've set one up, otherwise the OpenStreetMap routing service run by FOSSGIS. They get the points and whether it's a run, walk or ride, never your name or account, and they see our server rather than your phone. Turn off Follow paths and nothing is sent.</p>
