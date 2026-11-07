@@ -91,7 +91,7 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | PUT | /api/me | `{ name?, colour?, crest?, mode?, zones?, seasonSeen?, foundingAt? }` (`foundingAt`: when the Founding foothold badge was earned; set once, never moved or cleared) | `{ user }` (user has `foundingAt`, null until earned) |
 | POST | /api/activities | `{ mode, source, startedAt, points: Point[] }` | `{ activity, diff: { claimed: h3[], reinforced: h3[], taken: [{h3, from}], held: [{h3, owner}] }, battles: Battle[], hexesBefore, hexesAfter, load }` |
 | GET | /api/activities | `?limit=50` | `{ activities: Activity[] }` |
-| GET | /api/activities/:id | | `{ activity, track: Point[] }` (owner gets full track, others the public track) |
+| GET | /api/activities/:id | | `{ activity, track: Point[], hills: [{ id, name, seconds, rank, tookCrown, holds }] }` (owner gets full track, others the public track; `hills` are the hills climbed in it, see King of the hill below, empty until they're worked out just after saving) |
 | POST | /api/activities/:id/appeal | `{ note }` | `{ activity }` |
 | POST | /api/activities/:id/checkin | `{ feel, hurt?: { area, level } }` or `{ dismissed: true }` | `{ activity }` (yours only; answering again replaces it) |
 | GET | /api/territory | `?mode=run&bbox=w,s,e,n` | `{ cells: Cell[] }` (others' private hexes left out; max 5000) |
@@ -134,7 +134,10 @@ Crests are the ids in `src/lib/crests.js` (`chevron`, `star`, `wave`, ...).
 | GET | /api/strongholds | `?mode=run&bbox=w,s,e,n` | `{ strongholds: Stronghold[] }` (no bbox: around your last activity) |
 | GET | /api/strongholds/:id | `?mode=run` | `{ stronghold, byEfforts: [{ userId, name, colour, me, efforts, last }], byTime: [{ userId, name, colour, me, bestS, at }], recent: [{ activityId, at, elapsedS }] }` (top 20 each; `recent` is yours) |
 | GET | /api/strongholds/efforts | | `{ efforts: [{ strongholdId, activityId, mode, at, elapsedS }] }` (yours, for export) |
-| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, routes, route_shares_sent, route_shares_received, comments, reports, leagues, swaps, ... }` |
+| GET | /api/hills | `?mode=run&bbox=w,s,e,n` (bbox needed, up to 4 square degrees) | `{ hills: Hill[] }` hills whose start is in view, with the holder's name and colour (max 300) |
+| GET | /api/hills/:id | | `{ hill: Hill & { profile: [[metres, height]], people }, board: [{ rank, userId, name, colour, seconds, at, me }], mine: { rank, seconds, at, activityId } \| null }` (board: the top 10, each person's best once) |
+| GET | /api/me/export | | everything held about you: `{ user, activities (with tracks), club_members, kudos, notifications, plans, feedback, routes, route_shares_sent, route_shares_received, hill_efforts, hills_held, comments, reports, leagues, swaps, ... }` |
+| GET | /api/me/year | `?year=2026` (default this year, Sydney time) | Foothold Wrapped: `{ year, start, end, activities: [{ id, mode, startedAt, distanceM, movingS, elevGainM, loops, claimed, taken, bests }], rivals: [{ userId, name, colour, crest, tookFromThem, tookFromYou }], bests: { run, walk, ride } }` (yours only, no tracks; the phone reads tracks for the map film) |
 | DELETE | /api/me | | `{ ok }` (removes the account and all of the above; held ground goes wild) |
 | POST | /api/feedback | `{ kind: 'bug'|'idea'|'other', text }` | `{ ok }` |
 | GET | /api/explored | `?mode=run|walk|ride` (leave out for every mode) | `{ cells: [h3], total, capped }` every res-10 hex your tracks passed through, newest first, max 20000 |
@@ -153,6 +156,49 @@ they are in "Download my data" and go when your activities do. Server
 tables: `personal_bests`, `stronghold_efforts` (`USER_DATA` in
 `worker/strongholds.js`), from `migrations/0006_strongholds.sql`, which also
 seeds the seven Penrith loops.
+
+## King of the hill
+
+The steepest climbs in each area become hills, tied to the ground. Whoever
+holds the fastest time up a hill is King or Queen of the hill (the data says
+`holder`; the app says King of the hill). Run, walk and ride have their own
+hills. Rules and numbers are in `src/lib/engine/hills.js`:
+
+- A climb is a steady ascent of at least 20 m, at least 250 m long, averaging
+  4% or more. Dips under 3 m don't end it.
+- A hill's key is `mode:start hex>end hex` at H3 resolution 9. A climb whose
+  ends are within 60 m of a known hill's ends (or with the same key, a similar
+  length and ends within 120 m) is that hill. The first effort's line,
+  simplified, becomes the hill's line, and its heights the profile.
+- Efforts on known hills are found from the track alone: it must pass within
+  40 m of the start, then the end, cover the hill's length give or take a
+  quarter, and follow its line. The time is between those two samples.
+- Only the best per person per hill counts on the board. The crown moves only
+  on a strictly faster time, and the old holder gets a `hill` notification:
+  "Sam took the hill on the 32 m climb. Your time to beat: 1:42. Fancy another go?"
+  (not for efforts more than 14 days old, such as imports).
+- Heights: terrain heights through the same lookup as `/api/elevation`
+  (`terrainHeights` in `worker/elevation.js`), or a watch file's own heights
+  for imports. Never the phone's GPS heights. The server finds climbs after the
+  response (`ctx.waitUntil`), so `hills` on an activity can be empty for a few seconds.
+- Only activities that pass the anti-cheat count, imports included. A climb that
+  starts, ends or passes through your privacy zone never makes or counts a hill.
+- Names come from the climb's height ("The 32 m climb"). There is no geocoder.
+
+```
+Hill {
+  id, name, mode, line: [[lng, lat]], gainM, lengthM, grade (0.08 is 8%),
+  start: { lat, lng }, end: { lat, lng }, top: { lat, lng } (where the crown sits),
+  holder: { userId, name, colour, seconds, me } | null
+}
+```
+
+Server tables `hills` and `hill_efforts` (`migrations/0013_hills.sql`). Your
+efforts are in "Download my data" (`hill_efforts`, and `hills_held` for hills
+you hold). Deleting an activity removes its efforts; deleting your account
+removes all of them. Hills stay either way, and the next fastest becomes the
+holder. On the practice map, hills live on the device (`src/lib/api/localHills.js`),
+with two seeded hills held by practice rivals.
 
 ## FormTrack link
 

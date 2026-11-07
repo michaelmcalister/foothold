@@ -4,6 +4,7 @@
 // time at your usual pace, the climb and which hexes the loop would take.
 // Auto-build a loop (and ask for another), trace a rival's ground to take it
 // back, filter saved routes by climb, then save, run or send it to a watch.
+// A hill page (King of the hill) opens here with ?hill=id and the hill's line.
 import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Marker, LngLatBounds } from 'maplibre-gl'
@@ -378,6 +379,13 @@ onMounted(async () => {
   }
   if (route.query.suggest) await autoBuild()
   if (route.query.copy) await copyGround(String(route.query.copy))
+  // From a hill page (King of the hill): its line, ready to run or build a loop round
+  if (route.query.hill) {
+    try {
+      const { hill } = await api.hill(String(route.query.hill))
+      openShared({ ring: hill.line, mode: hill.mode, name: `Up ${hill.name.replace(/^The /, 'the ')}` })
+    } catch (e) { toast(e.message) }
+  }
 })
 onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (const m of markers) m.remove() })
 </script>

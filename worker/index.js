@@ -27,7 +27,9 @@ import { exportAccount, deleteAccount } from './account.js'
 import { streak } from './habits.js'
 import { divisionRoute } from './divisions.js'
 import { routeShareRoute } from './routeShares.js'
+import { yearInReview } from './wrapped.js'
 import { cleanPlannedAt } from '../src/lib/routeShare.js'
+import { detectAfterSave, hillsForActivity, hillsAfterDelete, hillRoute } from './hills.js'
 
 const DAY = 86400000
 const WEEK = 7 * DAY
@@ -235,6 +237,14 @@ async function postActivity(env, user, body, ctx) {
       .catch(() => {})
     if (ctx?.waitUntil) ctx.waitUntil(sync)
     else await Promise.race([sync, new Promise((r) => setTimeout(r, 5000))])
+  }
+
+  // King of the hill (worker/hills.js): climbs need terrain heights, so after the response when we can
+  if (!a.rejected) {
+    const hills = detectAfterSave(env, user, { id, mode, source, track: res.track, zones, startedAt: a.startedAt, now })
+      .catch((e) => console.error('hills', e?.message))
+    if (ctx?.waitUntil) ctx.waitUntil(hills)
+    else await hills
   }
 
   const row = await env.DB.prepare(`SELECT ${ACTIVITY_COLS} FROM activities a WHERE a.id = ?`).bind(id).first()
@@ -468,6 +478,9 @@ async function route(req, env, url, user, ctx) {
   // Weekly divisions (worker/divisions.js)
   const div = await divisionRoute({ env, user, m, path, now })
   if (div !== undefined) return json(div)
+  // King of the hill (worker/hills.js)
+  const hill = await hillRoute({ env, user, url, m, path })
+  if (hill !== undefined) return json(hill)
   // Routes sent to your crew (worker/routeShares.js)
   const shared = await routeShareRoute({ env, user, m, path, body, now, limit })
   if (shared !== undefined) return json(shared)
@@ -475,6 +488,7 @@ async function route(req, env, url, user, ctx) {
   // Profile
   if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
   if (path === '/api/me/export' && m === 'GET') return json(await exportAccount(env, user))
+  if (path === '/api/me/year' && m === 'GET') return json(await yearInReview(env, user, url, now)) // Foothold Wrapped (worker/wrapped.js)
   if (path === '/api/me' && m === 'DELETE') return json(await deleteAccount(env, user))
   if (path === '/api/me' && m === 'PUT') {
     const sets = []
@@ -559,7 +573,7 @@ async function route(req, env, url, user, ctx) {
     if (!row) return err('That activity is gone.', 404, 'not_found')
     const mine = row.user_id === user.id
     if (!sub && m === 'GET') {
-      return json({ activity: activityOut(row, user.id, row.given), track: unpackTrack(mine ? row.track : row.public_track) })
+      return json({ activity: activityOut(row, user.id, row.given), track: unpackTrack(mine ? row.track : row.public_track), hills: await hillsForActivity(env, user.id, id) })
     }
     if (!sub && m === 'DELETE') {
       if (!mine) return err('You can only delete your own activities.', 403)
@@ -570,6 +584,7 @@ async function route(req, env, url, user, ctx) {
         env.DB.prepare('DELETE FROM activities WHERE id = ? AND user_id = ?').bind(id, user.id),
       ])
       await afterDelete(env, user, { id, mode: row.mode })
+      await hillsAfterDelete(env, id) // its hill times go, and crowns pass to the next fastest
       return json({ ok: true })
     }
     if (sub === '/appeal' && m === 'POST') {

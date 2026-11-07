@@ -4,8 +4,10 @@
 // and FIT files (one or many) from a watch or app, and (in the practice map)
 // simulates a loop. A route from the planner shows dashed, with how far off
 // it you are. A story mission can ride along: pick one before starting and
-// a strip shows its chapter and surge timer during the run.
-import { ref, computed, onBeforeUnmount } from 'vue'
+// a strip shows its chapter and surge timer during the run. Or race a
+// ghost: a past run of yours from here, or the planned route at a pace. The
+// ghost moves on the map and the voice coach calls the gap.
+import { ref, computed, watch, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import { rec, start, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
@@ -15,7 +17,11 @@ import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack } from '../../lib/tracks.js'
 import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
-import { beginRun, finishRun, endRun, missionLive } from '../../lib/audio/runAudio.js'
+import { beginRun, finishRun, endRun, missionLive, coachSays } from '../../lib/audio/runAudio.js'
+import GhostPicker from '../../components/GhostPicker.vue'
+import { makeGhost, ghostAt, progressAlong, gapSeconds, gapLine, gapShort, raceResult } from '../../lib/ghost.js'
+import { saveGhostRace } from '../../lib/ghostRace.js'
+import { usualPace } from '../../lib/planner.js'
 import { saveResult } from '../../lib/missions/index.js'
 import MissionPicker from '../../components/MissionPicker.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
@@ -59,8 +65,84 @@ const loopHint = computed(() => {
   return `${rec.toStartM} m back to your start closes the loop.`
 })
 
+// ---- ghost ----
+const ghostPick = ref(null)
+const ghost = shallowRef(null)
+const ghostLive = ref(null) // { pos, gapS, offM } during the run
+const usual = ref(360)
+let ghostIdx = 0
+let bestD = 0
+let reachedAtS = null
+let nextCueM = 500
+let ghostDoneSaid = false
+let offSaid = false
+
+async function buildGhost(pick) {
+  ghost.value = null
+  if (!pick) return
+  try {
+    if (pick.kind === 'run') {
+      const { track } = await api.activity(pick.activity.id)
+      ghost.value = makeGhost(track, { label: 'your ghost' })
+    } else if (plannedRing.value) {
+      ghost.value = makeGhost(plannedRing.value.map(([lng, lat]) => ({ lat, lng })), { paceSPerKm: pick.paceSPerKm, label: 'the pace ghost' })
+    }
+    if (!ghost.value) { toast("That run can't be raced. Pick another."); ghostPick.value = null }
+  } catch (e) { toast(e.message); ghostPick.value = null }
+}
+watch(ghostPick, buildGhost)
+onMounted(async () => {
+  try { usual.value = usualPace((await api.activities({ limit: 30 })).activities, mode.value) || 360 } catch { /* an easy pace it is */ }
+  const id = here.query.ghost
+  if (id) {
+    try {
+      const { activity } = await api.activity(String(id))
+      mode.value = activity.mode
+      ghostPick.value = { kind: 'run', activity }
+    } catch { toast("That run isn't there any more.") }
+  }
+})
+
+function resetGhostRace() {
+  ghostIdx = 0; bestD = 0; reachedAtS = null; nextCueM = 500; ghostDoneSaid = false; offSaid = false
+  ghostLive.value = null
+}
+watch(() => [rec.elapsedS, rec.points.length], () => {
+  const g = ghost.value
+  if (!g || rec.status !== 'recording' || !rec.points.length) return
+  const here0 = rec.points[rec.points.length - 1]
+  const p = progressAlong(g, here0, ghostIdx)
+  if (p.offM < 80) { ghostIdx = p.idx; bestD = Math.max(bestD, p.d); offSaid = false }
+  else if (!offSaid && rec.distanceM > 200) { offSaid = true; coachSays(`You're off ${g.label}'s line. Head back to it to keep racing.`) }
+  const gapS = gapSeconds(g, bestD, rec.elapsedS)
+  const pos = ghostAt(g, rec.elapsedS)
+  ghostLive.value = { pos, gapS, offM: Math.round(p.offM) }
+  if (reachedAtS == null && bestD >= g.totalM - 25) {
+    reachedAtS = rec.elapsedS
+    coachSays(raceResult(g, { reachedEnd: true, myS: reachedAtS }).text)
+  } else if (reachedAtS == null && bestD >= nextCueM) {
+    nextCueM += 500
+    coachSays(gapLine(gapS, { label: g.label }))
+  }
+  if (pos.done && !ghostDoneSaid && reachedAtS == null) { ghostDoneSaid = true; coachSays(`${g.label[0].toUpperCase() + g.label.slice(1)} has finished. Keep going, it's only time.`) }
+})
+const ghostStrip = computed(() => {
+  if (!ghost.value || !ghostLive.value) return null
+  if (reachedAtS != null) return { text: 'Ghost race done', cls: 'done' }
+  return { text: `Ghost: ${gapShort(ghostLive.value.gapS)}`, cls: ghostLive.value.gapS >= 3 ? 'ahead' : ghostLive.value.gapS <= -3 ? 'behind' : '' }
+})
+// How the race went, worked out as you finish
+function ghostOutcome() {
+  const g = ghost.value
+  if (!g) return null
+  const r = raceResult(g, { reachedEnd: reachedAtS != null, myS: reachedAtS })
+  return { ...r, label: g.label, totalS: g.totalS, ghost: g.pts.filter((_, i) => i % Math.max(1, Math.ceil(g.pts.length / 1500)) === 0).map((q) => [q.lat, q.lng, Math.round(q.s)]) }
+}
+let pendingGhost = null
+
 function begin() {
   error.value = null
+  resetGhostRace()
   start(mode.value)
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
   beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' ? null : missionId.value })
@@ -80,6 +162,7 @@ async function save(payload, label = 'Saving', missionSummary = null) {
     if (payload.source === 'phone' && !payload.simulated) forgetUnfinished()
     setLastResult(res)
     if (missionSummary) saveResult(res.activity.id, missionSummary)
+    if (pendingGhost) { saveGhostRace(res.activity.id, pendingGhost); pendingGhost = null }
     await refresh()
     router.replace({ name: 'result', params: { id: res.activity.id } })
   } catch (e) {
@@ -99,6 +182,7 @@ function tooShort(gpsPoints, elapsedS) {
 
 async function finish() {
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
+  pendingGhost = ghostOutcome()
   const out = stop()
   const missionSummary = finishRun(totals)
   await saveRecording(out, totals.elapsedS, missionSummary)
@@ -211,7 +295,7 @@ onBeforeUnmount(() => {})
 <template>
   <div class="rec">
     <div class="maparea">
-      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" />
+      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" :ghost="ghostLive?.pos || null" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
@@ -248,6 +332,7 @@ onBeforeUnmount(() => {})
           </div>
         </div>
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
+        <GhostPicker v-model="ghostPick" :mode="mode" :here="store.located ? store.centre : null" :route="plannedRing ? planned.route : null" :usual-pace="usual" />
         <div v-if="error" class="notice bad">{{ error }}</div>
         <div v-else-if="rec.error" class="notice bad">{{ rec.error }}</div>
         <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
@@ -267,6 +352,7 @@ onBeforeUnmount(() => {})
         </div>
         <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
         <div v-if="rec.notice" class="notice gap" role="status">{{ rec.notice }}</div>
+        <div v-if="ghostStrip" class="ghoststrip" :class="ghostStrip.cls" aria-live="polite"><span class="g" aria-hidden="true"></span>{{ ghostStrip.text }}</div>
         <div class="live">
           <div class="stat"><span class="big-num">{{ duration(rec.elapsedS) }}</span><span class="label">Time</span></div>
           <div class="stat"><span class="big-num">{{ km(rec.distanceM) }}</span><span class="label">km</span></div>
@@ -335,4 +421,8 @@ onBeforeUnmount(() => {})
 .leftover p { margin: 0; }
 .leftover .row { display: flex; gap: 8px; }
 .notice.gap { font-size: 0.9rem; }
+.ghoststrip { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--soft); font-weight: 750; }
+.ghoststrip .g { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
+.ghoststrip.ahead { background: #E3F3E6; }
+.ghoststrip.behind { background: #FCEBD9; }
 </style>

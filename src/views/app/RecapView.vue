@@ -8,6 +8,7 @@
 // allowed sound yet.
 // The "try it now" demo (#/try/flyover) plays the demo run here too, and
 // ends on a button to its run report instead of "Done".
+// "Make a reel" (ReelMaker) turns the flyover into a short video to share.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cellToBoundary } from 'h3-js'
@@ -19,6 +20,10 @@ import { planRecap } from '../../lib/recap/plan.js'
 import { createDirector } from '../../lib/recap/director.js'
 import { mapsKey } from '../../lib/recap/config.js'
 import PracticeSignup from '../../components/PracticeSignup.vue'
+import { ghostRace } from '../../lib/ghostRace.js'
+import { ghostAt } from '../../lib/ghost.js'
+import { withDistance } from '../../lib/runStats.js'
+import ReelMaker from '../../components/ReelMaker.vue'
 import { demoRun } from '../../lib/recap/demo.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
@@ -39,6 +44,7 @@ const shot = ref('flyin')
 const metres = ref(0)
 const hexCount = ref(0)
 const engine = ref('')
+const reelTrack = ref([]) // kept for the reel
 let driver = null
 let director = null
 let plan = null
@@ -95,6 +101,18 @@ function toggleMusic() {
 }
 function tapForSound() { wakeSound() }
 
+// A ghost you raced on this run: its dot moves beside yours as the trail draws
+let raceGhost = null
+let timed = []
+function elapsedAt(m) {
+  if (timed.length < 2) return 0
+  let lo = 0, hi = timed.length - 1
+  while (hi - lo > 1) { const k = (lo + hi) >> 1; if (timed[k].d <= m) lo = k; else hi = k }
+  const a = timed[lo], b = timed[hi]
+  const f = b.d > a.d ? Math.min(1, Math.max(0, (m - a.d) / (b.d - a.d))) : 0
+  return (a.t + (b.t - a.t) * f - timed[0].t) / 1000
+}
+
 function direct() {
   director = createDirector(driver, plan, {
     onShot: (id) => {
@@ -104,6 +122,7 @@ function direct() {
     },
     onProgress: (p) => {
       metres.value = p.metres
+      if (raceGhost && driver?.setGhost) driver.setGhost(p.shot === 'follow' ? ghostAt(raceGhost, elapsedAt(p.metres)) : null)
       if (p.shot === 'follow') music.setIntensity(0.3 + 0.7 * p.f) // busier as the trail draws
     },
     onDone: () => { state.value = 'done' },
@@ -122,7 +141,12 @@ onMounted(async () => {
     const isDemo = rid.value === 'demo'
     const r = isDemo ? demoRun() : await api.activity(rid.value)
     activity.value = r.activity
-    const track = r.track || []
+    const track = (reelTrack.value = r.track || [])
+    const race = isDemo ? null : ghostRace(rid.value)
+    if (race?.ghost?.length > 1 && track.every((q) => Number.isFinite(q.t))) {
+      raceGhost = { pts: race.ghost.map(([lat, lng, s]) => ({ lat, lng, s })), totalS: race.totalS }
+      timed = withDistance(track)
+    }
     const loops = findLoops(track)
     const hexes = cellsForLoops(loops)
     hexCount.value = !isDemo && r.activity?.claimed != null ? (r.activity.claimed || 0) + (r.activity.taken || 0) : hexes.length
@@ -237,9 +261,11 @@ onBeforeUnmount(() => {
       <div v-if="trial" class="actions">
         <RouterLink class="btn" :to="{ name: 'try-report' }">See your run report</RouterLink>
         <button class="btn ghost" type="button" @click="play()">Watch again</button>
+        <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
       </div>
       <div v-else class="actions">
         <button class="btn" type="button" @click="play()">Watch again</button>
+        <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
         <button class="btn ghost" type="button" @click="back">{{ rid === 'demo' ? 'Done' : 'See your run report' }}</button>
       </div>
       <PracticeSignup v-if="rid !== 'demo'" dark class="keep" :simulated="!!activity?.simulated" />
@@ -333,9 +359,10 @@ onBeforeUnmount(() => {
 .stats div { display: grid; gap: 2px; }
 .stats .num { font-weight: 850; font-stretch: 112%; font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .stats .lbl { font-size: 0.82rem; opacity: 0.75; }
-.actions { display: flex; gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .keep { margin-top: 14px; }
 .actions .btn { flex: 1; }
+.actions .reelbtn { flex-basis: 100%; }
 .btn.ghost { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; }
 .credit { font-size: 0.75rem; opacity: 0.6; }
 </style>
