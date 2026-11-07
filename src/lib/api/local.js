@@ -23,6 +23,7 @@ import { MAX_LEAGUES, MAX_MEMBERS, SWAP_DAYS, GAIN_DAYS, makeCode, normaliseCode
 import { practiceCommentsFor } from '../social/practice.js'
 import { practiceDivision } from '../social/divisionPractice.js'
 import { yearBounds, yearOf } from '../wrapped.js'
+import { seedPracticeHills, listHills, hillDetail, hillsOfActivity, detectPractice, dropActivityHills, rivalHillTick, PRACTICE_HILL } from './localHills.js'
 import { weekScore, tierOut, clampTier, daysLeftIn, placedText, promotedText, ACTIVE_DAYS, PROMOTE_TOP, PER_HEX, PER_OUTING, MAX_OUTINGS, DIVISION_SIZE } from '../engine/divisions.js'
 
 const DAY = 86400000
@@ -65,6 +66,8 @@ async function state() {
     bests: await kv.get('bests', {}), // your personal bests: { mode: { key: { value, activityId, at } } }
     social: await kv.get('social', { comments: [], reports: [], leagues: [], swaps: [], decided: [] }),
     division: await kv.get('division', null), // weekly division: { week, tier, best, seed, history }
+    hills: await kv.get('hills', []), // King of the hill (localHills.js): hills on this device
+    hillEfforts: await kv.get('hillEfforts', []), // everyone's times up them (practice rivals too)
   }
   if (!S.user) {
     S.user = {
@@ -101,7 +104,10 @@ const save = {
   bests: () => kv.set('bests', S.bests),
   social: () => kv.set('social', S.social),
   division: () => kv.set('division', S.division),
+  hills: () => Promise.all([kv.set('hills', S.hills), kv.set('hillEfforts', S.hillEfforts.slice(-5000))]),
 }
+// Hill detection runs after a practice save; activity(id) waits for it
+const pendingHills = new Map()
 
 function player(id) {
   if (id === S.user.id) return { id, name: S.user.name || 'You', colour: S.user.colour, crest: S.user.crest || null }
@@ -282,7 +288,8 @@ export async function ensureWorld(where) {
     return old ? { ...c, members: [...new Set([...c.members, ...old.members])] } : c
   })
   S.world = { v: WORLD_VERSION, centre, seededAt: now, lastTick: now, area: area?.id || null, seasonReset: seasonFor(now).id }
-  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses(), save.efforts()])
+  seedPracticeHills(S, centre, now)
+  await Promise.all([save.cells('run'), save.activities(), save.clubs(), save.world(), save.losses(), save.efforts(), save.hills()])
   return S.world
 }
 
@@ -342,6 +349,8 @@ async function tick() {
       changed = true
     }
   }
+  // A practice rival goes faster up a hill you hold
+  for (const text of rivalHillTick(S, S.user.id, { now, rand, player })) { notify('hill', text, now); changed = true }
   // Retire finished battles
   for (const b of S.battles) {
     if (!b.endedAt && b.endsAt <= now) {
@@ -377,7 +386,7 @@ async function tick() {
     S.world.weekNotice = wk.key
   }
   await save.world()
-  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses(), save.efforts(), save.social()])
+  if (changed) await Promise.all([save.cells('run'), save.battles(), save.notifications(), save.activities(), save.losses(), save.efforts(), save.social(), save.hills()])
 }
 
 // A new season softens everyone's ground, the same as the server's hourly
@@ -583,6 +592,11 @@ export const local = {
     }
     const hexesAfter = [...cells.values()].filter((c) => c.owner === S.user.id && !isWild(c, now)).length
     await Promise.all([save.activities(), save.cells(mode), save.battles(), save.notifications(), save.visited(), save.efforts(), save.bests()])
+    // King of the hill: heights take a moment, so after the save (activity(id) waits for it)
+    if (!res.activity.rejected) {
+      pendingHills.set(res.activity.id, detectPractice(S, res.activity, res.track, { uid, zones: S.user.zones })
+        .then((n) => (n ? save.hills() : null)).catch(() => null))
+    }
     return {
       prs,
       strongholds,
@@ -608,7 +622,9 @@ export const local = {
     const activity = S.activities.find((a) => a.id === id)
     if (!activity) throw new Error('That activity is gone.')
     const track = (await kv.get(`track:${id}`, null)) || []
-    return { activity: withCount(activity), track }
+    const pending = pendingHills.get(id)
+    if (pending) await Promise.race([pending, new Promise((r) => setTimeout(r, 8000))])
+    return { activity: withCount(activity), track, hills: hillsOfActivity(S, id, S.user.id) }
   },
 
   async appeal(id, note) {
@@ -638,11 +654,12 @@ export const local = {
     S.activities = S.activities.filter((a) => a.id !== id)
     delete S.visited[id]
     S.efforts = S.efforts.filter((e) => e.activityId !== id)
+    dropActivityHills(S, id) // its hill times go; the board finds the next best
     if (gone?.bests) S.bests = { ...S.bests, [gone.mode]: rebuildBests(S.activities.filter((a) => a.userId === S.user.id && a.mode === gone.mode), gone.mode) }
     S.social.comments = S.social.comments.filter((c) => c.activityId !== id)
     S.social.reports = S.social.reports.filter((r) => r.activityId !== id)
     await kv.del(`track:${id}`)
-    await Promise.all([save.activities(), save.visited(), save.efforts(), save.bests(), save.social()])
+    await Promise.all([save.activities(), save.visited(), save.efforts(), save.bests(), save.social(), save.hills()])
     return { ok: true }
   },
 
@@ -1087,6 +1104,21 @@ export const local = {
     }
   },
 
+  // King of the hill (localHills.js). A world from before hills gets its practice hills here.
+  async hills({ mode = 'run', bbox } = {}) {
+    await state()
+    if (S.world && !S.hills.some((h) => h.id.startsWith(PRACTICE_HILL))) {
+      seedPracticeHills(S, S.world.centre)
+      await save.hills()
+    }
+    return listHills(S, { mode, bbox }, player, S.user.id)
+  },
+
+  async hill(id) {
+    await state()
+    return hillDetail(S, id, player, S.user.id)
+  },
+
   async feedback({ kind, text }) {
     await state()
     S.feedback.push({ kind, text: String(text).slice(0, 2000), at: Date.now() })
@@ -1203,6 +1235,7 @@ export const local = {
       reports: S.social.reports.filter((r) => r.reporter === S.user.id),
       leagues: myLeagues().map(leagueOut),
       division: S.division,
+      hillEfforts: S.hillEfforts.filter((e) => e.userId === S.user.id),
     }
   },
   async deleteAccount() {

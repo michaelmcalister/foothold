@@ -6,6 +6,7 @@
 // sheet sums up how the last season went. Strongholds show as crowns; tap
 // one for its holder and leaderboards. New players see the first week
 // journey in place of the nudge, and the strip shows the weekly streak.
+// Hills show as lines with a small crown; tap one for its King of the hill page.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -35,6 +36,7 @@ const hot = ref(false)
 const seasonInfo = ref(null)
 const strongholds = ref([])
 const pickedSh = ref(null)
+const hills = ref([])
 let t = 0
 
 // This week's quests, folded by default; the choice is remembered on this device
@@ -94,12 +96,14 @@ async function load() {
   const pad = 0.02
   const [w, s, e, n] = bbox.value
   const box = [w - pad, s - pad, e + pad, n + pad]
-  const [{ cells: c }, sh] = await Promise.all([
+  const [{ cells: c }, sh, hl] = await Promise.all([
     api.territory({ mode: store.mode, bbox: box }),
     api.strongholds({ mode: store.mode, bbox: box }).catch(() => null),
+    api.hills({ mode: store.mode, bbox: box }).catch(() => null),
   ])
   cells.value = c
   if (sh) strongholds.value = sh.strongholds
+  if (hl) hills.value = hl.hills
 }
 const shPicked = computed(() => strongholds.value.find((s) => s.id === pickedSh.value) || null)
 const shRoute = computed(() => (shPicked.value ? decodePolyline(shPicked.value.line) : null))
@@ -179,7 +183,9 @@ async function suggest() {
       :explored="exploring ? explored || [] : null"
       :strongholds="strongholds"
       :stronghold-route="shRoute"
+      :hills="hills"
       @moved="onMoved"
+      @hill="(id) => router.push({ name: 'hill', params: { id } })"
       @cell="pickCell"
       @stronghold="pickStronghold"
     />

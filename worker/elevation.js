@@ -2,7 +2,8 @@
 // terrain heights (Copernicus 90 m model, through Open-Meteo) for corners of
 // a 100 m grid the app sends. The app never sends the route itself, and the
 // lookup service sees our server, not the runner. Answers are cached by
-// batch, and fresh lookups are rate limited per address.
+// batch, and fresh lookups are rate limited per address. terrainHeights is
+// the same lookup for the server's own use (hills, worker/hills.js).
 import { hit } from './db.js'
 
 export const GRIDS = [0.001, 0.002, 0.004]
@@ -43,14 +44,17 @@ function lookupUrl(env, batch) {
     : `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`
 }
 
-export async function handleElevation(req, env, { fetcher = fetch, cache = globalThis.caches?.default } = {}) {
-  const body = await req.json().catch(() => null)
-  const parsed = readBody(body)
-  if (parsed.error) return json({ error: parsed.error, code: 'bad_request' }, 400)
-  const { nodes } = parsed
-
+/**
+ * Terrain heights for grid corners [[lat, lng]], for the elevation route and
+ * for the server itself (hill detection in worker/hills.js). Answers are
+ * cached by batch of 100. `beforeFresh` runs once before the first lookup
+ * that isn't cached (the route uses it for the per-address limit) and can
+ * return { limited, retryAfter } to stop.
+ * Returns { elev } (one height or null per node) or { fail: 'limited' | 'failed', retryAfter }.
+ */
+export async function terrainHeights(env, nodes, { fetcher = fetch, cache = globalThis.caches?.default, beforeFresh = null } = {}) {
   const out = []
-  let limited = false
+  let checked = false
   for (let i = 0; i < nodes.length; i += BATCH) {
     const batch = nodes.slice(i, i + BATCH)
     const key = new Request(`https://elevation.foothold.cache/${await sha(JSON.stringify(batch))}.json`)
@@ -58,24 +62,38 @@ export async function handleElevation(req, env, { fetcher = fetch, cache = globa
     if (cached) { out.push(...(await cached.json()).elevation); continue }
 
     // Only fresh lookups count towards the limit, once per request
-    if (!limited) {
-      const ip = req.headers.get('cf-connecting-ip') || 'unknown'
-      const r = await hit(env, 'elevation', ip)
-      if (!r.ok) return json({ error: 'Too many height lookups for now. Try again a bit later.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 600) })
-      limited = true
+    if (!checked && beforeFresh) {
+      const r = await beforeFresh()
+      if (r?.limited) return { fail: 'limited', retryAfter: r.retryAfter }
     }
+    checked = true
     const res = await fetcher(lookupUrl(env, batch))
     if (!res.ok) {
       console.error('elevation', res.status) // never log the points
-      return json({ error: "Heights aren't available right now.", code: 'elevation_failed' }, 502)
+      return { fail: 'failed' }
     }
     const data = await res.json().catch(() => null)
     const elevation = Array.isArray(data?.elevation) && data.elevation.length === batch.length
       ? data.elevation.map((e) => (Number.isFinite(e) ? Math.round(e * 10) / 10 : null))
       : null
-    if (!elevation) return json({ error: "Heights aren't available right now.", code: 'elevation_failed' }, 502)
+    if (!elevation) return { fail: 'failed' }
     if (cache) await cache.put(key, new Response(JSON.stringify({ elevation }), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=2592000' } }))
     out.push(...elevation)
   }
-  return json({ elev: out })
+  return { elev: out }
+}
+
+export async function handleElevation(req, env, { fetcher = fetch, cache = globalThis.caches?.default } = {}) {
+  const body = await req.json().catch(() => null)
+  const parsed = readBody(body)
+  if (parsed.error) return json({ error: parsed.error, code: 'bad_request' }, 400)
+  const beforeFresh = async () => {
+    const ip = req.headers.get('cf-connecting-ip') || 'unknown'
+    const r = await hit(env, 'elevation', ip)
+    return r.ok ? null : { limited: true, retryAfter: r.retryAfter }
+  }
+  const r = await terrainHeights(env, parsed.nodes, { fetcher, cache, beforeFresh })
+  if (r.fail === 'limited') return json({ error: 'Too many height lookups for now. Try again a bit later.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 600) })
+  if (r.fail) return json({ error: "Heights aren't available right now.", code: 'elevation_failed' }, 502)
+  return json({ elev: r.elev })
 }

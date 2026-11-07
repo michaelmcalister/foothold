@@ -21,6 +21,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li><strong>Your name on the map</strong> and the colour and crest you pick.</li>
         <li><strong>Heart rate and cadence</strong>, only if your watch sends them, used to check activities are genuine.</li>
         <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time. To show your readiness over time, the app keeps one readiness score a day on your device only, and clears it when you unlink.</li>
+        <li><strong>Your times up hills</strong> (King of the hill): when an activity climbs a hill, we keep how long the climb took, which activity it was and when. Delete the activity and its times go.</li>
         <li><strong>How a run felt</strong>, only if you answer "How did that feel?" after a run: how hard it was, and where something hurt and how badly. It is saved with that activity, only you see it, and the coach uses it to ease your plan. Delete the activity and it goes too.</li>
       </ul>
 
@@ -31,6 +32,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li>Never where you are right now. Claims show up after a delay, not live.</li>
         <li>Comments you leave on an activity, with your name, to anyone who can see that activity. Deleting an activity deletes its comments.</li>
         <li>In a private league, the other members see your name, colour and how many hexes you hold and gained this week. Ground inside your privacy zones is never counted.</li>
+        <li>On hills (King of the hill), your name, colour and best time up each hill you've climbed, on that hill's top 10. The fastest person's colour lights up the ground around the hill on the map. The first person up a new hill gives it its line: a simplified shape of the climb, never the rest of the activity. A climb that starts, ends or passes through one of your privacy zones never makes a hill and never counts.</li>
         <li>People in your clubs and leagues see your name, colour and crest when they choose who to send a route to. A route you send goes only to the people you pick.</li>
       </ul>
 
@@ -58,7 +60,7 @@ import BrandMark from '../components/BrandMark.vue'
       <p>When you race a ghost, it's one of your own past runs, or a route at a pace you pick. The result and the ghost's line are kept on your phone so the recap can show both of you. Nothing about it is sent anywhere.</p>
 
       <h2>Elevation charts</h2>
-      <p>To draw the hills on your run report, Foothold looks up ground heights from Open-Meteo, a weather and terrain service. Your phone never sends them your route. It sends our server the corners of a 100 m grid around your route, and our server asks Open-Meteo for those heights, so they don't see your phone, your name or your account. The heights are kept on your device so a run doesn't need looking up twice. Runs imported from a watch use the watch's own heights instead.</p>
+      <p>To draw the hills on your run report, Foothold looks up ground heights from Open-Meteo, a weather and terrain service. Your phone never sends them your route. It sends our server the corners of a 100 m grid around your route, and our server asks Open-Meteo for those heights, so they don't see your phone, your name or your account. The heights are kept on your device so a run doesn't need looking up twice. Runs imported from a watch use the watch's own heights instead. To find hills (King of the hill), our server looks up the same grid of heights for each activity you save, the same way, and keeps none of it beyond the hill itself.</p>
 
       <h2>Spotify and the voice coach</h2>
       <p>If you connect Spotify, Foothold can see your playlists and start, pause and turn down music on your devices. The Spotify sign-in is kept on your phone, not on our servers, and we don't see your listening history. The voice coach's Australian voice is made by ElevenLabs: we send them only the words to say, like "2 kilometres, average pace 5 40 per k", never your name or account. If you pick the phone's own voice instead, it uses the voices built into your phone or browser. Some of these, like Google's online voices in Chrome, are made by the browser's maker, which then sees the words spoken (your distance and pace), not who you are to Foothold.</p>
@@ -69,7 +71,7 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Your choices</h2>
       <ul>
         <li>Download everything we hold about you from Settings.</li>
-        <li>Delete an activity, or your whole account, at any time.</li>
+        <li>Delete an activity, or your whole account, at any time. Hills stay on the map for everyone without your name, and the next fastest person becomes King of the hill.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
       <p class="small muted">Last updated 6 November 2026. This is a draft for review before launch.</p>
