@@ -330,6 +330,22 @@ const rivals = [
               <dd>From 400 metres to the marathon on foot, and 10 to 40 kilometres on the bike.</dd>
             </div>
             <div>
+              <dt>Flyover reels</dt>
+              <dd>Turn your flyover into a short vertical video with music, ready for Stories or TikTok. Made on your phone.</dd>
+            </div>
+            <div>
+              <dt>Ghost runs</dt>
+              <dd>Race your best run from here, or a route at a pace you pick. The ghost runs beside you and the coach calls the gap.</dd>
+            </div>
+            <div>
+              <dt>King of the hill</dt>
+              <dd>The steepest climbs near you become hills. Fastest up holds the crown, and the ground around it glows their colour.</dd>
+            </div>
+            <div>
+              <dt>Foothold Wrapped</dt>
+              <dd>Your year as a story: the map filling in week by week, your numbers, your favourite loop and your biggest rival.</dd>
+            </div>
+            <div>
               <dt>Weekly recap and share card</dt>
               <dd>Your week next to last week, and a clean picture of your loop and ground, ready to post.</dd>
             </div>
