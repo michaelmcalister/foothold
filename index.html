@@ -12,13 +12,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Foothold" />
+    <script>
+      // Night mode before first paint (the same rule as src/lib/theme.js):
+      // Night, or Auto with the phone set to dark. Night colours only show in the app.
+      try {
+        var fhRoot = document.documentElement
+        var fhTheme = localStorage.getItem('fh-theme')
+        var fhNight = fhTheme === 'night' || (fhTheme !== 'day' && matchMedia('(prefers-color-scheme: dark)').matches)
+        fhRoot.dataset.theme = fhNight ? 'night' : 'day'
+        if (fhNight) {
+          fhRoot.classList.add('night')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0F1916')
+        }
+        if (/^#\/app/.test(location.hash)) fhRoot.classList.add('in-app')
+      } catch (e) { /* storage blocked: the app sets it when it starts */ }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/foothold/assets/index-DsN5JRhy.js"></script>
+    <script type="module" crossorigin src="/foothold/assets/index-Ck2j7KwS.js"></script>
     <link rel="modulepreload" crossorigin href="/foothold/assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="/foothold/assets/reactivity.esm-bundler-B6OWRSK7.js">
     <link rel="modulepreload" crossorigin href="/foothold/assets/preload-helper-BGDvBy5Y.js">
-    <link rel="stylesheet" crossorigin href="/foothold/assets/index-LQKBCqmQ.css">
+    <link rel="stylesheet" crossorigin href="/foothold/assets/index-CK2cdoGn.css">
   </head>
   <body>
     <div id="app"></div>
