@@ -185,19 +185,26 @@ const audioLine = computed(() => {
 async function save(payload, label = 'Saving', missionSummary = null) {
   saving.value = label
   error.value = null
+  let res
   try {
-    const res = await api.postActivity(payload)
-    if (payload.source === 'phone' && !payload.simulated) forgetUnfinished()
-    setLastResult(res)
-    if (missionSummary) saveResult(res.activity.id, missionSummary)
-    if (pendingGhost) { saveGhostRace(res.activity.id, pendingGhost); pendingGhost = null }
-    await refresh()
-    router.replace({ name: 'result', params: { id: res.activity.id } })
+    res = await api.postActivity(payload)
   } catch (e) {
     error.value = e.message
-  } finally {
     saving.value = false
+    return
   }
+  // Saved. Nothing from here on may keep the summary from showing.
+  const id = res?.activity?.id
+  const quietly = (fn) => { try { fn() } catch { /* a nice extra, not worth losing the summary over */ } }
+  if (payload.source === 'phone' && !payload.simulated) quietly(forgetUnfinished)
+  quietly(() => setLastResult(res))
+  if (missionSummary && id) quietly(() => saveResult(id, missionSummary))
+  if (pendingGhost && id) quietly(() => saveGhostRace(id, pendingGhost))
+  pendingGhost = null
+  await Promise.race([refresh().catch(() => {}), new Promise((r) => setTimeout(r, 4000))]) // fresh numbers, but never a long wait
+  saving.value = false
+  if (id) router.replace({ name: 'result', params: { id } }).catch(() => { location.hash = `#/app/result/${encodeURIComponent(id)}` })
+  else router.replace({ name: 'you' }).catch(() => {})
 }
 
 // Why a recording couldn't be saved, in plain words
