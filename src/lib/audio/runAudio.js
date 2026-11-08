@@ -20,6 +20,7 @@ import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.
 import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
 import { CAST } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
+import { listenFor, stopListening, canListen, primeMicrophone, optionsPrompt } from './listen.js'
 
 let stopWatch = null
 let announcer = null
@@ -96,12 +97,59 @@ export function missionLines(script, narratorKey, saga = null) {
   }
   add(script.loop)
   add(script.early)
+  for (const b of script.beats.filter((x) => x.options)) {
+    out.push({ text: optionsPrompt(b.options), who: narratorKey })
+    for (const o of b.options) add(o.say, b.who)
+    for (const k of ['right', 'wrong', 'timeout']) add(b[k], b.who)
+  }
+
   for (const b of script.beats) {
     add(b.say, b.who)
     for (const k of ['success', 'okay', 'half', 'done', 'easyNudge']) add(b[k], b.who)
   }
   const seen = new Set()
   return out.filter((l) => l.who && !seen.has(l.who + l.text) && seen.add(l.who + l.text))
+}
+
+// ---- questions: read the options out, listen for an answer, or take a tap ----
+function askAloud() {
+  const v = mission?.view().ask
+  if (!v) return
+  if (scape) enqueue(() => scape?.sting('question'))
+  else sfx.cue('loopReady')
+  sayLine(narrator ? { text: optionsPrompt(v.options), who: narrator } : optionsPrompt(v.options))
+  if (!audio.answerByVoice || !canListen()) return
+  enqueue(async () => {
+    const now = mission?.view().ask
+    if (!now) return // answered with a tap while the options were read
+    const s = scape
+    s?.duck(true)
+    const key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
+    s?.duck(false)
+    if (key) applyAnswer(key)
+  })
+}
+
+function answered(events) {
+  for (const e of events.filter((x) => x.type === 'answer')) {
+    if (e.kind === 'choice') { if (scape) enqueue(() => scape?.sting('impact')); continue }
+    if (scape) enqueue(() => scape?.sting(e.right ? 'correct' : 'downer'))
+    else sfx.cue(e.right ? 'surgeDone' : 'chapter')
+  }
+}
+
+function applyAnswer(key) {
+  if (!mission) return
+  const out = mission.answer(key)
+  answered(out.events)
+  for (const line of out.lines) sayLine(line)
+  missionLive.value = mission.view()
+}
+
+/** A tap on one of the answers on screen. */
+export function answerMission(key) {
+  stopListening()
+  applyAnswer(key)
 }
 
 function startScape(saga) {
@@ -130,6 +178,9 @@ async function todaysTarget() {
 export async function beginRun(mode, { onError = () => {}, missionId = null } = {}) {
   endRun()
   unlock()
+  // a mission that asks questions: ask for the microphone now, inside the tap
+  const asks = missionId && missionById(missionId)?.beats.some((b) => b.options)
+  if (asks && audio.answerByVoice && canListen()) primeMicrophone()
   sfx.resume() // the same tap wakes the sound effects
   sfx.cue('start')
   if (audio.spotifyAutoplay && spotify.isLinked()) {
@@ -189,6 +240,8 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
             if (MISSION_SFX[e.type] && !(narrator && ['chapter', 'finale'].includes(e.type))) sfx.cue(MISSION_SFX[e.type])
           }
           for (const line of out.lines) sayLine(line)
+          if (out.events.some((e) => e.type === 'ask')) askAloud()
+          answered(out.events)
           // the end of an episode: the end theme, then a teaser for the next one
           if (narrator && out.events.some((e) => e.type === 'finale')) {
             const s = scape
@@ -215,6 +268,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
 export function finishRun({ elapsedS, distanceM }) {
   if (announcer) sfx.cue('finish')
   let summary = null
+  stopListening()
   if (mission) {
     const out = mission.finish()
     summary = out.summary
@@ -240,6 +294,7 @@ function stopListening() {
 
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
+  stopListening()
   scape?.stop(0.6)
   scape = null
   forgetLines()

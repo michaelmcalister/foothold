@@ -4,6 +4,7 @@
 // so they never talk over each other; speak() resolves when the line ends.
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
+import { context } from './sfx.js'
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -133,8 +134,35 @@ async function playBlob(blob, text) {
   }
 }
 
+// The same clip through Web Audio (the context the sound effects use, woken by a tap)
+async function playWeb(blob, text) {
+  const ctx = context()
+  if (!ctx || ctx.state !== 'running') throw new Error('no web audio')
+  const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
+  await new Promise((resolve) => {
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.connect(ctx.destination)
+    const t = setTimeout(resolve, 3000 + text.length * 130)
+    src.onended = () => { clearTimeout(t); resolve() }
+    src.start()
+  })
+}
+
+/**
+ * Play a voice clip so it shares the speaker with your music: as an
+ * announcement first (iPhone lowers Spotify under it), through Web Audio if
+ * the player won't, then the ordinary way. Only if all of those fail does the
+ * caller fall back to the phone's own voice.
+ */
+async function playVoice(blob, text) {
+  try { return await asAnnouncement(() => playBlob(blob, text)) } catch { /* next way */ }
+  try { return await asAnnouncement(() => playWeb(blob, text)) } catch { /* next way */ }
+  return playBlob(blob, text)
+}
+
 async function speakServer(text, voiceKey) {
-  await playBlob(await fetchVoice(text, voiceKey), text)
+  await playVoice(await fetchVoice(text, voiceKey), text)
 }
 
 /**
@@ -178,7 +206,7 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
     try {
       const k = madeKey(who, text)
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 9000))
-      await asAnnouncement(() => playBlob(blob, text))
+      await playVoice(blob, text)
       return
     } catch { /* fall back to the phone voice below */ }
   }
@@ -193,7 +221,7 @@ export async function speak(text, { coachVoice = 'charlie', voiceName = '' } = {
   if (!text) return
   if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
     try {
-      await asAnnouncement(() => speakServer(text, coachVoice))
+      await speakServer(text, coachVoice)
       return
     } catch { /* fall back to the phone voice below */ }
   }

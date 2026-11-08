@@ -306,3 +306,103 @@ describe('episode framing', () => {
   })
 })
 
+
+describe('choices, quizzes and puzzles', () => {
+  // run until the first question is up, then hand back control
+  function upTo(script, kind) {
+    const m = createMission(script, { paces })
+    let t = 0, dist = 0
+    const lines = []
+    while (t < 4000) {
+      const out = m.update({ elapsedS: t, distanceM: dist, toStartM: 2000 })
+      lines.push(...out.lines)
+      if (m.view().ask?.kind === kind) break
+      t++
+      dist += 1000 / 360
+    }
+    return { m, t, dist, lines }
+  }
+
+  it('a choice changes what comes next', () => {
+    const ep = missionById('heist-recruit')
+    for (const [key, want, not] of [['B', /Observatory Hill and through the park/, /Argyle Cut and down the steps/], ['A', /Argyle Cut and down the steps/, /Observatory Hill and through the park/]]) {
+      let { m, t, dist } = upTo(ep, 'choice')
+      expect(m.view().ask.options.map((o) => o.label)).toEqual(['The Argyle Cut', 'Observatory Hill'])
+      const ans = m.answer(key)
+      expect(ans.events[0]).toMatchObject({ type: 'answer', kind: 'choice', key, timedOut: false })
+      const later = []
+      for (; t < 1000; t++) { dist += 1000 / 300; later.push(...m.update({ elapsedS: t, distanceM: dist, toStartM: 2000 }).lines.map(lineText)) }
+      expect(later.some((l) => want.test(l))).toBe(true)
+      expect(later.some((l) => not.test(l))).toBe(false)
+    }
+  })
+
+  it('the story waits for an answer, then answers for you and carries on', () => {
+    const ep = missionById('ember-smoke')
+    let { m, t, dist } = upTo(ep, 'choice')
+    const asked = t
+    let said = null
+    for (; t < asked + 60; t++) {
+      dist += 1000 / 360
+      const out = m.update({ elapsedS: t, distanceM: dist, toStartM: 2000 })
+      if (out.lines.length && !said) said = { t, line: out.lines[0] }
+      if (t < asked + 29) expect(m.view().ask).toBeTruthy()
+    }
+    expect(said.t - asked).toBeGreaterThanOrEqual(30)
+    expect(lineText(said.line)).toMatch(/radioed Bluey myself/) // the default, said kindly
+    expect(m.finish().summary.choices).toEqual([{ id: 'chooks', key: 'B', label: 'Radio Bluey', timedOut: true }])
+  })
+
+  it('quizzes and puzzles keep score, and both answers are kind', () => {
+    const ep = missionById('heist-gala')
+    let { m } = upTo(ep, 'puzzle')
+    expect(m.view().ask.question).toMatch(/yacht is called Regal/)
+    const out = m.answer('A')
+    expect(out.events[0]).toMatchObject({ kind: 'puzzle', right: true })
+    expect(lineText(out.lines[0])).toMatch(/Lager/)
+    expect(m.answer('A').lines).toEqual([]) // nothing open now
+    const s = m.finish().summary
+    expect(s).toMatchObject({ quizRight: 1, quizTotal: 1 })
+    for (const mm of THRILLERS) for (const b of mm.beats.filter((x) => x.kind !== 'choice' && x.options)) {
+      expect(lineText(b.wrong)).not.toMatch(/\b(wrong|no{1}pe|failed|silly)\b/i)
+      expect(lineText(b.wrong)).toMatch(new RegExp(b.options.find((o) => o.key === b.answer).label.replace(/^The /, ''), 'i')) // it tells you the answer
+    }
+  })
+
+  it('every thriller episode asks at least one thing, and every flag a beat needs can be set', () => {
+    for (const m of THRILLERS) {
+      expect(m.beats.some((b) => b.options), m.id).toBe(true)
+      const flags = new Set(m.beats.flatMap((b) => (b.options || []).map((o) => o.flag)).filter(Boolean))
+      for (const b of m.beats) for (const f of [b.if, b.unless].filter(Boolean)) expect(flags.has(f), `${m.id} ${b.at} ${f}`).toBe(true)
+    }
+  })
+})
+
+describe('answering out loud', async () => {
+  const { matchAnswer, optionsPrompt } = await import('../src/lib/audio/listen.js')
+  const two = [{ key: 'A', label: 'The fire trail' }, { key: 'B', label: 'The main road' }]
+  const years = [{ key: 'A', label: '1923' }, { key: 'B', label: '1932' }, { key: 'C', label: '1942' }]
+
+  it('hears letters, order and the words of an option', () => {
+    expect(matchAnswer('A', two)).toBe('A')
+    expect(matchAnswer('bee', two)).toBe('B')
+    expect(matchAnswer('option b please', two)).toBe('B')
+    expect(matchAnswer('the second one', two)).toBe('B')
+    expect(matchAnswer('fire trail', two)).toBe('A')
+    expect(matchAnswer("let's take the main road", two)).toBe('B')
+    expect(matchAnswer('1932', years)).toBe('B')
+    expect(matchAnswer('I think it was 1932', years)).toBe('B')
+    expect(matchAnswer('see', years)).toBe('C')
+  })
+
+  it("doesn't guess when it isn't clear", () => {
+    expect(matchAnswer('', two)).toBe(null)
+    expect(matchAnswer('the road or the trail', two)).toBe(null)
+    expect(matchAnswer('banana', two)).toBe(null)
+  })
+
+  it('reads the options out plainly', () => {
+    expect(optionsPrompt(two)).toBe('Say A for the fire trail, or B for the main road.')
+    expect(optionsPrompt([{ key: 'A', label: 'Radio Bluey' }, { key: 'B', label: 'Carry the cage' }])).toBe('Say A for radio Bluey, or B for carry the cage.')
+  })
+})

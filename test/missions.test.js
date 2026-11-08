@@ -232,7 +232,7 @@ describe('mission engine', () => {
 describe('mission scripts', () => {
   const DASH = /[‒–—―]|--/
   const text = (l) => (typeof l === 'string' ? l : l?.text)
-  const all = (m) => [m.blurb, m.loop, m.early, ...m.beats.flatMap((b) => [b.say, b.success, b.okay, b.half, b.done, b.easyNudge])].map(text).filter(Boolean)
+  const all = (m) => [m.blurb, m.loop, m.early, m.previously, m.next, ...m.beats.flatMap((b) => [b.say, b.success, b.okay, b.half, b.done, b.easyNudge, b.right, b.wrong, b.timeout, ...(b.options || []).flatMap((o) => [o.label, o.say])])].map(text).filter(Boolean)
 
   it('has the six Trailkeepers missions: three intro, two longer surge missions and one steady scout', () => {
     expect(MISSIONS.filter((m) => m.saga === 'trailkeepers')).toHaveLength(6)
@@ -273,7 +273,13 @@ describe('mission scripts', () => {
       expect(m.title && m.blurb && m.loop && m.early && m.difficulty, m.id).toBeTruthy()
       let last = -1
       for (const b of m.beats) {
-        expect(['story', 'surge', 'steady', 'recover', 'finale'], b.kind).toContain(b.kind)
+        expect(['story', 'surge', 'steady', 'recover', 'finale', 'choice', 'quiz', 'puzzle'], b.kind).toContain(b.kind)
+        if (b.options) {
+          expect(b.options.length).toBeGreaterThanOrEqual(2)
+          for (const o of b.options) expect(o.label.length, o.label).toBeLessThanOrEqual(28)
+          if (b.kind === 'choice') for (const o of b.options) expect(o.flag && o.say, `${m.id} ${b.at}`).toBeTruthy()
+          else expect(b.options.some((o) => o.key === b.answer) && b.right && b.wrong, `${m.id} ${b.at}`).toBeTruthy()
+        }
         expect(b.say, `${m.id} ${b.at}`).toBeTruthy()
         expect(b.at).toBeGreaterThan(last)
         last = b.at

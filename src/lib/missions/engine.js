@@ -8,6 +8,11 @@
 // late, the beats after it slide along so the spacing stays the same. Lines
 // are never closer together than MIN_GAP seconds.
 //
+// Some beats ask something: a choice (which way the story goes), a quiz or a
+// puzzle. The story waits up to ASK_WAIT_S for an answer (tap one on screen),
+// then answers for you, so you never have to stop. Beats with `if: flag` or
+// `unless: flag` play only when a choice set (or didn't set) that flag.
+//
 // A surge succeeds when your speed over it is at least 10% higher than
 // your speed over the 90 seconds before it. Either way the line is kind.
 
@@ -20,6 +25,8 @@ const SURGE_CAP_S = 240 // a metre surge never runs longer than this
 const STEADY_QUICK_S = 15 // this much quicker than easy pace gets a gentle word
 
 const segmentKinds = ['surge', 'steady', 'recover']
+const askKinds = ['choice', 'quiz', 'puzzle']
+export const ASK_WAIT_S = 30 // how long a question waits before the story answers for you
 
 /** The words of a line, without performance cues like [whispers]. */
 export const lineText = (line) => String((typeof line === 'string' ? line : line?.text) || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim()
@@ -57,6 +64,11 @@ export function createMission(script, { paces = null } = {}) {
     surgesDone: 0,
     surgesWon: 0,
     closing: null,
+    ask: null, // a question waiting for an answer: { beat, at }
+    flags: new Set(), // choices made, for the beats that depend on them
+    choices: [], // [{ id, key, label, timedOut }]
+    quizRight: 0,
+    quizTotal: 0,
   }
   const total = surgeCount(script)
 
@@ -127,6 +139,35 @@ export function createMission(script, { paces = null } = {}) {
     return t >= seg.seconds
   }
 
+  function applies(beat) {
+    if (beat.if && !st.flags.has(beat.if)) return false
+    if (beat.unless && st.flags.has(beat.unless)) return false
+    return true
+  }
+
+  // An answer to the question on screen (key), or null when time ran out
+  function resolve(out, key) {
+    const beat = st.ask.beat
+    st.ask = null
+    const opt = beat.options.find((o) => o.key === key) || null
+    if (beat.kind === 'choice') {
+      const pick = opt || beat.options.find((o) => o.key === beat.default) || beat.options[0]
+      if (pick.flag) st.flags.add(pick.flag)
+      st.choices.push({ id: beat.id || String(beat.at), key: pick.key, label: pick.label, timedOut: !opt })
+      out.events.push({ type: 'answer', kind: 'choice', key: pick.key, timedOut: !opt })
+      // out of time: the timeout line says what happens; otherwise the pick's own line
+      say(out, !opt && beat.timeout ? beat.timeout : pick.say, beat.who)
+      return
+    }
+    // a quiz or puzzle
+    st.quizTotal++
+    const right = !!opt && opt.key === beat.answer
+    if (right) st.quizRight++
+    if (right && beat.flag) st.flags.add(beat.flag)
+    out.events.push({ type: 'answer', kind: beat.kind, key: opt?.key || null, right, timedOut: !opt })
+    say(out, right ? beat.right : beat.wrong, beat.who)
+  }
+
   function release(beat, out) {
     st.shift = Math.max(st.shift, st.clock - beat.at)
     if (beat.chapter) {
@@ -136,6 +177,10 @@ export function createMission(script, { paces = null } = {}) {
     if (beat.scene) out.events.push({ type: 'scene', scene: beat.scene })
     say(out, beat.say, beat.who, beat.fx)
     if (segmentKinds.includes(beat.kind)) startSegment(beat, out)
+    if (askKinds.includes(beat.kind)) {
+      st.ask = { beat, at: st.clock }
+      out.events.push({ type: 'ask', kind: beat.kind })
+    }
     if (beat.kind === 'finale') {
       if (st.seg) endSegment(out, { quiet: true })
       st.done = true
@@ -176,7 +221,15 @@ export function createMission(script, { paces = null } = {}) {
       return
     }
 
+    // a question waiting for an answer holds the story; after a while the story answers for you
+    if (st.ask) {
+      if (st.clock - st.ask.at >= (st.ask.beat.wait || ASK_WAIT_S) && canSpeak()) resolve(out, null)
+      return
+    }
+
     if (st.done) return
+    // beats that depend on a choice you didn't make are skipped quietly
+    while (script.beats[st.next] && !applies(script.beats[st.next])) st.next++
     const beat = script.beats[st.next]
     if (!beat || st.clock < beat.at + st.shift) return
     if (beat.say && !canSpeak()) return
@@ -214,6 +267,16 @@ export function createMission(script, { paces = null } = {}) {
       return out
     },
 
+    /** Answer the question on screen with an option's key. Returns { lines, events }. */
+    answer(key) {
+      const out = { lines: [], events: [] }
+      if (!st.ask || st.finished) return out
+      if (!st.ask.beat.options.some((o) => o.key === key)) return out
+      st.lastLineAt = -Infinity // an answer is always heard straight away
+      resolve(out, key)
+      return out
+    },
+
     pause({ elapsedS, distanceM } = {}) {
       if (st.paused || st.finished) return
       st.paused = true
@@ -228,6 +291,7 @@ export function createMission(script, { paces = null } = {}) {
     finish() {
       const out = { lines: [], events: [] }
       if (st.finished) return { ...out, summary: this.summary() }
+      st.ask = null
       if (st.seg?.kind === 'surge') endSegment(out, { quiet: true })
       else if (st.seg) st.seg = null
       if (!st.done) {
@@ -266,6 +330,13 @@ export function createMission(script, { paces = null } = {}) {
         surgesTotal: total,
         paused: st.paused,
         done: st.done,
+        ask: st.ask ? {
+          kind: st.ask.beat.kind,
+          question: lineText(st.ask.beat.ask || st.ask.beat.say),
+          options: st.ask.beat.options.map((o) => ({ key: o.key, label: o.label })),
+          remainingS: Math.max(0, Math.ceil((st.ask.beat.wait || ASK_WAIT_S) - (st.clock - st.ask.at))),
+          waitS: st.ask.beat.wait || ASK_WAIT_S,
+        } : null,
       }
     },
 
@@ -279,6 +350,9 @@ export function createMission(script, { paces = null } = {}) {
         surgesTotal: total,
         closing: st.closing,
         clockS: Math.round(st.clock),
+        choices: st.choices.slice(),
+        quizRight: st.quizRight,
+        quizTotal: st.quizTotal,
       }
     },
   }

@@ -4,13 +4,16 @@
 // use almost no power on most phone screens) that ignores taps in a pocket,
 // while GPS, the voice coach, the story and the directions carry on. Hold
 // the button for a second and a half to come back. The screen stays awake
-// (the recorder holds a wake lock), so nothing stops.
+// (the recorder holds a wake lock), so nothing stops. A mission question
+// shows here too, so it can be answered without unlocking.
 import { ref, onBeforeUnmount } from 'vue'
 import { rec } from '../lib/recorder.js'
 import { duration, km } from '../lib/format.js'
 
-const props = defineProps({ nextTurn: { type: Object, default: null } })
-const emit = defineEmits(['close'])
+import AskCard from './AskCard.vue'
+
+const props = defineProps({ nextTurn: { type: Object, default: null }, ask: { type: Object, default: null } })
+const emit = defineEmits(['close', 'answer'])
 
 const HOLD_MS = 1500
 const holding = ref(false)
@@ -39,6 +42,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     </div>
     <p v-if="props.nextTurn" class="turn">{{ props.nextTurn.short }}<template v-if="props.nextTurn.inM != null">, {{ props.nextTurn.inM }} m</template></p>
     <p v-if="rec.status === 'paused'" class="turn">Paused</p>
+    <AskCard v-if="props.ask" class="pask" :ask="props.ask" dark @answer="(k) => emit('answer', k)" />
     <button
       type="button" class="unlock" :class="{ holding }"
       @pointerdown="down" @pointerup="up" @pointercancel="up" @pointerleave="up" @keydown="key"
@@ -66,6 +70,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 .unlock .ring { position: absolute; inset: -2px; border-radius: 50%; border: 3px solid #3a5ed8; opacity: 0; transform: scale(0.6); }
 .unlock.holding .ring { opacity: 1; transform: scale(1); transition: transform 1.5s linear, opacity 0.2s; }
 .unlock:focus-visible { outline: 2px solid #3a5ed8; outline-offset: 4px; }
+.pask { width: 100%; max-width: 420px; }
 .tip { margin: 0; max-width: 300px; text-align: center; font-size: 0.85rem; color: #4a4a4a; }
 @media (prefers-reduced-motion: reduce) { .unlock.holding .ring { transition: opacity 0.2s; } }
 </style>

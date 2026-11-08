@@ -468,6 +468,24 @@ Object.assign(STINGS, {
       return t + 0.45
     },
   },
+  question: {
+    dur: 0.9,
+    build(ctx, out, t) {
+      // a two note lift that asks for an answer
+      bell(ctx, out, t, note('A5'), { peak: 0.14, decay: 0.5 })
+      bell(ctx, out, t + 0.18, note('E6'), { peak: 0.16, decay: 0.7 })
+      tone(ctx, out, t, { freq: note('A3'), type: 'triangle', attack: 0.02, decay: 0.7, peak: 0.08 })
+      return t + 0.85
+    },
+  },
+  correct: {
+    dur: 1.1,
+    build(ctx, out, t) {
+      ;['D5', 'F#5', 'A5', 'D6'].forEach((n, i) => pluck(ctx, out, t + i * 0.07, note(n), { peak: 0.16, decay: i === 3 ? 0.6 : 0.25, bright: 3600 }))
+      bell(ctx, out, t + 0.28, note('D6'), { peak: 0.12, decay: 0.8 })
+      return t + 1.05
+    },
+  },
   flare: {
     dur: 2.2,
     build(ctx, out, t) {

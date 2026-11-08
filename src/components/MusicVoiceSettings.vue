@@ -7,6 +7,7 @@ import { ref, computed, onMounted } from 'vue'
 import { audio } from '../lib/audio/settings.js'
 import { australianVoices, voicesReady, speak, unlock, serverVoices } from '../lib/audio/voice.js'
 import * as spotify from '../lib/audio/spotify.js'
+import { canListen } from '../lib/audio/listen.js'
 import { toast } from '../lib/store.js'
 import { resume as wakeSound, playSequence } from '../lib/audio/sfx.js'
 
@@ -146,6 +147,7 @@ function testVoice() {
           <label class="check"><input v-model="audio.sayPace" type="checkbox" /><span>Pace (speed on rides)</span></label>
           <label class="check"><input v-model="audio.sayTerritory" type="checkbox" /><span>When I'm close to closing a loop</span></label>
           <label class="check"><input v-model="audio.directions" type="checkbox" /><span>Turn by turn directions on a planned route</span></label>
+          <label v-if="canListen()" class="check"><input v-model="audio.answerByVoice" type="checkbox" /><span>Answer mission questions out loud (uses the microphone only while a question is open)</span></label>
         </fieldset>
         <div class="field">
           <label for="s-cheer">Encouragement</label>

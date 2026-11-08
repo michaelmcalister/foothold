@@ -58,7 +58,7 @@ onMounted(async () => {
       </li>
       <li v-for="g in groups" :key="g.id" class="group">
         <h3 class="gtitle" :class="g.id">{{ g.title }}</h3>
-        <p class="small muted gblurb">{{ g.blurb }}<template v-if="g.score"> Full cast, scene sounds and music.</template></p>
+        <p class="small muted gblurb">{{ g.blurb }}<template v-if="g.score"> Full cast, scene sounds and music, and choices that change the story. Answer out loud or tap.</template></p>
         <p v-if="g.note" class="small note">{{ g.note }}</p>
         <ul class="list" role="list">
           <li v-for="m in g.missions" :key="m.id">

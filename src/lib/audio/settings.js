@@ -13,6 +13,7 @@ export const DEFAULTS = {
   sayTime: true,
   sayTerritory: true, // loop closing hints
   directions: true, // turn by turn on a planned route that has them
+  answerByVoice: true, // answer mission questions out loud (where the browser can listen)
   cheer: 'some', // encouragement: 'off' | 'some' | 'lots'
   music: 'duck', // while talking: 'duck' (lower) | 'pause' | 'none' (talk over)
   duckTo: 25, // percent volume while talking, when the phone allows it
