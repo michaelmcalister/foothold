@@ -59,6 +59,20 @@ describe('thriller scripts', () => {
     expect(sagaById('ember').note).toMatch(/fire service/) // a real world reminder
   })
 
+  it('The Parkes Signal: three episodes that build up, unlock in order and end somewhere hopeful', () => {
+    const eps = MISSIONS.filter((m) => m.saga === 'signal')
+    expect(eps.map((m) => m.id)).toEqual(['signal-contact', 'signal-swarm', 'signal-starfall'])
+    expect(CHAINS.signal).toEqual(eps.map((m) => m.id))
+    expect(unlockedBy('signal-swarm').id).toBe('signal-contact')
+    expect(eps.map((m) => m.minutes)).toEqual([20, 25, 30])
+    expect(sagaById('signal').score).toBe('signal')
+    expect(lineText(eps[2].beats.at(-1).say)).toMatch(/Lumen is going home/)
+    for (const m of eps) {
+      expect(m.beats.filter((b) => b.kind === 'surge').length, m.id).toBeGreaterThanOrEqual(3)
+      for (const b of m.beats) if (b.spatial) expect(['dog', 'drones', 'meteor', 'helicopter']).toContain(b.spatial)
+    }
+  })
+
   it('every speaker is in the cast, and every effect and scene exists', () => {
     for (const m of THRILLERS) {
       const narrator = sagaById(m.saga).narrator
@@ -278,7 +292,7 @@ describe('soundscape', () => {
 
 describe('episode framing', () => {
   it('every episode has a number, a "Previously on" from episode two and a "Next time" until the last', () => {
-    for (const id of ['ember', 'heist']) {
+    for (const id of ['ember', 'heist', 'signal']) {
       const eps = MISSIONS.filter((m) => m.saga === id)
       eps.forEach((m, i) => {
         expect(m.episode).toBe(i + 1)

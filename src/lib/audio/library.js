@@ -16,6 +16,9 @@ export const AMBIENCE = {
   tower: 'Inside an empty office tower stairwell at night: air conditioning hum, fluorescent light buzz, distant lift machinery, echoing footsteps far below, no music, no voices',
   gala: 'A glamorous rooftop party heard from the next room: murmuring crowd, glasses clinking, muffled string quartet music through a wall, laughter, no clear words',
   studio: 'A lively television game show studio: excited audience murmuring, bursts of applause and laughter, light studio band noodling quietly, no clear words',
+  outback: 'Wheat paddocks in country New South Wales on a cold still night: crickets, a light breeze through dry grass and a wire fence, a far off farm dog once, vast quiet open space, no music, no voices',
+  dish: 'Beside a giant radio telescope at night in the countryside: deep electrical hum of machinery, slow grinding of huge motors turning, occasional electronic beeps, crickets, no music, no voices',
+  swarm: 'A swarm of hundreds of small drones hovering overhead at night: layered high pitched rotor buzzing that swells and fades, a low electronic hum, wind over a field, no music, no voices',
   harbour: 'Sydney Harbour wharf at night: water lapping against wooden pylons, a ferry idling, ropes creaking, gentle wind, gulls far away, no music, no voices',
 }
 
@@ -28,6 +31,8 @@ export const SFX = {
   kookaburra: { prompt: 'A single kookaburra laughing call in the bush, loud and close', seconds: 5 },
   kids: { prompt: 'Children laughing and playing on a playground in a park, a little way off, no clear words', seconds: 8 },
   chatter: { prompt: 'Two or three people chatting and laughing as they walk past on a footpath, no clear words', seconds: 5 },
+  'drone-swarm': { prompt: 'A swarm of many small buzzing drones flying fast overhead from one side to the other, high rotor whine with doppler, then fading', seconds: 6 },
+  meteor: { prompt: 'A meteor streaking across the night sky with a rushing tearing hiss, then a soft distant rumbling boom', seconds: 5 },
   dog: { prompt: 'A small dog barking a few times from behind a backyard fence', seconds: 3 },
 }
 
@@ -40,6 +45,11 @@ export const TRACKS = {
   'ember-rising': {
     title: 'Hold the Line',
     prompt: 'Original epic cinematic instrumental for a heroic rescue. Thundering taiko drums, low brass, soaring strings, tension that builds to a triumphant peak, about 130 bpm. No vocals.',
+    seconds: 90,
+  },
+  'signal-pursuit': {
+    title: 'Starfall Pursuit',
+    prompt: 'Original cinematic sci-fi chase instrumental. Pulsing analogue synth arpeggios, driving electronic drums, deep cinematic brass hits, eerie high strings, urgent and thrilling, about 135 bpm. No vocals.',
     seconds: 90,
   },
   'arena-anthem': {
@@ -65,10 +75,10 @@ export const TRACKS = {
 }
 
 /** The tracks for an ordinary run, in a fresh order each time. */
-export const RUN_PLAYLIST = ['arena-anthem', 'synth-sprint', 'surf-rock-run', 'big-beat-push', 'spy-chase', 'ember-rising']
+export const RUN_PLAYLIST = ['arena-anthem', 'synth-sprint', 'surf-rock-run', 'big-beat-push', 'spy-chase', 'ember-rising', 'signal-pursuit']
 
 /** The chase music each series brings in when a surge starts. */
-export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase', quiz: 'big-beat-push' }
+export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase', quiz: 'big-beat-push', signal: 'signal-pursuit' }
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)
 export const isTrack = (id) => Object.prototype.hasOwnProperty.call(TRACKS, id)

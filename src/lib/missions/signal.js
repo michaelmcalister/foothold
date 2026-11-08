@@ -1,0 +1,200 @@
+// The Parkes Signal: a three episode sci-fi thriller. One cold night near
+// Parkes, in central western NSW, the big radio dish catches a signal that
+// counts in prime numbers. Lights in the sky, a talking capsule in the wheat,
+// a swarm of curious drones, an army major, and a lost visitor who needs the
+// dish to call home. You are the runner in the middle of it.
+//
+// Same beat format as thrillers.js (which adds these to THRILLERS). Trivia is
+// real (checked): the Parkes dish is 64 m across and helped beam TV of the
+// Apollo 11 Moon landing in 1969; 11 is the next prime after 7; we live in
+// the Milky Way; there are 8 planets; sunlight takes about 8 minutes to reach
+// Earth.
+//
+// House rules: tense, never cruel. Nobody is hurt, the Major turns out to be
+// decent, and the story lands somewhere hopeful.
+
+const line = (who, text) => ({ who, text })
+
+const S_WIN = line('anika', 'Brilliant running. Ease right back now and get your breath.')
+const S_OKAY = line('anika', 'You got there, and that is what counts. Ease right back now.')
+const S_WIN_KIP = line('kip', '[excited] You lost them! Ease right back now.')
+const S_OKAY_KIP = line('kip', 'Okay, you are clear. Breathe. Ease right back now.')
+const S_HALF = line('anika', 'Halfway. Keep going.')
+const S_HALF_KIP = line('kip', 'Halfway! Keep it up!')
+const S_EASY = line('anika', 'Easy now. Save your legs. It is a long night.')
+
+const sig = (at, seconds, who, say, recover, extra = {}) => ({
+  at, kind: 'surge', seconds, who, say, recover,
+  success: who === 'kip' ? S_WIN_KIP : S_WIN,
+  okay: who === 'kip' ? S_OKAY_KIP : S_OKAY,
+  half: who === 'kip' ? S_HALF_KIP : S_HALF,
+  ...extra,
+})
+
+export const SIGNAL_SAGA = {
+  id: 'signal',
+  title: 'The Parkes Signal',
+  blurb: 'A signal from deep space, a talking capsule in the wheat, and a runner caught in the middle.',
+  note: 'The story is set on a dark country night. In real life, run where you are well lit and easy to see.',
+  narrator: 'signal-narrator',
+  score: 'signal',
+  isNew: true,
+}
+
+export const SIGNAL = [
+  {
+    id: 'signal-contact',
+    episode: 1,
+    next: 'Next time on The Parkes Signal: something lands in the wheat, a swarm takes off, and an army convoy rolls in.',
+    saga: 'signal',
+    title: 'First Contact',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 20,
+    difficulty: 'Gentle',
+    blurb: 'Episode 1. The big dish catches a signal, every phone goes black, and three silent lights stop right above you.',
+    loop: line('kip', 'You closed a loop. I have marked it on my paper map. Old school.'),
+    early: line('anika', 'Stopping there is fine. The drive made it, thanks to you. Get some rest. The signal will keep.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Nine fourteen pm', scene: 'outback', say: 'Parkes, in the Central West. A clear cold night, a sky full of stars, and the big dish turning slowly in its paddock. Start with an easy walk or jog.' },
+      { at: 40, kind: 'story', spatial: 'dog', say: 'A farm dog barks at nothing. Then it stops, mid bark, and the whole paddock goes quiet.' },
+      { at: 75, kind: 'story', fx: 'transmission', say: 'Then you hear it. A pulse of sound from nowhere. Every streetlight flickers. Every phone screen goes black.' },
+      { at: 140, kind: 'story', who: 'anika', say: 'Dr Anika Rao, at the dish. Do not panic. But maybe walk a bit faster. We just caught a signal, and it is not from anything we know.' },
+      { at: 205, kind: 'story', who: 'kip', say: 'Kip here, on the old ham radio in my ute. Phones are out, internet is out, but this thing is older than my dad. It still works.' },
+      sig(260, 30, 'anika', 'The signal knocked out the dish computers. I need the backup drive from the visitor centre. Pick it up for 30 seconds and go!', 120, { chapter: 'The visitor centre', fx: 'servo' }),
+      { at: 330, kind: 'story', say: 'The visitor centre is dark. A cardboard astronaut grins at you from the corner. The backup drive sits on the desk, blinking green.' },
+      { at: 380, kind: 'quiz', who: 'anika', say: 'While you are there. In 1969, this dish helped beam live TV of which Moon landing to the world?',
+        options: [{ key: 'A', label: 'Apollo 11' }, { key: 'B', label: 'Apollo 13' }, { key: 'C', label: 'Voyager 1' }], answer: 'A',
+        right: line('anika', 'Apollo 11. Hundreds of millions of people watched, and a lot of it came through this paddock.'),
+        wrong: line('anika', 'It was Apollo 11. Hundreds of millions of people watched, and a lot of it came through this paddock.') },
+      { at: 450, kind: 'story', fx: 'scan', say: 'Overhead, three lights slide across the stars. No sound. No blinking. Perfectly in a line.' },
+      { at: 500, kind: 'story', who: 'kip', say: '[whispers] Are you seeing the lights? They stopped. They are right above you. I reckon they are watching.' },
+      { at: 560, kind: 'choice', id: 'lights', who: 'anika', say: 'The lights are drifting toward the wheat. Follow them, or stay on the road and bring me the drive?',
+        options: [
+          { key: 'A', label: 'Follow the lights', flag: 'followed', say: line('kip', '[excited] Legend. Keep them in sight. I am right with you on the radio.') },
+          { key: 'B', label: 'Stay on the road', flag: 'road', say: line('anika', 'Sensible. The drive first, then we chase lights.') },
+        ],
+        default: 'B', timeout: line('anika', 'Stay on the road. Drive first.') },
+      sig(630, 30, 'kip', 'They are speeding up! Pick it up for 30 seconds along the fence line. Keep them in sight!', 120, { if: 'followed', chapter: 'The lights', fx: 'whoosh' }),
+      sig(631, 30, 'anika', 'The lights are following you! Pick it up for 30 seconds, straight down the road to the dish.', 120, { unless: 'followed', chapter: 'The lights', fx: 'whoosh' }),
+      { at: 720, kind: 'story', if: 'followed', say: 'The lights stop over the wheat and hang there, humming. Then, one by one, they blink out. The paddock is dark again.' },
+      { at: 721, kind: 'story', unless: 'followed', say: 'You glance back. The lights are right behind you, keeping pace. Then, one by one, they blink out.' },
+      { at: 790, kind: 'steady', seconds: 160, scene: 'dish', say: 'You reach the dish. It towers over you, sixty four metres across, groaning as it turns. Settle into an easy pace while Anika works.', easyNudge: S_EASY },
+      { at: 860, kind: 'story', who: 'anika', fx: 'transmission', say: 'The drive works. I am playing the signal back. Listen. Two pulses. Three. Five. Seven. It is counting in prime numbers.' },
+      { at: 930, kind: 'story', who: 'kip', say: 'Prime numbers. So it is not a satellite glitch. Something out there can count, and it wants us to know.' },
+      sig(990, 30, 'anika', 'It is sending something new. Coordinates! Pick it up for 30 seconds while I decode.', 130, { chapter: 'The coordinates', fx: 'riser' }),
+      { at: 1060, kind: 'story', who: 'anika', fx: 'braam', say: '[whispers] Wait. These coordinates are not in space. They are here, in Parkes. They are exactly where you are standing.' },
+      { at: 1120, kind: 'finale', say: 'Episode one complete. The signal is counting, the lights are gone, and something is coming to find you. To be continued.' },
+    ],
+  },
+  {
+    id: 'signal-swarm',
+    episode: 2,
+    previously: 'Previously on The Parkes Signal: a signal from deep space, three silent lights, and coordinates pointing right at you.',
+    next: 'Next time on The Parkes Signal: a meteor shower, a race to the dish, and a choice the whole world will hear.',
+    saga: 'signal',
+    title: 'The Swarm',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 25,
+    difficulty: 'Steady effort',
+    blurb: 'Episode 2. A capsule in the wheat says hello, a swarm of drones takes off, and the army wants what you are holding.',
+    loop: line('kip', 'Another loop closed. The swarm is copying your route. I think they like you.'),
+    early: line('anika', 'That will do for tonight. The core is safe with Kip. You did plenty.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 240, chapter: 'Midnight', scene: 'outback', say: 'Midnight. Frost on the fence posts and your breath in the air. Something landed in the wheat ten minutes ago. Warm up easy.' },
+      { at: 50, kind: 'story', fx: 'sonic', say: 'A boom rolls across the paddocks, so deep you feel it in your ribs.' },
+      { at: 75, kind: 'story', spatial: 'dog', say: 'A farm dog starts barking. Then another. Then every dog for ten kilometres joins in.' },
+      { at: 130, kind: 'story', who: 'kip', say: 'Kip here. I followed the glow. There is a crater in Bob Fenwick’s wheat, and something in it is humming.' },
+      { at: 190, kind: 'story', who: 'anika', say: 'Do not touch anything. I am on my way with the scanner. Tell me what you see.' },
+      { at: 245, kind: 'story', say: 'In the middle of the crater sits a capsule the size of a fridge. Smooth and silver, warm to the touch, glowing a soft blue.' },
+      { at: 300, kind: 'story', who: 'lumen', fx: 'transmission', say: '[curious] Hello. I am Lumen. I have come a very long way. You are the one who runs. I have been listening.' },
+      { at: 370, kind: 'story', who: 'kip', say: '[excited] It talks! The fridge talks! Anika, the fridge is talking to us!' },
+      sig(430, 45, 'anika', 'The capsule is opening and something is coming out. Pick it up for 45 seconds and get some distance!', 130, { chapter: 'The swarm', scene: 'swarm', fx: 'braam' }),
+      { at: 530, kind: 'story', spatial: 'drones', say: 'A swarm of tiny silver drones pours out, hundreds of them, glittering in the moonlight. They circle you once. Then again.' },
+      { at: 590, kind: 'story', who: 'lumen', say: 'Do not be alarmed. My scouts are curious. They follow anything quick, and you are very quick.' },
+      { at: 650, kind: 'puzzle', who: 'anika', say: 'Lumen says the scouts will settle if we answer its question. It is counting again. Two, three, five, seven. What comes next?',
+        options: [{ key: 'A', label: '9' }, { key: 'B', label: '11' }, { key: 'C', label: '13' }], answer: 'B',
+        right: line('anika', 'Eleven, the next prime. The swarm just slowed right down. Clever.'),
+        wrong: line('anika', 'It is 11, the next prime. I have sent it. The swarm just slowed right down.') },
+      { at: 720, kind: 'steady', seconds: 200, say: 'The swarm hangs over the wheat, humming softly like bees on a warm day. Hold an easy pace and catch your breath.', easyNudge: S_EASY },
+      { at: 780, kind: 'quiz', who: 'lumen', say: '[curious] I have a question for you, runner. What do you call your galaxy?',
+        options: [{ key: 'A', label: 'Andromeda' }, { key: 'B', label: 'The Milky Way' }, { key: 'C', label: 'Orion' }], answer: 'B',
+        right: line('lumen', 'The Milky Way. A lovely name. From the outside, it looks like spilled sugar.'),
+        wrong: line('lumen', 'You call it the Milky Way. A lovely name. From the outside, it looks like spilled sugar.') },
+      { at: 850, kind: 'story', who: 'kip', fx: 'scan', say: 'Uh oh. Headlights on the highway. Lots of them. Army trucks, I reckon. Somebody else heard the signal.' },
+      { at: 910, kind: 'story', who: 'hale', say: 'This is Major Dan Hale. This area is closed. Whoever is in that paddock, stay exactly where you are.' },
+      { at: 965, kind: 'story', who: 'lumen', say: '[whispers] They want to take my core. Without it, I cannot call home. Please. Help me hide it.' },
+      { at: 1020, kind: 'choice', id: 'hide', who: 'anika', say: 'Lumen has given you its core. It is warm and the size of a cricket ball. Hide in the old silo, or down by the creek?',
+        options: [
+          { key: 'A', label: 'The old silo', flag: 'silo', say: line('kip', 'The silo. Good thinking. Steel walls. Their scanners will not see through them.') },
+          { key: 'B', label: 'Down by the creek', flag: 'creek', say: line('anika', 'The creek. The cold water will hide its heat. Go.') },
+        ],
+        default: 'B', timeout: line('anika', 'Down by the creek. Go now.') },
+      sig(1080, 45, 'kip', 'Trucks are coming up the track! Pick it up for 45 seconds and get to the silo!', 130, { if: 'silo', chapter: 'Hide', fx: 'screech' }),
+      sig(1081, 45, 'anika', 'Trucks are coming up the track! Pick it up for 45 seconds, down the hill to the creek!', 130, { unless: 'silo', chapter: 'Hide', fx: 'screech' }),
+      { at: 1180, kind: 'story', if: 'silo', say: 'You slip inside the silo. It smells of old wheat. Through the rusty gaps, searchlights sweep the paddock and move on.' },
+      { at: 1181, kind: 'story', unless: 'silo', say: 'You crouch by the creek under the river red gums. Searchlights sweep across the water and move on.' },
+      { at: 1240, kind: 'story', spatial: 'helicopter', say: 'A helicopter thunders overhead, searchlight blazing. The swarm scatters into the dark like sparks from a campfire.' },
+      sig(1300, 45, 'kip', 'The searchlight is swinging back! Pick it up for 45 seconds and get to my ute!', 120, { chapter: 'The ute', fx: 'rotor' }),
+      { at: 1400, kind: 'story', who: 'kip', say: 'In! Go, go, go! Seatbelt on. Hold the core. Do not drop the core. Please do not drop the core.' },
+      { at: 1450, kind: 'finale', say: 'Episode two complete. You have the core, the Major has the capsule, and Lumen has one night left to call home. To be continued.' },
+    ],
+  },
+  {
+    id: 'signal-starfall',
+    episode: 3,
+    previously: 'Previously on The Parkes Signal: a talking capsule, a swarm of drones, and a glowing core hidden in your hands.',
+    saga: 'signal',
+    title: 'Starfall',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 30,
+    difficulty: 'Hard effort',
+    blurb: 'Episode 3, the finale. A meteor shower, a race to the dish, and four minutes to help a lost visitor call home.',
+    loop: line('lumen', 'You closed another loop. From up here, your paths look like a constellation.'),
+    early: line('anika', 'Stopping there is fine. Kip can carry the core the rest of the way. You got us so close.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 300, chapter: 'Two in the morning', scene: 'outback', say: 'Two in the morning. Kip’s ute is parked behind a hay shed. The core glows softly in your hands. Warm up easy.' },
+      { at: 60, kind: 'story', who: 'lumen', say: '[sighs] My family’s ship passes this world once every hundred years. Tonight, at three. If the big dish sends my song, they will hear me.' },
+      { at: 130, kind: 'story', who: 'anika', say: 'So we need the dish, the core and four minutes of transmission. And Major Hale has the dish surrounded.' },
+      { at: 200, kind: 'story', spatial: 'meteor', say: 'A streak of white light tears across the sky. Then another. Then ten more. A meteor shower, right on cue.' },
+      { at: 260, kind: 'quiz', who: 'kip', say: '[excited] Quick one while we wait. Lumen wants to know about our neighbourhood. How many planets go round our Sun?',
+        options: [{ key: 'A', label: '7' }, { key: 'B', label: '8' }, { key: 'C', label: '9' }], answer: 'B',
+        right: line('lumen', 'Eight. Thank you. I will tell my family. They will like the one with the rings.'),
+        wrong: line('kip', 'It is 8. Pluto got moved to the dwarf planet list. Lumen says it will like the one with the rings.') },
+      sig(330, 60, 'anika', 'Hale’s trucks are moving! Pick it up for 60 seconds, across the paddock, toward the dish!', 140, { chapter: 'The run to the dish', scene: 'dish', fx: 'siren' }),
+      { at: 440, kind: 'story', spatial: 'meteor', say: 'Meteors rain down over the dish, silver and gold. It looks like the whole sky is cheering you on.' },
+      { at: 500, kind: 'story', who: 'hale', say: 'Runner, I can see you on the thermal camera. I am not your enemy. I just need to know what that thing is.' },
+      { at: 560, kind: 'puzzle', who: 'lumen', say: 'The control room door wants a code. It is how long sunlight takes to reach your world. About how long is that?',
+        options: [{ key: 'A', label: '8 seconds' }, { key: 'B', label: '8 minutes' }, { key: 'C', label: '8 hours' }], answer: 'B',
+        right: line('lumen', 'About 8 minutes. The door is open. Your star is very punctual.'),
+        wrong: line('anika', 'It is about 8 minutes. Typing it in now. The door is open.') },
+      { at: 640, kind: 'steady', seconds: 220, say: 'You are inside. The control room hums and blinks. Hold an easy pace while Anika wakes up the dish.', easyNudge: S_EASY },
+      { at: 700, kind: 'story', who: 'anika', fx: 'servo', say: 'Dish is turning. Slowly. Come on, old girl. You did Apollo. You can do this.' },
+      { at: 780, kind: 'story', who: 'kip', say: '[whispers] Major Hale is outside the door. Just him. He has taken his helmet off. He wants to talk to you.' },
+      { at: 850, kind: 'choice', id: 'share', who: 'anika', say: 'Hale says the signal should be kept quiet, for safety. Give him a copy, or share it with every observatory on Earth?',
+        options: [
+          { key: 'A', label: 'Give it to Hale', flag: 'hale', say: line('hale', 'Thank you. I will make sure the right people hear this. Properly, and safely.') },
+          { key: 'B', label: 'Share it with the world', flag: 'world', say: line('anika', 'Every observatory on Earth. Sending it now. Nobody gets to keep the sky a secret.') },
+        ],
+        default: 'B', timeout: line('anika', 'Sharing it with everyone. The sky belongs to all of us.') },
+      { at: 920, kind: 'story', if: 'hale', who: 'hale', say: 'Right. Then my soldiers will hold the gate. Nobody stops this transmission. You have my word.' },
+      { at: 921, kind: 'story', if: 'world', who: 'hale', say: '[sighs] I cannot argue with that. My soldiers will hold the gate. Nobody stops this transmission.' },
+      sig(990, 60, 'kip', 'Power is dropping! The backup generator is at the far gate. Pick it up for 60 seconds!', 140, { chapter: 'Power', fx: 'alarm' }),
+      { at: 1100, kind: 'story', fx: 'thunk', say: 'You haul on the big lever. The generator coughs, splutters, then roars. Every light on the dish blazes white.' },
+      { at: 1160, kind: 'story', who: 'anika', say: 'Power is back. Dish is locked on. Ninety seconds until the ship passes. Get the core up to the feed cabin!' },
+      sig(1220, 60, 'anika', 'Up the ladder to the feed cabin! Pick it up for 60 seconds. This is it!', 150, { chapter: 'Three o’clock', scene: 'swarm', fx: 'riser' }),
+      { at: 1330, kind: 'story', who: 'lumen', fx: 'transmission', say: '[whispers] Thank you, runner. Sending now. Listen.' },
+      { at: 1370, kind: 'story', fx: 'braam', say: 'The dish sings. A deep note you feel in your chest. High above, a light far bigger than a star slows down, and stops.' },
+      { at: 1430, kind: 'story', spatial: 'drones', say: 'The swarm rises from the wheat, thousands of them, and forms a shape in the sky. It is a runner. It is you.' },
+      { at: 1490, kind: 'story', who: 'lumen', say: 'My family heard me. They are coming to take me home. I will tell them about the little blue world, and the one who runs.' },
+      { at: 1550, kind: 'steady', seconds: 180, scene: 'outback', chapter: 'Dawn', say: 'The great light fades back into the stars. Cool down now with a gentle jog or a walk. The sky is quiet again.' },
+      { at: 1640, kind: 'story', who: 'kip', fx: 'cheer', say: 'Mate. We just helped an alien phone home. From Parkes. Nobody at the pub is going to believe this.' },
+      { at: 1700, kind: 'story', who: 'hale', say: 'For the record, you are the bravest civilian I have ever met. And easily the fastest.' },
+      { at: 1760, kind: 'finale', who: 'anika', say: 'The Parkes Signal is complete. Lumen is going home, the dish did it again, and you were the runner who made it happen. Look up sometimes.' },
+    ],
+  },
+]
+
+export const SIGNAL_CHAIN = ['signal-contact', 'signal-swarm', 'signal-starfall']

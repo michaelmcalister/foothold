@@ -1,4 +1,5 @@
-// The thriller missions: two four episode series with a full cast, sound
+// The thriller missions: two four episode series (and The Parkes Signal, in
+// signal.js) with a full cast, sound
 // effects and a score (see src/lib/missions/cast.js and
 // src/lib/audio/soundscape.js).
 //
@@ -26,6 +27,8 @@
 // House rules still hold: tense, never cruel. Nobody gets hurt, nobody is
 // shamed for a slow surge, and every episode lands somewhere safe.
 
+import { SIGNAL, SIGNAL_SAGA, SIGNAL_CHAIN } from './signal.js'
+
 const line = (who, text) => ({ who, text })
 
 // ---- Ember Run ----
@@ -51,6 +54,7 @@ const job = (at, seconds, who, say, recover, extra = {}) =>
   ({ at, kind: 'surge', seconds, who, say, success: who === 'pixel' ? H_WIN_PIX : H_WIN, okay: who === 'pixel' ? H_OKAY_PIX : H_OKAY, recover, ...extra })
 
 export const SAGAS = [
+  SIGNAL_SAGA,
   {
     id: 'ember',
     title: 'Ember Run',
@@ -464,9 +468,11 @@ export const THRILLERS = [
       { at: 2080, kind: 'finale', who: 'viv', say: 'The Night Job is complete. The pool stays and Crane goes. Same time next year? [laughs] I will be in touch.' },
     ],
   },
+  ...SIGNAL,
 ]
 
 export const THRILLER_CHAINS = {
+  signal: SIGNAL_CHAIN,
   ember: ['ember-smoke', 'ember-wind', 'ember-tower', 'ember-dawn'],
   heist: ['heist-recruit', 'heist-gala', 'heist-cross', 'heist-ferry'],
 }

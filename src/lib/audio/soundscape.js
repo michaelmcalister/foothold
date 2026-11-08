@@ -147,6 +147,16 @@ export const SPOTS = {
   tick(ctx, out, t) {
     noise(ctx, out, t, { attack: 0.001, decay: 0.006, peak: 0.02, filter: { type: 'highpass', freq: 5000 } })
   },
+  blip(ctx, out, t, r) {
+    // the dish's receiver chirping: a short pure tone, sometimes a pair
+    const f = [880, 1320, 1760][Math.floor(r() * 3)]
+    tone(ctx, out, t, { freq: f, attack: 0.005, decay: 0.12, peak: 0.012 })
+    if (r() > 0.5) tone(ctx, out, t + 0.16, { freq: f * 1.5, attack: 0.005, decay: 0.12, peak: 0.01 })
+  },
+  buzz(ctx, out, t, r) {
+    // one of the swarm darting close by
+    tone(ctx, out, t, { freq: 520 + r() * 300, glideTo: 380 + r() * 200, glideTime: 0.7, type: 'sawtooth', attack: 0.2, decay: 0.5, peak: 0.008, filter: { type: 'bandpass', freq: 1400, q: 3 } })
+  },
 }
 
 /**
@@ -223,6 +233,28 @@ export const SCENES = {
     ],
     spots: [{ name: 'clap', rate: 0.08 }],
   },
+  outback: {
+    beds: [
+      { filter: { type: 'lowpass', freq: 380 }, level: 0.04, lfo: { rate: 0.05, depth: 0.7 } }, // cold wind over the paddocks
+      { filter: { type: 'bandpass', freq: 4200, q: 8 }, level: 0.012, am: { rate: 22, depth: 0.8 } }, // crickets
+    ],
+    spots: [{ name: 'cricket', rate: 0.7 }],
+  },
+  dish: {
+    beds: [
+      { filter: { type: 'lowpass', freq: 300 }, level: 0.035, lfo: { rate: 0.04, depth: 0.5 } },
+      { filter: { type: 'bandpass', freq: 4200, q: 8 }, level: 0.008, am: { rate: 22, depth: 0.8 } },
+    ],
+    hums: [{ freq: 50, level: 0.012 }],
+    spots: [{ name: 'blip', rate: 0.12 }, { name: 'cricket', rate: 0.3 }],
+  },
+  swarm: {
+    beds: [
+      { filter: { type: 'bandpass', freq: 2600, q: 5 }, level: 0.02, am: { rate: 17, depth: 0.6 }, lfo: { rate: 0.13, depth: 0.7 } }, // hundreds of tiny rotors
+      { filter: { type: 'lowpass', freq: 250 }, level: 0.03, lfo: { rate: 0.05, depth: 0.5 } },
+    ],
+    spots: [{ name: 'buzz', rate: 0.4 }, { name: 'blip', rate: 0.08 }],
+  },
   harbour: {
     beds: [
       { filter: { type: 'lowpass', freq: 500 }, level: 0.05, lfo: { rate: 0.22, depth: 0.8 } }, // water on the pylons
@@ -248,6 +280,9 @@ export const AROUND = {
   gala: [{ name: 'chatter', rate: 0.03 }],
   harbour: [{ name: 'chatter', rate: 0.01 }, { name: 'helicopter', rate: 0.003 }],
   studio: [],
+  outback: [{ name: 'dog', rate: 0.004 }, { name: 'meteor', rate: 0.004 }],
+  dish: [{ name: 'meteor', rate: 0.003 }],
+  swarm: [{ name: 'drones', rate: 0.02 }, { name: 'helicopter', rate: 0.003 }],
 }
 /** What the map says is around you adds its own sounds (a park, a main road, shops). */
 export const NEARBY = {
@@ -400,6 +435,48 @@ export const STINGS = {
 
 // ---- the cinematic kit: big hits, risers and the like ----
 Object.assign(STINGS, {
+  transmission: {
+    dur: 2.6,
+    build(ctx, out, t) {
+      // a signal from deep space: pulses in twos, threes and fives, over a hiss
+      noise(ctx, out, t, { attack: 0.3, hold: 1.6, decay: 0.6, peak: 0.05, filter: { type: 'bandpass', freq: 2200, q: 0.8 } })
+      let at = t + 0.15
+      for (const n of [2, 3, 5]) {
+        for (let i = 0; i < n; i++) tone(ctx, out, at + i * 0.09, { freq: 1480, attack: 0.004, decay: 0.06, peak: 0.12, fm: { ratio: 3, index: 0.6 } })
+        at += n * 0.09 + 0.22
+      }
+      tone(ctx, out, t, { freq: note('A1'), type: 'triangle', attack: 0.6, hold: 1.2, decay: 0.8, peak: 0.1 })
+      return t + 2.5
+    },
+  },
+  servo: {
+    dur: 2.2,
+    build(ctx, out, t) {
+      // a huge motor grinding round, ending in a clunk
+      tone(ctx, out, t, { freq: 70, glideTo: 118, glideTime: 1.6, type: 'sawtooth', attack: 0.2, hold: 1.2, decay: 0.4, peak: 0.12, filter: { freq: 500, q: 2 } })
+      tone(ctx, out, t, { freq: 140, glideTo: 236, glideTime: 1.6, type: 'square', attack: 0.2, hold: 1.2, decay: 0.4, peak: 0.025, filter: { freq: 900 } })
+      noise(ctx, out, t + 1.8, { attack: 0.002, decay: 0.2, peak: 0.25, filter: { type: 'lowpass', freq: 400 } })
+      return t + 2.1
+    },
+  },
+  sonic: {
+    dur: 2.6,
+    build(ctx, out, t) {
+      // a sonic boom: a hard double crack, then the rumble rolling away
+      for (const at of [0, 0.12]) noise(ctx, out, t + at, { attack: 0.002, decay: 0.25, peak: 0.35, filter: { type: 'lowpass', freq: 1400, to: 200, time: 0.25 } })
+      tone(ctx, out, t, { freq: 60, glideTo: 28, glideTime: 1.8, attack: 0.005, decay: 2.2, peak: 0.42 })
+      noise(ctx, out, t + 0.2, { attack: 0.2, decay: 2, peak: 0.08, filter: { type: 'lowpass', freq: 160 } })
+      return t + 2.5
+    },
+  },
+  scan: {
+    dur: 1.8,
+    build(ctx, out, t) {
+      // something sweeping the sky: two rising tones that hang in the air
+      for (const at of [0, 0.7]) tone(ctx, out, t + at, { freq: 400, glideTo: 2400, glideTime: 0.6, attack: 0.02, decay: 0.7, peak: 0.08, fm: { ratio: 1.5, index: 0.4 } })
+      return t + 1.7
+    },
+  },
   braam: {
     dur: 3.2,
     build(ctx, out, t) {
@@ -614,6 +691,13 @@ export const THEMES = {
     end: ['D3', 'F#3', 'A3', 'D4'],
     voice: 'horn',
   },
+  signal: {
+    motif: ['A4', 'E5', 'C5', 'B4', 'E5', 'G#4', 'A4'], // an eerie glassy line from far away
+    beats: [1, 0.5, 1, 0.5, 1, 0.5, 2.5],
+    chord: ['A1', 'E2', 'A2', 'C3', 'E3'],
+    end: ['A2', 'C#3', 'E3', 'A3'],
+    voice: 'glass',
+  },
   heist: {
     motif: ['E3', 'G3', 'B3', 'A#3', 'A3', 'G3', 'E3'], // a spy bass line
     beats: [0.5, 0.5, 1, 0.5, 0.5, 0.5, 2],
@@ -627,6 +711,9 @@ function motifNote(ctx, out, t, voice, freq, len) {
   if (voice === 'horn') {
     for (const d of [-6, 6]) tone(ctx, out, t, { freq, type: 'sawtooth', detune: d, attack: 0.08, hold: len * 0.7, decay: len * 0.5, peak: 0.05, filter: { freq: 700, to: 1600, time: 0.25, q: 1 } })
     tone(ctx, out, t, { freq: freq / 2, type: 'triangle', attack: 0.08, hold: len * 0.7, decay: len * 0.5, peak: 0.05 })
+  } else if (voice === 'glass') {
+    bell(ctx, out, t, freq, { peak: 0.13, decay: Math.max(0.6, len * 1.8) })
+    tone(ctx, out, t, { freq: freq / 2, type: 'triangle', detune: 7, attack: 0.15, hold: len * 0.5, decay: len, peak: 0.04 })
   } else {
     pluck(ctx, out, t, freq, { peak: 0.2, decay: Math.min(0.6, len * 0.9), bright: 1400 })
     noise(ctx, out, t, { attack: 0.001, decay: 0.02, peak: 0.03, filter: { type: 'highpass', freq: 7000 } }) // brushed hat
@@ -713,6 +800,15 @@ export const SCORES = {
     pulse: 'tick',
     run: ['C5', 'E5', 'G5', 'C6', 'G5', 'E5', 'D5', 'G5'],
     bass: ['C2', 'C2', 'E2', 'G2', 'A1', 'A1', 'G1', 'B1'],
+  },
+  signal: {
+    bpm: [70, 92, 132, 92],
+    drone: ['A1', 'E2'],
+    tension: ['A2', 'C3', 'E3'],
+    lift: ['A2', 'C#3', 'E3', 'A3'],
+    pulse: 'tick', // the receiver ticking
+    run: ['A4', 'C5', 'E5', 'A5', 'G5', 'E5', 'C5', 'E5'],
+    bass: ['A1', 'A1', 'C2', 'A1', 'G1', 'G1', 'E1', 'G1'],
   },
   heist: {
     bpm: [80, 100, 128, 100],

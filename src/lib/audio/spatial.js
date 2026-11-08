@@ -87,6 +87,16 @@ const SYNTH = {
     // voices too far away to make out: formant-ish murmurs
     for (let i = 0; i < dur * 4; i++) noise(ctx, out, t + i * 0.25 + r() * 0.1, { attack: 0.03, decay: 0.12, peak: 0.2, filter: { type: 'bandpass', freq: 500 + r() * 900, q: 4 } })
   },
+  drones(ctx, out, t, dur, r) {
+    // a cloud of tiny rotors: detuned buzzing that swells and passes
+    for (let i = 0; i < 5; i++) tone(ctx, out, t + r() * 0.4, { freq: 380 + r() * 260, glideTo: 300 + r() * 200, glideTime: dur, type: 'sawtooth', detune: (r() - 0.5) * 30, attack: dur * 0.4, decay: dur * 0.55, peak: 0.04, filter: { type: 'bandpass', freq: 1500, q: 2 } })
+    noise(ctx, out, t, { attack: dur * 0.4, decay: dur * 0.6, peak: 0.12, filter: { type: 'bandpass', freq: 3000, q: 1.5 } })
+  },
+  meteor(ctx, out, t, dur) {
+    // a hiss tearing across the sky, then a far off rumble
+    noise(ctx, out, t, { attack: dur * 0.3, decay: dur * 0.5, peak: 0.3, filter: { type: 'bandpass', freq: 5000, to: 600, time: dur * 0.8, q: 1 } })
+    tone(ctx, out, t + dur * 0.75, { freq: 50, glideTo: 30, glideTime: 1, attack: 0.05, decay: 1.2, peak: 0.25 })
+  },
   crackle(ctx, out, t, dur, r) {
     for (let i = 0; i < dur * 12; i++) noise(ctx, out, t + r() * dur, { attack: 0.001, decay: 0.015 + r() * 0.03, peak: 0.05 + r() * 0.08, filter: { type: 'bandpass', freq: 1500 + r() * 2500, q: 3 } })
   },
@@ -106,6 +116,8 @@ export const SPATIAL = {
   kids: { dur: 6, place: 'park', recorded: 'kids', synth: null },
   chatter: { dur: 4, from: { x: 12, y: 0, z: -4 }, to: { x: -12, y: 0, z: -2 }, recorded: 'chatter', synth: 'chatter' },
   dog: { dur: 2.5, place: 'yard', recorded: 'dog', synth: null },
+  drones: { dur: 6, from: { x: -40, y: 12, z: -20 }, to: { x: 50, y: 10, z: 12 }, recorded: 'drone-swarm', synth: 'drones' },
+  meteor: { dur: 4, from: { x: -90, y: 70, z: -60 }, to: { x: 80, y: 30, z: -40 }, recorded: 'meteor', synth: 'meteor' },
 }
 
 /** A random place for a sound with no path: up in the trees, across the park, over a fence. */

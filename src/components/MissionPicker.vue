@@ -181,7 +181,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
           </section>
 
           <section v-for="g in groups" :key="g.id" class="mb-row" :style="{ '--ring': g.look.accent }">
-            <h3 class="rtitle"><span>{{ g.title }}</span> <span class="rtag">{{ g.look.tag }}</span></h3>
+            <h3 class="rtitle"><span>{{ g.title }}</span> <span v-if="g.isNew" class="mb-new">New</span> <span class="rtag">{{ g.look.tag }}</span></h3>
             <p class="rblurb">{{ g.blurb }}</p>
             <ul class="mb-cards" role="list">
               <li v-for="m in g.missions" :key="m.id">
@@ -293,6 +293,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 
 .mb-row { margin-top: 22px; }
 .rtitle { margin: 0 16px; font-size: 1.12rem; font-weight: 850; display: flex; align-items: baseline; gap: 8px; }
+.mb-new { padding: 2px 8px; border-radius: 999px; background: var(--ring); color: #0B0D12; font-size: 0.72rem; font-weight: 850; align-self: center; }
 .rtag { font-size: 0.78rem; font-weight: 700; color: var(--ring, var(--accent)); }
 .rblurb { margin: 3px 16px 0; font-size: 0.84rem; line-height: 1.4; color: rgba(244, 246, 250, 0.7); max-width: 46ch; }
 .mb-cards {

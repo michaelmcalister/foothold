@@ -157,7 +157,7 @@ export async function primeMicrophone() {
 
 /** "Say A for the fire trail, or B for the road." */
 export function optionsPrompt(options) {
-  const parts = options.map((o) => `${o.key} for ${o.label.replace(/\.$/, '').replace(/^[A-Z]/, (c) => (/^(I|Sydney|Crane|Bluey|Gwen|Pixel|Mack|Viv|Reg|Jo|Ollie|Pip)\b/.test(o.label) ? c : c.toLowerCase()))}`)
+  const parts = options.map((o) => `${o.key} for ${o.label.replace(/\.$/, '').replace(/^[A-Z]/, (c) => (/^(I|Sydney|Crane|Bluey|Gwen|Pixel|Mack|Viv|Reg|Jo|Ollie|Pip|Apollo|Voyager|Andromeda|Orion)\b/.test(o.label) ? c : c.toLowerCase()))}`)
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')}, or ${parts.at(-1)}` : parts[0]
   return `Say ${list}.`
 }
