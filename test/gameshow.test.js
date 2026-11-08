@@ -146,3 +146,14 @@ describe('pacing', () => {
     }
   })
 })
+
+describe('the next episode', async () => {
+  const { nextEpisode } = await import('../src/lib/audio/runAudio.js')
+  it('knows what comes next in each series, and that a finale has nothing after it', () => {
+    expect(nextEpisode('quiz-1').id).toBe('quiz-2')
+    expect(nextEpisode('ember-tower').id).toBe('ember-dawn')
+    expect(nextEpisode('heist-ferry')).toBe(null)
+    expect(nextEpisode('first-steps').id).toBe('supply-line')
+    expect(nextEpisode('steady-scout')).toBe(null)
+  })
+})

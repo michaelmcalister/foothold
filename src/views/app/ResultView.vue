@@ -28,6 +28,7 @@ import { playSequence, resultSounds, firstTime } from '../../lib/audio/sfx.js'
 import { loadJourney, freshSteps, markCheered, cheerSound, remindSecondOuting } from '../../lib/journey.js'
 import { stepsDoneBy } from '../../lib/engine/firstweek.js'
 import { resultFor, missionHeadline } from '../../lib/missions/index.js'
+import { nextEpisode } from '../../lib/audio/runAudio.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,6 +53,7 @@ function checkedIn(act) {
 const a = computed(() => res.value?.activity)
 const race = computed(() => (a.value ? ghostRace(a.value.id) : null))
 const mission = computed(() => resultFor(route.params.id))
+const nextUp = computed(() => (mission.value ? nextEpisode(mission.value.id) : null))
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
 const newHexes = computed(() => (res.value?.diff?.claimed.length || 0) + (res.value?.diff?.taken.length || 0))
 const takenBy = computed(() => {
@@ -166,6 +168,7 @@ async function sendAppeal() {
       <div v-if="mission" class="notice mission">
         <strong>{{ missionHeadline(mission) }}</strong>
         <p v-if="mission.closing">{{ mission.closing }}</p>
+        <RouterLink v-if="nextUp" class="btn small nextep" :to="{ name: 'record', query: { mission: nextUp.id } }">Play the next episode: {{ nextUp.title }}</RouterLink>
       </div>
       <FeelCheckin v-if="askFeel" :activity="a" :plan="plan" :recent="recent" @saved="checkedIn" @plan="(p) => (plan = p)" />
 
@@ -257,6 +260,7 @@ async function sendAppeal() {
 .notice.fw { background: var(--tint); color: var(--ink); display: grid; gap: 8px; justify-items: start; }
 .notice.fw p { margin: 0; }
 .mission { background: var(--tint); color: var(--ink); display: grid; gap: 4px; }
+.mission .nextep { justify-self: start; margin-top: 6px; }
 .mission p { margin: 0; }
 .shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: var(--tint); color: var(--ink); }
 .shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: var(--card); color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }

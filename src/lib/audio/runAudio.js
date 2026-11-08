@@ -17,7 +17,7 @@ import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
 import { api } from '../api/index.js'
 import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.js'
-import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
+import { createMission, missionById, recordTry, sagaById, CHAINS } from '../missions/index.js'
 import { CAST, stripTags } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
 import { listenFor, stopListening as stopMic, canListen, primeListening, optionsPrompt } from './listen.js'
@@ -36,6 +36,7 @@ let level = 0 // the score's intensity
 let episode = null // the thriller episode's title and teaser lines
 let runMusic = null // Foothold's own music, when Spotify isn't playing
 let keepAwake = 0 // wakes the sound if the phone pauses it mid run
+let runPaces = null
 let probe = null // asks the record screen's map what's around you
 let probedAt = -Infinity
 
@@ -214,6 +215,98 @@ async function todaysTarget() {
   } catch { return { paces: trainingPaces(DEFAULT_5K_S), target: null } }
 }
 
+/**
+ * Start a mission's story and sound (at the start of a run, or straight after
+ * the last episode when you say yes to the next one).
+ */
+function startMission(script) {
+  mission = script ? createMission(script, { paces: runPaces }) : null
+  const saga = script ? sagaById(script.saga) : null
+  narrator = saga?.narrator || null
+  level = 0
+  episode = null
+  missionOffer.value = null
+  if (narrator) {
+    prepareLines(missionLines(script, narrator, saga), { coachVoice: audio.coachVoice }) // in the background
+    scape = startScape(saga)
+    // get the episode's recorded scenes ready while the title music plays
+    const ctx = sfx.context()
+    if (scape && ctx) for (const n of new Set(script.beats.map((b) => b.scene).filter((x) => x && AMBIENCE[x]))) loadBuffer(ctx, 'ambience', n)
+    episode = episodeLines(script, saga)
+    // the cold open: title music, the episode's title, and what happened last time
+    const s = scape
+    if (s) enqueue(() => s.intro())
+    sayLine(episode.title)
+    sayLine(episode.previously)
+  }
+  missionLive.value = mission ? mission.view() : null
+}
+
+// ---- after an episode: offer the next one ----
+/** The offer on screen: { kind: 'next', question, options, remainingS, waitS } or null. */
+export const missionOffer = ref(null)
+const OFFER_S = 25
+let offerTimer = 0
+let nextScript = null
+
+/** The episode after this one in its series, if there is one. */
+export function nextEpisode(id) {
+  for (const chain of Object.values(CHAINS)) {
+    const i = chain.indexOf(id)
+    if (i >= 0 && i < chain.length - 1) return missionById(chain[i + 1])
+  }
+  return null
+}
+
+function offerNext(script) {
+  const next = nextEpisode(script.id)
+  if (!next) return
+  nextScript = next
+  const ep = next.episode ? `episode ${next.episode}, ${next.title}` : next.title
+  enqueue(async () => {
+    if (!mission || mission.script.id !== script.id) return
+    missionOffer.value = { kind: 'next', question: `Up next: ${next.title}. Keep going?`, options: [{ key: 'A', label: 'Yes, play it' }, { key: 'B', label: 'No thanks' }], remainingS: OFFER_S, waitS: OFFER_S }
+    clearInterval(offerTimer)
+    offerTimer = setInterval(() => {
+      const o = missionOffer.value
+      if (!o) return clearInterval(offerTimer)
+      if (o.remainingS <= 1) { answerOffer('B', { quiet: true }); return }
+      missionOffer.value = { ...o, remainingS: o.remainingS - 1 }
+    }, 1000)
+  })
+  const ask = `Want to go straight into ${ep}? Say yes or no.`
+  sayLine(narrator ? { text: ask, who: narrator } : ask)
+  if (!audio.answerByVoice || !canListen()) return
+  enqueue(async () => {
+    if (!missionOffer.value) return
+    sfx.play('kudos', { wait: false })
+    const key = await listenFor(missionOffer.value.options, { timeoutMs: Math.max(5000, (missionOffer.value.remainingS - 1) * 1000) })
+    if (key && missionOffer.value) answerOffer(key)
+  })
+}
+
+/** Yes (A) starts the next episode now, without stopping the run; no (B) carries on. */
+export function answerOffer(key, { quiet = false } = {}) {
+  if (!missionOffer.value) return
+  clearInterval(offerTimer)
+  stopMic()
+  missionOffer.value = null
+  if (key !== 'A' || !nextScript) {
+    if (!quiet) say('No worries. Enjoy the rest of your run.')
+    return
+  }
+  // close this episode (it counts, and unlocks the next), then on with the next
+  const done = mission?.finish()
+  if (done?.summary && done.summary.clockS >= 60) recordTry(done.summary)
+  scape?.stop(2)
+  scape = null
+  runMusic?.stop(2)
+  runMusic = null
+  startMission(nextScript)
+  if (!scape) runMusic = startRunMusic()
+  nextScript = null
+}
+
 /** Call from the Start button tap (phones only allow sound after a tap). */
 export async function beginRun(mode, { onError = () => {}, missionId = null } = {}) {
   endRun()
@@ -233,25 +326,9 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
     spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle }).catch((e) => onError(e.message))
   }
   const { paces, target } = await todaysTarget()
+  runPaces = paces
   const script = missionId ? missionById(missionId) : null
-  mission = script ? createMission(script, { paces }) : null
-  const saga = script ? sagaById(script.saga) : null
-  narrator = saga?.narrator || null
-  level = 0
-  episode = null
-  if (narrator) {
-    prepareLines(missionLines(script, narrator, saga), { coachVoice: audio.coachVoice }) // in the background
-    scape = startScape(saga)
-    // get the episode's recorded scenes ready while the title music plays
-    const ctx = sfx.context()
-    if (scape && ctx) for (const n of new Set(script.beats.map((b) => b.scene).filter((x) => x && AMBIENCE[x]))) loadBuffer(ctx, 'ambience', n)
-    episode = episodeLines(script, saga)
-    // the cold open: title music, the episode's title, and what happened last time
-    const s = scape
-    if (s) enqueue(() => s.intro())
-    sayLine(episode.title)
-    sayLine(episode.previously)
-  }
+  startMission(script)
   // no thriller score: Foothold's own tracks, unless Spotify is playing yours
   if (!scape) runMusic = startRunMusic()
   missionSpokeAt = -Infinity
@@ -301,10 +378,11 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
           if (out.events.some((e) => e.type === 'ask')) askAloud()
           answered(out.events)
           // the end of an episode: the end theme, then a teaser for the next one
-          if (narrator && out.events.some((e) => e.type === 'finale')) {
+          if (out.events.some((e) => e.type === 'finale')) {
             const s = scape
-            if (s) enqueue(() => s.outro())
-            sayLine(episode?.next)
+            if (narrator && s) enqueue(() => s.outro())
+            if (narrator) sayLine(episode?.next)
+            offerNext(mission.script) // and ask if they'd like to keep going
           }
           if (out.lines.length) missionSpokeAt = rec.elapsedS
         }
@@ -346,6 +424,9 @@ export function finishRun({ elapsedS, distanceM }) {
 }
 
 function stopListening() {
+  clearInterval(offerTimer)
+  missionOffer.value = null
+  nextScript = null
   stopWatch?.()
   stopWatch = null
   announcer = null

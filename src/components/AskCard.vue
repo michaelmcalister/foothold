@@ -6,7 +6,7 @@ import { listening, listenProblem } from '../lib/audio/listen.js'
 
 const props = defineProps({ ask: { type: Object, required: true }, dark: { type: Boolean, default: false } })
 const emit = defineEmits(['answer'])
-const HEAD = { choice: 'Your call', quiz: 'Quick quiz', puzzle: 'Puzzle' }
+const HEAD = { choice: 'Your call', quiz: 'Quick quiz', puzzle: 'Puzzle', next: 'Up next' }
 </script>
 
 <template>

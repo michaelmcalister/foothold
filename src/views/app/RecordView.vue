@@ -17,7 +17,7 @@ import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack } from '../../lib/tracks.js'
 import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
-import { beginRun, finishRun, endRun, missionLive, coachSays, answerMission, setSurroundingsProbe } from '../../lib/audio/runAudio.js'
+import { beginRun, finishRun, endRun, missionLive, missionOffer, coachSays, answerMission, answerOffer, setSurroundingsProbe } from '../../lib/audio/runAudio.js'
 import GhostPicker from '../../components/GhostPicker.vue'
 import { makeGhost, ghostAt, progressAlong, gapSeconds, gapLine, gapShort, raceResult } from '../../lib/ghost.js'
 import { saveGhostRace } from '../../lib/ghostRace.js'
@@ -43,7 +43,7 @@ const saving = ref(false)
 const error = ref(null)
 const fileInput = ref(null)
 const progress = ref(null)
-const missionId = ref(null)
+const missionId = ref(here.query.mission ? String(here.query.mission) : null) // ?mission= from the run summary's "next episode"
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
@@ -343,7 +343,7 @@ onBeforeUnmount(() => {})
 
 <template>
   <div class="rec">
-    <PocketMode v-if="pocket" :next-turn="nextTurn" :ask="missionLive?.ask || null" @answer="answerMission" @close="pocket = false" />
+    <PocketMode v-if="pocket" :next-turn="nextTurn" :ask="missionLive?.ask || missionOffer || null" @answer="(k) => (missionLive?.ask ? answerMission(k) : answerOffer(k))" @close="pocket = false" />
     <div class="maparea">
       <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="routeRing" :fit="!!routeRing" :ghost="ghostLive?.pos || null" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
@@ -402,6 +402,7 @@ onBeforeUnmount(() => {})
         </div>
         <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
         <AskCard v-if="missionLive?.ask && rec.status === 'recording'" :ask="missionLive.ask" @answer="answerMission" />
+        <AskCard v-else-if="missionOffer && rec.status === 'recording'" :ask="missionOffer" @answer="(k) => answerOffer(k)" />
         <div v-if="rec.notice" class="notice gap" role="status">{{ rec.notice }}</div>
         <div v-if="turnText && rec.status === 'recording'" class="turnstrip" :class="{ soon: nextTurn.inM <= 60 }" aria-live="off">
           <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" :style="{ transform: `rotate(${ARROWS[turnText.turn] || 0}deg)` }"><path d="M12 20V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
