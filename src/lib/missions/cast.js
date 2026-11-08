@@ -21,6 +21,11 @@ export const CAST = {
   mack: { name: 'Mack', voiceId: 'M4FiuEOcSLrYgftiXoq9', pitch: 0.75, rate: 0.96, radio: true }, // Blake
   crane: { name: 'Lachlan Crane', voiceId: 'gZR4sGJmJaoBOVzKgZ8j', pitch: 0.9, rate: 1.04 }, // Scotty
   reg: { name: 'Reg', voiceId: 'abRFZIdN4pvo8ZPmGxHP', pitch: 0.85, rate: 0.94 }, // Lee
+
+  // Run Your Mouth (the game show)
+  tex: { name: 'Tex Tilley', voiceId: 'zcIk2xc7SGwlywr4TzZu', pitch: 1.0, rate: 1.08 }, // Simon
+  milly: { name: 'Milly', voiceId: 'BB9S0ZoOunfdUYSciL2X', pitch: 1.2, rate: 1.1 }, // Milly
+  announcer: { name: 'Announcer', voiceId: 'IKne3meq5aSn9XLyUdCD', pitch: 0.95, rate: 1.05 }, // Charlie
 }
 
 export const isCast = (key) => Object.prototype.hasOwnProperty.call(CAST, key)

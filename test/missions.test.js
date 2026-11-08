@@ -317,12 +317,12 @@ describe('progress and suggestions', () => {
   })
 
   it('unlocks the series in order, and any try counts', () => {
-    expect([...unlockedIds({})].sort()).toEqual(['ember-smoke', 'first-steps', 'heist-recruit', 'steady-scout'])
+    expect([...unlockedIds({})].sort()).toEqual(['ember-smoke', 'first-steps', 'heist-recruit', 'quiz-1', 'steady-scout'])
     recordTry({ id: 'first-steps', completed: false, surgesDone: 0 }) // a short, partial try
     expect(unlockedIds(loadProgress()).has('supply-line')).toBe(true)
     expect(unlockedIds(loadProgress()).has('lantern-night')).toBe(false)
     for (const id of CHAIN) recordTry({ id, completed: true })
-    expect(unlockedIds(loadProgress()).size).toBe(8) // all six, plus the first episode of each thriller
+    expect(unlockedIds(loadProgress()).size).toBe(9) // all six, plus the first episode of each other series
     expect(loadProgress()['first-steps']).toMatchObject({ tries: 2, completed: 1 })
   })
 

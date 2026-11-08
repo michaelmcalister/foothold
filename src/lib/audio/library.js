@@ -15,6 +15,7 @@ export const AMBIENCE = {
   street: 'A wet city street at night in light rain: tyres hissing on wet road, cars passing, rain dripping from awnings, distant traffic, no music, no clear voices',
   tower: 'Inside an empty office tower stairwell at night: air conditioning hum, fluorescent light buzz, distant lift machinery, echoing footsteps far below, no music, no voices',
   gala: 'A glamorous rooftop party heard from the next room: murmuring crowd, glasses clinking, muffled string quartet music through a wall, laughter, no clear words',
+  studio: 'A lively television game show studio: excited audience murmuring, bursts of applause and laughter, light studio band noodling quietly, no clear words',
   harbour: 'Sydney Harbour wharf at night: water lapping against wooden pylons, a ferry idling, ropes creaking, gentle wind, gulls far away, no music, no voices',
 }
 
@@ -55,7 +56,7 @@ export const TRACKS = {
 export const RUN_PLAYLIST = ['arena-anthem', 'synth-sprint', 'surf-rock-run', 'big-beat-push', 'spy-chase', 'ember-rising']
 
 /** The chase music each series brings in when a surge starts. */
-export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase' }
+export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase', quiz: 'big-beat-push' }
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)
 export const isTrack = (id) => Object.prototype.hasOwnProperty.call(TRACKS, id)

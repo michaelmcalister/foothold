@@ -9,6 +9,7 @@
 // House rules: Australian English, no dashes, no guilt, never scary or mean.
 
 import { THRILLERS, THRILLER_CHAINS, SAGAS as THRILLER_SAGAS } from './thrillers.js'
+import { GAMESHOW, GAMESHOW_CHAIN, QUIZ_SAGA } from './gameshow.js'
 
 const WIN = 'You lost them. Brilliant running. Ease right back now.'
 const OKAY = 'You got away anyway. Nice work. Ease right back now.'
@@ -186,12 +187,13 @@ const TRAILKEEPERS = [
 ]
 
 /** Every mission: the Trailkeepers first, then the thriller series (thrillers.js). */
-export const MISSIONS = [...TRAILKEEPERS.map((m) => ({ saga: 'trailkeepers', ...m })), ...THRILLERS]
+export const MISSIONS = [...TRAILKEEPERS.map((m) => ({ saga: 'trailkeepers', ...m })), ...THRILLERS, ...GAMESHOW]
 
 /** The series, in the order the picker shows them. */
 export const SAGAS = [
   { id: 'trailkeepers', title: 'The Trailkeepers', blurb: 'A friendly crew, a cheeky rival and a suburb to hold.', narrator: null, score: null },
   ...THRILLER_SAGAS,
+  QUIZ_SAGA,
 ]
 export const sagaById = (id) => SAGAS.find((s) => s.id === id) || SAGAS[0]
 
@@ -199,7 +201,7 @@ export const sagaById = (id) => SAGAS.find((s) => s.id === id) || SAGAS[0]
 export const CHAIN = ['first-steps', 'supply-line', 'lantern-night', 'magpie-season', 'hilltop-crown']
 
 /** Each series unlocks in its own order; the first episode of each is always open. */
-export const CHAINS = { trailkeepers: CHAIN, ...THRILLER_CHAINS }
+export const CHAINS = { trailkeepers: CHAIN, ...THRILLER_CHAINS, quiz: GAMESHOW_CHAIN }
 
 export const missionById = (id) => MISSIONS.find((m) => m.id === id) || null
 

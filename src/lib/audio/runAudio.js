@@ -43,6 +43,15 @@ const MISSION_SFX = { 'surge-start': 'surge', 'surge-end': 'surgeDone', chapter:
 // The regular update's first sentence ("2 kilometres."), for when the mission has the floor
 const headline = (line) => (line.match(/^[^.]*\./) || [line])[0]
 
+// The height now, smoothed over the last few GPS fixes (phone GPS heights wobble by metres)
+function smoothAlt() {
+  const alts = []
+  for (let i = rec.points.length - 1; i >= 0 && alts.length < 15; i--) if (Number.isFinite(rec.points[i].alt)) alts.push(rec.points[i].alt)
+  if (alts.length < 5) return null
+  alts.sort((a, b) => a - b)
+  return alts[Math.floor(alts.length / 2)]
+}
+
 /** Have the voice coach say a line (if the voice is on), ducking the music like any update. */
 export function coachSays(text) { say(text) }
 
@@ -109,12 +118,13 @@ export function missionLines(script, narratorKey, saga = null) {
   const ep = episodeLines(script, saga)
   for (const l of [ep.title, ep.previously, ep.next]) if (l) out.push({ text: l, who: narratorKey })
   const add = (l, who) => {
-    if (!l) return
+    if (!l || typeof l === 'function') return // worked out live (a game show score), so not made ahead
     if (typeof l === 'string') out.push({ text: l, who: who || narratorKey })
     else out.push({ text: l.text, who: l.who || who || narratorKey })
   }
   add(script.loop)
   add(script.early)
+  for (const h of script.hillLines || []) add(h, script.host)
   for (const b of script.beats.filter((x) => x.options)) {
     out.push({ text: optionsPrompt(b.options), who: narratorKey })
     for (const o of b.options) add(o.say, b.who)
@@ -149,9 +159,13 @@ function askAloud() {
 }
 
 function answered(events) {
-  for (const e of events.filter((x) => x.type === 'answer')) {
+  const show = mission?.script.scored
+  for (const e of events) {
+    // game show: the till rings for points from sprints and hills
+    if (show && scape && (e.type === 'climb' || (e.type === 'surge-end' && e.points))) { enqueue(() => scape?.sting('cash')); continue }
+    if (e.type !== 'answer') continue
     if (e.kind === 'choice') { if (scape) enqueue(() => scape?.sting('impact')); continue }
-    if (scape) enqueue(() => scape?.sting(e.right ? 'correct' : 'downer'))
+    if (scape) enqueue(() => scape?.sting(e.right ? (show ? 'cash' : 'correct') : (show ? 'bonk' : 'downer')))
     else sfx.cue(e.right ? 'surgeDone' : 'chapter')
   }
 }
@@ -249,7 +263,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
         if (ready && !loopWasReady) sfx.cue('loopReady')
         if (ready) loopWasReady = true
         else if (rec.toStartM == null || rec.toStartM > 60) loopWasReady = false // only ping again after heading away
-        const live = { elapsedS: rec.elapsedS, distanceM: rec.distanceM, paceSPerKm: rec.paceSPerKm, toStartM: rec.toStartM }
+        const live = { elapsedS: rec.elapsedS, distanceM: rec.distanceM, paceSPerKm: rec.paceSPerKm, toStartM: rec.toStartM, altM: smoothAlt() }
         let loopSaid = false
         if (mission) {
           const out = mission.update(live)

@@ -26,7 +26,8 @@ const STEADY_QUICK_S = 15 // this much quicker than easy pace gets a gentle word
 
 const segmentKinds = ['surge', 'steady', 'recover']
 const askKinds = ['choice', 'quiz', 'puzzle']
-export const ASK_WAIT_S = 30 // how long a question waits before the story answers for you
+export const ASK_WAIT_S = 30
+export const CLIMB_STEP = 6 // metres: phone GPS heights wobble by a few metres even after smoothing // how long a question waits before the story answers for you
 
 /** The words of a line, without performance cues like [whispers]. */
 export const lineText = (line) => String((typeof line === 'string' ? line : line?.text) || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim()
@@ -69,6 +70,11 @@ export function createMission(script, { paces = null } = {}) {
     choices: [], // [{ id, key, label, timedOut }]
     quizRight: 0,
     quizTotal: 0,
+    score: 0, // game show points
+    climbBase: null, // the lowest height since the last bit of climbing counted
+    climbM: 0, // metres climbed (game show hill bonus)
+    climbSaidAt: 0, // metres climbed at the last hill bonus line
+    hillLine: 0,
   }
   const total = surgeCount(script)
 
@@ -111,7 +117,14 @@ export function createMission(script, { paces = null } = {}) {
       const result = paceS && paceS * SURGE_GAIN <= seg.before ? 'success' : 'okay'
       st.surgesDone++
       if (result === 'success') st.surgesWon++
-      out.events.push({ type: 'surge-end', result, paceS: paceS && Math.round(paceS), beforeS: Math.round(seg.before) })
+      // game show sprints: the quicker you go, the more it's worth (10% up is full points, 20% up is double)
+      let points = 0
+      if (seg.beat.points) {
+        const lift = paceS ? seg.before / paceS - 1 : 0
+        points = Math.round((seg.beat.points * Math.min(2, Math.max(0.3, lift / 0.1))) / 100) * 100
+        st.score += points
+      }
+      out.events.push({ type: 'surge-end', result, paceS: paceS && Math.round(paceS), beforeS: Math.round(seg.before), points, score: st.score })
       if (!quiet) say(out, result === 'success' ? seg.beat.success : seg.beat.okay, seg.beat.who)
       if (seg.beat.recover) {
         st.seg = { kind: 'recover', beat: { kind: 'recover' }, at: st.clock, dist: st.dist, seconds: seg.beat.recover, metres: null }
@@ -126,6 +139,8 @@ export function createMission(script, { paces = null } = {}) {
   // A line is plain text, or { who, text } for the cast missions. Lines with
   // a speaker or a sound to go with them go out as { text, who, fx }.
   function say(out, line, who = null, fx = null) {
+    // a line can be worked out from the game so far ("You finished on 5,400 points.")
+    if (typeof line === 'function') line = line({ score: st.score, right: st.quizRight, total: st.quizTotal })
     const text = typeof line === 'string' ? line : line?.text
     if (!text) return
     const speaker = (typeof line === 'object' && line.who) || who
@@ -139,6 +154,27 @@ export function createMission(script, { paces = null } = {}) {
     return t >= seg.seconds
   }
 
+  // Climbing (game show hill bonus): heights come in smoothed, and only a
+  // rise of CLIMB_STEP metres or more from the last reference counts (the
+  // reference follows you down too), so GPS wobble on the flat earns nothing
+  function climb(alt, out) {
+    if (st.climbBase == null) { st.climbBase = alt; return }
+    if (alt <= st.climbBase - CLIMB_STEP) { st.climbBase = alt; return }
+    const up = alt - st.climbBase
+    if (up < CLIMB_STEP) return
+    st.climbM += up
+    st.climbBase = alt
+    const pts = Math.round(up * script.climbPoints)
+    st.score += pts
+    out.events.push({ type: 'climb', metres: Math.round(up), points: pts, score: st.score })
+    // a word from the host every 10 m or so, when nothing else is talking
+    const lines = script.hillLines || []
+    if (lines.length && st.climbM - st.climbSaidAt >= 10 && canSpeak() && !st.ask && st.seg?.kind !== 'surge') {
+      st.climbSaidAt = st.climbM
+      say(out, lines[st.hillLine++ % lines.length], script.host || null)
+    }
+  }
+
   function applies(beat) {
     if (beat.if && !st.flags.has(beat.if)) return false
     if (beat.unless && st.flags.has(beat.unless)) return false
@@ -148,6 +184,7 @@ export function createMission(script, { paces = null } = {}) {
   // An answer to the question on screen (key), or null when time ran out
   function resolve(out, key) {
     const beat = st.ask.beat
+    st.askedAt = st.ask.at
     st.ask = null
     const opt = beat.options.find((o) => o.key === key) || null
     if (beat.kind === 'choice') {
@@ -163,8 +200,15 @@ export function createMission(script, { paces = null } = {}) {
     st.quizTotal++
     const right = !!opt && opt.key === beat.answer
     if (right) st.quizRight++
+    // game show points: quicker answers are worth more (half for a slow one)
+    let points = 0
+    if (right && beat.points) {
+      const left = Math.max(0, (beat.wait || ASK_WAIT_S) - (st.clock - st.askedAt))
+      points = Math.round((beat.points * (0.5 + 0.5 * left / (beat.wait || ASK_WAIT_S))) / 100) * 100
+      st.score += points
+    }
     if (right && beat.flag) st.flags.add(beat.flag)
-    out.events.push({ type: 'answer', kind: beat.kind, key: opt?.key || null, right, timedOut: !opt })
+    out.events.push({ type: 'answer', kind: beat.kind, key: opt?.key || null, right, timedOut: !opt, points, score: st.score })
     say(out, right ? beat.right : beat.wrong, beat.who)
   }
 
@@ -184,7 +228,7 @@ export function createMission(script, { paces = null } = {}) {
     if (beat.kind === 'finale') {
       if (st.seg) endSegment(out, { quiet: true })
       st.done = true
-      st.closing = lineText(beat.say)
+      st.closing = lineText(typeof beat.say === 'function' ? beat.say({ score: st.score, right: st.quizRight, total: st.quizTotal }) : beat.say)
       out.events.push({ type: 'finale' })
     }
   }
@@ -241,7 +285,7 @@ export function createMission(script, { paces = null } = {}) {
   return {
     script,
 
-    update({ elapsedS = 0, distanceM = 0, toStartM = null } = {}) {
+    update({ elapsedS = 0, distanceM = 0, toStartM = null, altM = null } = {}) {
       const out = { lines: [], events: [] }
       if (st.finished) return out
       if (!st.started) {
@@ -261,6 +305,7 @@ export function createMission(script, { paces = null } = {}) {
       st.clock = clock
       st.dist = Math.max(0, distanceM - st.distBase - st.distGap)
       st.toStart = toStartM
+      if (script.climbPoints && Number.isFinite(altM)) climb(altM, out)
       st.samples.push([st.clock, st.dist])
       while (st.samples.length > 2 && st.samples[0][0] < st.clock - PRE_WINDOW_S - 30) st.samples.shift()
       step(out)
@@ -337,6 +382,8 @@ export function createMission(script, { paces = null } = {}) {
           remainingS: Math.max(0, Math.ceil((st.ask.beat.wait || ASK_WAIT_S) - (st.clock - st.ask.at))),
           waitS: st.ask.beat.wait || ASK_WAIT_S,
         } : null,
+        score: script.scored ? st.score : null,
+        climbM: script.climbPoints ? Math.round(st.climbM) : null,
       }
     },
 
@@ -353,6 +400,7 @@ export function createMission(script, { paces = null } = {}) {
         choices: st.choices.slice(),
         quizRight: st.quizRight,
         quizTotal: st.quizTotal,
+        score: script.scored ? st.score : null,
       }
     },
   }

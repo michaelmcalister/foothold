@@ -130,6 +130,10 @@ export const SPOTS = {
   farHorn(ctx, out, t) {
     for (const f of [note('A1'), note('E2')]) tone(ctx, out, t, { freq: f, type: 'sawtooth', attack: 0.4, hold: 1.6, decay: 1.2, peak: 0.02, filter: { freq: 400 } })
   },
+  clap(ctx, out, t, r) {
+    // a little ripple of applause
+    for (let i = 0; i < 14; i++) noise(ctx, out, t + i * 0.07 + r() * 0.04, { attack: 0.002, decay: 0.04, peak: 0.02 + r() * 0.02, filter: { type: 'bandpass', freq: 1500 + r() * 900, q: 1 } })
+  },
   tick(ctx, out, t) {
     noise(ctx, out, t, { attack: 0.001, decay: 0.006, peak: 0.02, filter: { type: 'highpass', freq: 5000 } })
   },
@@ -201,6 +205,13 @@ export const SCENES = {
       { filter: { type: 'lowpass', freq: 200 }, level: 0.03 },
     ],
     spots: [{ name: 'clink', rate: 0.25 }],
+  },
+  studio: {
+    beds: [
+      { filter: { type: 'bandpass', freq: 700, q: 0.7 }, level: 0.04, lfo: { rate: 0.25, depth: 0.4 } }, // the audience murmuring
+      { filter: { type: 'lowpass', freq: 180 }, level: 0.025 },
+    ],
+    spots: [{ name: 'clap', rate: 0.08 }],
   },
   harbour: {
     beds: [
@@ -469,6 +480,25 @@ Object.assign(STINGS, {
       return t + 0.45
     },
   },
+  bonk: {
+    dur: 0.8,
+    build(ctx, out, t) {
+      // a friendly wrong answer: a cartoon boing, not a harsh buzzer
+      tone(ctx, out, t, { freq: 330, glideTo: 180, glideTime: 0.35, type: 'triangle', attack: 0.005, decay: 0.5, peak: 0.22 })
+      tone(ctx, out, t + 0.02, { freq: 165, glideTo: 90, glideTime: 0.35, type: 'square', attack: 0.005, decay: 0.4, peak: 0.05, filter: { freq: 900 } })
+      return t + 0.75
+    },
+  },
+  cash: {
+    dur: 0.9,
+    build(ctx, out, t) {
+      // points in the bank: a till ring and a sparkle
+      bell(ctx, out, t, 2093, { peak: 0.16, decay: 0.5 })
+      bell(ctx, out, t + 0.09, 2637, { peak: 0.14, decay: 0.6 })
+      noise(ctx, out, t, { attack: 0.001, decay: 0.08, peak: 0.08, filter: { type: 'bandpass', freq: 5000, q: 2 } })
+      return t + 0.85
+    },
+  },
   question: {
     dur: 0.9,
     build(ctx, out, t) {
@@ -500,6 +530,13 @@ Object.assign(STINGS, {
 
 // ---- the title music: a cold open and an end theme for each series ----
 export const THEMES = {
+  quiz: {
+    motif: ['C5', 'E5', 'G5', 'C6', 'A5', 'C6', 'G5'], // a bright brassy game show sting
+    beats: [0.5, 0.5, 0.5, 1, 0.5, 0.5, 2],
+    chord: ['C2', 'G2', 'C3', 'E3', 'G3'],
+    end: ['C3', 'E3', 'G3', 'C4'],
+    voice: 'horn',
+  },
   ember: {
     motif: ['D4', 'F4', 'A4', 'G4', 'F4', 'E4', 'D4'], // a horn line
     beats: [1, 0.5, 1.5, 0.5, 0.5, 0.5, 2.5],
@@ -597,6 +634,15 @@ export const SCORES = {
     pulse: 'tom', // low drums
     run: ['D4', 'F4', 'A4', 'C5', 'D5', 'C5', 'A4', 'F4'],
     bass: ['D2', 'D2', 'F2', 'D2', 'C2', 'C2', 'A1', 'C2'],
+  },
+  quiz: {
+    bpm: [96, 112, 132, 112],
+    drone: ['C3', 'G3'],
+    tension: ['C3', 'E3', 'G3'],
+    lift: ['C3', 'E3', 'G3', 'C4'],
+    pulse: 'tick',
+    run: ['C5', 'E5', 'G5', 'C6', 'G5', 'E5', 'D5', 'G5'],
+    bass: ['C2', 'C2', 'E2', 'G2', 'A1', 'A1', 'G1', 'B1'],
   },
   heist: {
     bpm: [80, 100, 128, 100],
