@@ -20,7 +20,7 @@ import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.
 import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
 import { CAST } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
-import { listenFor, stopListening, canListen, primeMicrophone, optionsPrompt } from './listen.js'
+import { listenFor, stopListening as stopMic, canListen, primeMicrophone, optionsPrompt } from './listen.js'
 
 let stopWatch = null
 let announcer = null
@@ -148,7 +148,7 @@ function applyAnswer(key) {
 
 /** A tap on one of the answers on screen. */
 export function answerMission(key) {
-  stopListening()
+  stopMic()
   applyAnswer(key)
 }
 
@@ -268,7 +268,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
 export function finishRun({ elapsedS, distanceM }) {
   if (announcer) sfx.cue('finish')
   let summary = null
-  stopListening()
+  stopMic()
   if (mission) {
     const out = mission.finish()
     summary = out.summary
@@ -294,7 +294,7 @@ function stopListening() {
 
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
-  stopListening()
+  stopMic()
   scape?.stop(0.6)
   scape = null
   forgetLines()
