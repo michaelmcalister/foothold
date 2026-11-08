@@ -833,7 +833,7 @@ export async function handleApi(req, env, ctx) {
   }
   // Public: recorded ambience and music (made once with ElevenLabs, then served from R2)
   {
-    const m = /^\/api\/audio\/(ambience|track)\/([a-z0-9-]{1,40})$/.exec(url.pathname)
+    const m = /^\/api\/audio\/(ambience|track|sfx)\/([a-z0-9-]{1,40})$/.exec(url.pathname)
     if (m && req.method === 'GET') {
       res = await handleAudio(req, env, m[1], m[2])
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)

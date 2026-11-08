@@ -18,7 +18,7 @@ import * as spotify from './spotify.js'
 import { api } from '../api/index.js'
 import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.js'
 import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
-import { CAST } from '../missions/cast.js'
+import { CAST, stripTags } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
 import { listenFor, stopListening as stopMic, canListen, primeMicrophone, optionsPrompt } from './listen.js'
 import { loadBuffer, createRunMusic } from './recorded.js'
@@ -35,6 +35,11 @@ let narrator = null // who reads lines with no speaker
 let level = 0 // the score's intensity
 let episode = null // the thriller episode's title and teaser lines
 let runMusic = null // Foothold's own music, when Spotify isn't playing
+let probe = null // asks the record screen's map what's around you
+let probedAt = -Infinity
+
+/** The record screen hands over a way to ask its map what's nearby (surroundings.js). */
+export function setSurroundingsProbe(fn) { probe = fn }
 
 /** What the Record screen's mission strip shows (null with no mission). */
 export const missionLive = ref(null)
@@ -96,7 +101,7 @@ function sayLine(line) {
   if (!text || !audio.voice) return
   const radio = CAST[who]?.radio && s
   enqueue(() => spotify.aroundSpeech(async () => {
-    if (radio) await s.sting('squelch')
+    if (radio) { await s.sting('squelch'); s.radio(stripTags(text).length / 13) } // static and crackle under the line
     await talking(() => speakAs(text, who, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }))
     if (radio) await s.sting('squelch')
   }, { how: audio.music, duckTo: audio.duckTo }))
@@ -191,7 +196,7 @@ function startScape(saga) {
   if (!ctx || !out) return null
   // your own Spotify music takes the place of the score
   const music = !spotifyOn()
-  const recorded = { ambience: (n) => loadBuffer(ctx, 'ambience', n), track: (id) => loadBuffer(ctx, 'track', id) }
+  const recorded = { ambience: (n) => loadBuffer(ctx, 'ambience', n), track: (id) => loadBuffer(ctx, 'track', id), sfx: (id) => loadBuffer(ctx, 'sfx', id) }
   const s = createSoundscape(ctx, out, { score: saga.score, music, seed: Date.now() % 9973, recorded, chase: music ? CHASE_TRACK[saga.id] : null })
   s.start()
   return s
@@ -265,11 +270,18 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
         else if (rec.toStartM == null || rec.toStartM > 60) loopWasReady = false // only ping again after heading away
         const live = { elapsedS: rec.elapsedS, distanceM: rec.distanceM, paceSPerKm: rec.paceSPerKm, toStartM: rec.toStartM, altM: smoothAlt() }
         let loopSaid = false
+        // every 20 seconds or so, what's around you (a park, a main road, shops)
+        if (scape && probe && rec.elapsedS - probedAt >= 20) {
+          probedAt = rec.elapsedS
+          const near = probe(rec.points[rec.points.length - 1])
+          if (near) scape.setSurroundings(near)
+        }
         if (mission) {
           const out = mission.update(live)
           for (const e of out.events) {
             if (e.type === 'loop') loopSaid = true
             if (e.type === 'scene') scape?.setScene(e.scene)
+            if (e.type === 'spatial') scape?.spatial(e.name)
             if (scape) {
               level = intensityFor(e.type, level)
               scape.setIntensity(level)

@@ -19,6 +19,18 @@ export const AMBIENCE = {
   harbour: 'Sydney Harbour wharf at night: water lapping against wooden pylons, a ferry idling, ropes creaking, gentle wind, gulls far away, no music, no voices',
 }
 
+// One-shot sounds that move around you (spatial.js), recorded once each
+export const SFX = {
+  helicopter: { prompt: 'A helicopter approaching from far away, flying low directly overhead with heavy rotor thumping, then fading into the distance', seconds: 10 },
+  'car-pass': { prompt: 'A single car driving past on a suburban street at moderate speed, approaching and passing by, no horn', seconds: 4 },
+  'siren-pass': { prompt: 'A fire truck with its siren on driving past quickly and fading away down the road', seconds: 8 },
+  magpie: { prompt: 'An Australian magpie carolling its warbling song in a gum tree, close by, clear', seconds: 4 },
+  kookaburra: { prompt: 'A single kookaburra laughing call in the bush, loud and close', seconds: 5 },
+  kids: { prompt: 'Children laughing and playing on a playground in a park, a little way off, no clear words', seconds: 8 },
+  chatter: { prompt: 'Two or three people chatting and laughing as they walk past on a footpath, no clear words', seconds: 5 },
+  dog: { prompt: 'A small dog barking a few times from behind a backyard fence', seconds: 3 },
+}
+
 export const TRACKS = {
   'spy-chase': {
     title: 'Rooftop Pursuit',
@@ -60,6 +72,7 @@ export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase', quiz: 'b
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)
 export const isTrack = (id) => Object.prototype.hasOwnProperty.call(TRACKS, id)
+export const isSfx = (id) => Object.prototype.hasOwnProperty.call(SFX, id)
 
 /** A fresh shuffle of a playlist (rand is injectable for tests). */
 export function shuffled(list, rand = Math.random) {

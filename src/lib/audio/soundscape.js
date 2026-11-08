@@ -11,6 +11,7 @@
 // are exported for tests; the voices take any AudioContext-like object.
 import { note, tone, noise, pluck, bell, kick, pad, swell, noiseBuffer, SILENT } from './synth.js'
 import { loopBuffer } from './recorded.js'
+import { playSpatial, radioStatic, SPATIAL } from './spatial.js'
 
 // ---- seeded randomness, so tests (and renders) are repeatable ----
 export function rng(seed = 1) {
@@ -22,6 +23,16 @@ export function rng(seed = 1) {
 }
 
 // ---- continuous layers ----
+
+// Freeze a fading level where it is at time `at`, ready for a new ramp. Uses
+// cancelAndHoldAtTime where there is one: reading .value can give the wrong
+// level (in some browsers, and always before an offline render starts), which
+// made a stopping layer jump to full volume for a moment.
+function holdAt(param, at) {
+  if (param.cancelAndHoldAtTime) { param.cancelAndHoldAtTime(at); return }
+  param.cancelScheduledValues(at)
+  param.setValueAtTime(param.value, at)
+}
 
 /**
  * Looping filtered noise with an optional slow swell (gusts, waves):
@@ -68,8 +79,7 @@ export function bed(ctx, out, t, { filter = { type: 'lowpass', freq: 800 }, leve
   src.start(t, (t * 3.17) % 0.9)
   return {
     stop(at, fade = 2) {
-      g.gain.cancelScheduledValues(at)
-      g.gain.setValueAtTime(g.gain.value || level, at)
+      holdAt(g.gain, at)
       g.gain.linearRampToValueAtTime(SILENT, at + fade)
       src.stop(at + fade + 0.05)
       for (const o of mods) o.stop(at + fade + 0.05)
@@ -93,7 +103,7 @@ export function hum(ctx, out, t, { freq = 60, level = 0.015, fadeIn = 2 } = {}) 
   return {
     stop(at, fade = 2) {
       for (const { o, g } of oscs) {
-        g.gain.cancelScheduledValues(at)
+        holdAt(g.gain, at)
         g.gain.linearRampToValueAtTime(SILENT, at + fade)
         o.stop(at + fade + 0.05)
       }
@@ -220,6 +230,45 @@ export const SCENES = {
     ],
     spots: [{ name: 'farHorn', rate: 0.012 }, { name: 'passing', rate: 0.03 }],
   },
+}
+
+/**
+ * Sounds placed around you in each scene (spatial.js), about `rate` times a
+ * second: birds in the trees, cars going past, a helicopter overhead.
+ */
+export const AROUND = {
+  bush: [{ name: 'magpie', rate: 0.02 }, { name: 'kookaburra', rate: 0.008 }, { name: 'bird', rate: 0.05 }],
+  smoke: [{ name: 'bird', rate: 0.02 }, { name: 'helicopter', rate: 0.004 }],
+  fire: [{ name: 'firetruck', rate: 0.006 }, { name: 'helicopter', rate: 0.006 }],
+  night: [{ name: 'dog', rate: 0.006 }],
+  rain: [{ name: 'magpie', rate: 0.01 }, { name: 'bird', rate: 0.04 }],
+  city: [{ name: 'car', rate: 0.05 }, { name: 'chatter', rate: 0.012 }],
+  street: [{ name: 'car', rate: 0.07 }],
+  tower: [],
+  gala: [{ name: 'chatter', rate: 0.03 }],
+  harbour: [{ name: 'chatter', rate: 0.01 }, { name: 'helicopter', rate: 0.003 }],
+  studio: [],
+}
+/** What the map says is around you adds its own sounds (a park, a main road, shops). */
+export const NEARBY = {
+  park: [{ name: 'bird', rate: 0.06 }, { name: 'kids', rate: 0.02 }, { name: 'magpie', rate: 0.01 }, { name: 'dog', rate: 0.006 }],
+  road: [{ name: 'car', rate: 0.06 }],
+  shops: [{ name: 'chatter', rate: 0.02 }],
+}
+
+/** When the spatial sounds play between from and to: at most one every few seconds, so they never pile up. */
+export function aroundTimes(list, from, to, r, { lastAt = -Infinity, gap = 5 } = {}) {
+  const out = []
+  for (const a of list) {
+    for (let expected = a.rate * (to - from); expected > 0; expected -= 1) {
+      if (r() < Math.min(1, expected)) out.push({ name: a.name, at: from + r() * (to - from) })
+    }
+  }
+  out.sort((x, y) => x.at - y.at)
+  const kept = []
+  let last = lastAt
+  for (const e of out) if (e.at - last >= gap) { kept.push(e); last = e.at }
+  return kept
 }
 
 /** Start a scene's continuous layers. Returns { stop(t) }. */
@@ -752,6 +801,16 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
   const chaseBus = ctx.createGain()
   chaseBus.gain.value = 0.5
   chaseBus.connect(master)
+  const spaceBus = ctx.createGain() // sounds placed around you
+  spaceBus.gain.value = 0.9
+  spaceBus.connect(master)
+  const radioBus = ctx.createGain() // static under radio lines: never ducked, it's part of the voice
+  radioBus.gain.value = 1
+  radioBus.connect(out)
+  const sfxBufs = new Map() // recorded one-shots, as they arrive
+  let near = { park: false, road: false, shops: false }
+  let aroundUpTo = 0
+  let lastAround = -Infinity
   let recLoop = null // the recorded loop for this scene
   let recScene = null // which scene it belongs to
   let chaseBuf = null
@@ -777,6 +836,19 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       const from = Math.max(spotsUpTo, now)
       for (const s of spotTimes(sceneName, from, until, r)) SPOTS[s.name](ctx, sceneBus, s.at, r)
       spotsUpTo = until
+    }
+    // sounds placed around you: the scene's, plus whatever the map says is near
+    if (sceneName && aroundUpTo < until) {
+      const from = Math.max(aroundUpTo, now)
+      const list = [...(AROUND[sceneName] || []), ...Object.entries(NEARBY).filter(([k]) => near[k]).flatMap(([, v]) => v)]
+      for (const e of aroundTimes(list, from, until, r, { lastAt: lastAround })) {
+        const def = SPATIAL[e.name]
+        const buffer = def?.recorded ? sfxBufs.get(def.recorded) : null
+        if (!buffer && !def?.synth) continue // a recording only, not made yet
+        playSpatial(ctx, spaceBus, e.name, e.at, { buffer, r })
+        lastAround = e.at
+      }
+      aroundUpTo = until
     }
     // in a chase, the sound of the chase: footsteps behind you, or the fire flaring
     if (intensity === 2 && score && chaseUpTo < until) {
@@ -809,6 +881,8 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       tick()
       timer = setInterval(tick, 250)
       if (recorded && chase) recorded.track(chase).then((b) => { chaseBuf = b }).catch(() => {})
+      // the recorded one-shots, for the sounds that move around you
+      if (recorded?.sfx) for (const id of new Set(Object.values(SPATIAL).map((d) => d.recorded).filter(Boolean))) recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b) }).catch(() => {})
     },
     setScene(name) {
       if (!SCENES[name] || name === sceneName) return
@@ -838,6 +912,19 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       if (intensity !== 2 && chaseLoop) { chaseLoop.stop(3); chaseLoop = null; nextStepAt = ctx.currentTime + 3 }
     },
     get state() { return { scene: sceneName, intensity, ducked } },
+    /** A sound placed around you, now (a beat's `spatial`). */
+    spatial(name) {
+      const def = SPATIAL[name]
+      if (!def) return
+      const buffer = def.recorded ? sfxBufs.get(def.recorded) : null
+      playSpatial(ctx, spaceBus, name, ctx.currentTime + 0.05, { buffer, r })
+      lastAround = ctx.currentTime + 0.05
+    },
+    /** What the map says is around you: { park, road, shops }. */
+    setSurroundings(s) { near = { park: !!s?.park, road: !!s?.road, shops: !!s?.shops } },
+    get surroundings() { return near },
+    /** Static and crackle under a radio line that lasts about `seconds`. */
+    radio(seconds) { radioStatic(ctx, radioBus, ctx.currentTime + 0.02, Math.max(0.5, seconds), r) },
     /** Lower everything but the effects while someone talks. */
     duck(on) {
       if (on === ducked) return
@@ -881,6 +968,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       scene?.stop(t, fade)
       recLoop?.stop(fade)
       chaseLoop?.stop(fade)
+      setTimeout(() => { try { radioBus.disconnect() } catch { /* gone */ } }, (fade + 0.5) * 1000)
       scene = null
       recLoop = null
       chaseLoop = null

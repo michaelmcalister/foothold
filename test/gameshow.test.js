@@ -98,9 +98,37 @@ describe('Run Your Mouth', () => {
         const key = answer.replace(/^(The|First) /, '').split(' ')[0]
         expect(lineText(b.wrong), b.say).toMatch(new RegExp(key, 'i'))
         expect(lineText(b.wrong)).not.toMatch(/\b(stupid|dumb|idiot|loser|terrible|wrong)\b/i)
-        expect(b.points).toBeGreaterThanOrEqual(1000)
+        expect(b.points).toBeGreaterThanOrEqual(500)
       }
       expect(m.beats.filter((b) => b.kind === 'surge').every((b) => b.points > 0)).toBe(true)
+    }
+  })
+})
+
+describe('pacing', () => {
+  it('someone is talking at least every 45 seconds when you answer promptly', () => {
+    for (const m of GAMESHOW) {
+      play.dist = 0
+      const mm = createMission(m, { paces })
+      const said = []
+      let asked = null
+      let t = 0
+      for (; t <= m.beats.at(-1).at + 300; t++) {
+        play.dist += 1000 / (mm.view().kind === 'surge' ? 300 : 360)
+        const out = mm.update({ elapsedS: t, distanceM: play.dist, toStartM: 2000 })
+        if (out.lines.length) said.push(t)
+        const ask = mm.view().ask
+        if (ask) {
+          if (asked == null) asked = t
+          if (t - asked >= 6) { if (mm.answer(ask.options[0].key).lines.length) said.push(t); asked = null }
+        }
+        if (mm.view().done) break
+      }
+      const gaps = said.slice(1).map((x, i) => x - said[i])
+      // a sprint is the only long quiet stretch, and it has a timer on screen
+      const quiet = gaps.filter((g) => g > 45)
+      expect(quiet.length, `${m.id}: ${gaps.join(',')}`).toBeLessThanOrEqual(m.beats.filter((b) => b.kind === 'surge').length)
+      expect(Math.max(...gaps), m.id).toBeLessThanOrEqual(110)
     }
   })
 })

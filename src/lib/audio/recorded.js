@@ -9,6 +9,13 @@ const RAW = import.meta.env.VITE_API_URL || ''
 const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
 export const canRecorded = () => !!RAW
 
+// Freeze a level where it is now, ready for a fade (see soundscape.js holdAt)
+function holdAt(param, at) {
+  if (param.cancelAndHoldAtTime) { param.cancelAndHoldAtTime(at); return }
+  param.cancelScheduledValues(at)
+  param.setValueAtTime(param.value, at)
+}
+
 const buffers = new Map() // 'kind/id' -> Promise<AudioBuffer | null>
 
 async function fetchOnce(kind, id, { waitForMaking = false } = {}) {
@@ -51,8 +58,7 @@ export function loopBuffer(ctx, out, buffer, { level = 0.5, fadeIn = 3, from = n
   return {
     stop(fade = 3) {
       const n = ctx.currentTime
-      g.gain.cancelScheduledValues(n)
-      g.gain.setValueAtTime(g.gain.value, n)
+      holdAt(g.gain, n)
       g.gain.linearRampToValueAtTime(SILENT, n + fade)
       try { src.stop(n + fade + 0.05) } catch { /* already stopped */ }
     },
@@ -78,8 +84,7 @@ function playTrack(ctx, out, buffer, { level, fade = 2.5, onStop }) {
   src.onended = () => done()
   onStop((f = 2) => {
     const n = ctx.currentTime
-    g.gain.cancelScheduledValues(n)
-    g.gain.setValueAtTime(g.gain.value, n)
+    holdAt(g.gain, n)
     g.gain.linearRampToValueAtTime(SILENT, n + f)
     try { src.stop(n + f + 0.05) } catch { /* done already */ }
     setTimeout(done, f * 1000)

@@ -17,7 +17,7 @@ import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack } from '../../lib/tracks.js'
 import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
-import { beginRun, finishRun, endRun, missionLive, coachSays, answerMission } from '../../lib/audio/runAudio.js'
+import { beginRun, finishRun, endRun, missionLive, coachSays, answerMission, setSurroundingsProbe } from '../../lib/audio/runAudio.js'
 import GhostPicker from '../../components/GhostPicker.vue'
 import { makeGhost, ghostAt, progressAlong, gapSeconds, gapLine, gapShort, raceResult } from '../../lib/ghost.js'
 import { saveGhostRace } from '../../lib/ghostRace.js'
@@ -30,6 +30,7 @@ import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
 import { offRouteM } from '../../lib/planner.js'
 import { createNavigator } from '../../lib/directions.js'
+import { surroundingsOnMap } from '../../lib/surroundings.js'
 import PocketMode from '../../components/PocketMode.vue'
 import AskCard from '../../components/AskCard.vue'
 
@@ -60,6 +61,11 @@ function dropRoute() {
   plannedRing.value = null
   setPlanned(null)
 }
+
+// The missions place real-world sounds around you from what the map shows nearby
+const tmap = ref(null)
+setSurroundingsProbe((p) => surroundingsOnMap(tmap.value?.map, p))
+onBeforeUnmount(() => setSurroundingsProbe(null))
 
 // Pocket mode: a black screen that keeps recording (locking the phone stops GPS)
 const pocket = ref(false)
@@ -332,7 +338,7 @@ onBeforeUnmount(() => {})
   <div class="rec">
     <PocketMode v-if="pocket" :next-turn="nextTurn" :ask="missionLive?.ask || null" @answer="answerMission" @close="pocket = false" />
     <div class="maparea">
-      <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" :ghost="ghostLive?.pos || null" />
+      <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" :ghost="ghostLive?.pos || null" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>

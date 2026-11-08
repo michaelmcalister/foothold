@@ -27,6 +27,7 @@ const STEADY_QUICK_S = 15 // this much quicker than easy pace gets a gentle word
 const segmentKinds = ['surge', 'steady', 'recover']
 const askKinds = ['choice', 'quiz', 'puzzle']
 export const ASK_WAIT_S = 30
+export const BRISK_GAP = 18 // seconds from an answer to the next beat in a brisk show
 export const CLIMB_STEP = 6 // metres: phone GPS heights wobble by a few metres even after smoothing // how long a question waits before the story answers for you
 
 /** The words of a line, without performance cues like [whispers]. */
@@ -168,11 +169,7 @@ export function createMission(script, { paces = null } = {}) {
     st.score += pts
     out.events.push({ type: 'climb', metres: Math.round(up), points: pts, score: st.score })
     // a word from the host every 10 m or so, when nothing else is talking
-    const lines = script.hillLines || []
-    if (lines.length && st.climbM - st.climbSaidAt >= 10 && canSpeak() && !st.ask && st.seg?.kind !== 'surge') {
-      st.climbSaidAt = st.climbM
-      say(out, lines[st.hillLine++ % lines.length], script.host || null)
-    }
+    if ((script.hillLines || []).length && st.climbM - st.climbSaidAt >= 10) { st.climbSaidAt = st.climbM; st.hillPending = true }
   }
 
   function applies(beat) {
@@ -186,6 +183,14 @@ export function createMission(script, { paces = null } = {}) {
     const beat = st.ask.beat
     st.askedAt = st.ask.at
     st.ask = null
+    // a brisk show (the game show) moves straight on after an answer: the next
+    // beat comes BRISK_GAP seconds later, not at its usual time
+    if (script.brisk) {
+      let n = st.next
+      while (script.beats[n] && !applies(script.beats[n])) n++
+      const next = script.beats[n]
+      if (next && next.at + st.shift > st.clock + BRISK_GAP) st.shift = st.clock + BRISK_GAP - next.at
+    }
     const opt = beat.options.find((o) => o.key === key) || null
     if (beat.kind === 'choice') {
       const pick = opt || beat.options.find((o) => o.key === beat.default) || beat.options[0]
@@ -219,6 +224,7 @@ export function createMission(script, { paces = null } = {}) {
       out.events.push({ type: 'chapter', chapter: beat.chapter })
     }
     if (beat.scene) out.events.push({ type: 'scene', scene: beat.scene })
+    if (beat.spatial) out.events.push({ type: 'spatial', name: beat.spatial })
     say(out, beat.say, beat.who, beat.fx)
     if (segmentKinds.includes(beat.kind)) startSegment(beat, out)
     if (askKinds.includes(beat.kind)) {
@@ -252,6 +258,13 @@ export function createMission(script, { paces = null } = {}) {
         if (d > 50 && 60 / (d / 1000) < easy[0] - STEADY_QUICK_S) { seg.nudged = true; say(out, seg.beat.easyNudge, seg.beat.who); return }
       }
       if (seg.kind === 'surge') return // nothing else talks over a surge
+    }
+
+    // a word from the host about the hill you just climbed, when there's a gap
+    if (st.hillPending && canSpeak() && !st.ask) {
+      st.hillPending = false
+      say(out, script.hillLines[st.hillLine++ % script.hillLines.length], script.host || null)
+      return
     }
 
     // the loop beat, once, when it fits
