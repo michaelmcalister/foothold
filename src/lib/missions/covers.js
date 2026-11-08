@@ -148,7 +148,29 @@ const EMBER = {
   'ember-dawn': { top: '#3A2A5E', mid: '#E46A6B', low: '#FFD08A', sun: '#FFF0C2', sunY: 225, smoke: 2, embers: 10, wind: 0, dawn: true },
 }
 
+function emberFlood(rand, u) {
+  // The Big Wet: a storm over the green hills, lightning, and the creek up over the road
+  let s = `<defs>${sky(`${u}s`, [[0, '#070D18'], [0.5, '#1E3550'], [1, '#56748A']])}${glow(`${u}g`, '#CFE6FF')}${blur(`${u}b`, 10)}`
+    + `<linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C6B7E"/><stop offset="1" stop-color="#14212E"/></linearGradient></defs>`
+  s += `<rect width="${W}" height="${H}" fill="url(#${u}s)"/>`
+  for (let i = 0; i < 4; i++) s += `<ellipse cx="${f(rand() * W)}" cy="${f(40 + rand() * 90)}" rx="${f(110 + rand() * 60)}" ry="${f(26 + rand() * 18)}" fill="#05090F" opacity="0.6" filter="url(#${u}b)"/>`
+  s += `<circle cx="196" cy="70" r="90" fill="url(#${u}g)" opacity="0.5"/>`
+  s += `<path d="M206 20 L184 92 L202 92 L176 168 L232 78 L212 78 L230 20 Z" fill="#F4FAFF"/>`
+  s += hill(rand, 220, 30, '#0E2A22', 3)
+  for (let i = 0; i < 6; i++) s += gum(rand, 20 + i * 50 + rand() * 20, 232 + rand() * 6, 60 + rand() * 40, '#0A1F19')
+  // the flood: wide brown water with streaks of light
+  s += `<rect y="250" width="${W}" height="${H - 250}" fill="url(#${u}w)"/>`
+  for (let i = 0; i < 30; i++) s += `<path d="M${f(rand() * W)} ${f(258 + rand() * 110)} q14 -3 28 0" stroke="#A9C7DA" stroke-width="1.4" fill="none" opacity="${f(0.2 + rand() * 0.5)}"/>`
+  s += `<path d="M196 160 L188 250" stroke="#F4FAFF" stroke-width="2" opacity="0.25"/>`
+  // the footbridge, and rain over everything
+  s += `<path d="M30 300 L270 286" stroke="#0A141C" stroke-width="7"/><g stroke="#0A141C" stroke-width="3">${[60, 110, 160, 210, 250].map((x) => `<path d="M${x} ${f(298 - (x - 30) * 0.058)} v26"/>`).join('')}</g>`
+  for (let i = 0; i < 70; i++) { const x = rand() * W; const y = rand() * H; s += `<path d="M${f(x)} ${f(y)} l-5 14" stroke="#BFD6E6" stroke-width="1" opacity="${f(0.2 + rand() * 0.4)}"/>` }
+  s += runner(150, 292, 52, '#03080D', false, '#CFE6FF')
+  return s
+}
+
 function ember(m, rand, u) {
+  if (m.id === 'ember-flood') return emberFlood(rand, u)
   const e = EMBER[m.id] || EMBER['ember-smoke']
   let s = `<defs>${sky(`${u}s`, [[0, e.top], [0.55, e.mid], [1, e.low]])}${glow(`${u}g`, e.sun)}${blur(`${u}b`, 12)}${glow(`${u}e`, '#FFB347')}</defs>`
   s += `<rect width="${W}" height="${H}" fill="url(#${u}s)"/>`
@@ -207,7 +229,34 @@ function skyline(rand, base, colour, lit, { from = 0, to = W, maxH = 140 } = {})
   return s
 }
 
+function heistVivid(rand, u) {
+  // Lights Out: the harbour lit up for Vivid, shell roofs washed in colour, a striped lighthouse
+  let s = `<defs>${sky(`${u}s`, [[0, '#060418'], [0.7, '#1E1450'], [1, '#2E1E60']])}${glow(`${u}g`, '#FFE9B0')}`
+    + `<linearGradient id="${u}a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5FA2"/><stop offset="0.5" stop-color="#FFD25E"/><stop offset="1" stop-color="#5FE3D2"/></linearGradient>`
+    + `<linearGradient id="${u}b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#7A5CFF"/><stop offset="1" stop-color="#FF5FA2"/></linearGradient></defs>`
+  s += `<rect width="${W}" height="${H}" fill="url(#${u}s)"/>`
+  s += stars(rand, 24, { bottom: 120 })
+  for (const [x, c] of [[60, '#FF5FA2'], [150, '#5FE3D2'], [240, '#FFD25E']]) s += `<path d="M${x - 5} 250 L${x - 50} 0 L${x + 50} 0 L${x + 5} 250 Z" fill="${c}" opacity="0.12"/>`
+  // shell roofs, glowing with projections
+  s += `<path d="M40 252 Q70 150 140 140 Q100 190 104 252 Z" fill="url(#${u}a)"/>`
+  s += `<path d="M96 252 Q120 170 196 160 Q154 200 160 252 Z" fill="url(#${u}b)"/>`
+  s += `<path d="M152 252 Q170 196 226 190 Q200 220 204 252 Z" fill="url(#${u}a)" opacity="0.9"/>`
+  s += `<rect x="30" y="250" width="190" height="10" fill="#120C2A"/>`
+  // the striped lighthouse on the headland, beam swinging over the water
+  s += `<path d="M230 252 L300 236 L300 260 Z" fill="#0A0820"/><path d="M262 248 L262 196 L270 196 L270 248 Z" fill="#F4F1EA"/>`
+  for (const y of [204, 220, 236]) s += `<rect x="262" y="${y}" width="8" height="8" fill="#E03B3B"/>`
+  s += `<path d="M266 196 L40 150 L40 180 Z" fill="#FFF3C4" opacity="0.18"/><circle cx="266" cy="194" r="16" fill="url(#${u}g)"/>`
+  // the harbour, with the lights doubled in it
+  s += `<rect y="258" width="${W}" height="${H - 258}" fill="#07051A"/>`
+  for (let i = 0; i < 40; i++) { const c = ['#FF5FA2', '#5FE3D2', '#FFD25E'][i % 3]; s += `<rect x="${f(30 + rand() * 200)}" y="${f(264 + rand() * 100)}" width="${f(6 + rand() * 24)}" height="1.6" fill="${c}" opacity="${f(0.2 + rand() * 0.5)}"/>` }
+  // the Regal heading for the Heads
+  s += `<path d="M200 300 L276 300 L268 310 L208 310 Z" fill="#E8E4FF"/><path d="M226 300 L240 270 L240 300 Z" fill="#E8E4FF"/>`
+  s += runner(110, 360, 62, '#000', false, '#FF5FA2')
+  return s
+}
+
 function heist(m, rand, u) {
+  if (m.id === 'heist-vivid') return heistVivid(rand, u)
   const h = HEIST[m.id] || HEIST['heist-recruit']
   let s = `<defs>${sky(`${u}s`, [[0, h.top], [1, h.low]])}${glow(`${u}g`, '#FFE9B0')}${blur(`${u}b`, 6)}`
     + `<linearGradient id="${u}beam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#DDE6FF" stop-opacity="0.55"/><stop offset="1" stop-color="#DDE6FF" stop-opacity="0"/></linearGradient></defs>`
@@ -263,6 +312,8 @@ const SHOW = {
   'quiz-1': { bg: ['#1B0630', '#5A1678'], bulbs: '#FFD86B', confetti: ['#FF5FA2', '#5FE3D2', '#FFD86B'] },
   'quiz-2': { bg: ['#06223A', '#0E6F8A'], bulbs: '#FF9F5A', confetti: ['#FFD86B', '#FF5F5F', '#9DFF7A'] },
   'quiz-3': { bg: ['#2A0A04', '#8C2A12'], bulbs: '#FFE9A8', confetti: ['#FFD86B', '#FFFFFF', '#FF9F5A'], trophy: true },
+  'quiz-4': { bg: ['#062A1E', '#1F7A4C'], bulbs: '#FFE066', confetti: ['#FFE066', '#FF7A59', '#FFFFFF'] },
+  'quiz-5': { bg: ['#14100A', '#6B5114'], bulbs: '#FFE9A8', confetti: ['#FFD25E', '#FFFFFF', '#FFF2C4'], trophy: true },
 }
 
 function quiz(m, rand, u) {
@@ -314,7 +365,51 @@ function dish(x, y, colour) {
     + `<circle cx="${x + 4}" cy="${y - 152}" r="4" fill="${colour}"/>`
 }
 
+function signalStowaway(rand, u) {
+  // Stowaway: a warm January night, Kip's shed with a blue glow under the door, one little drone
+  let s = `<defs>${sky(`${u}s`, [[0, '#060A1C'], [0.65, '#1C2E4E'], [1, '#3C3456']])}${glow(`${u}g`, '#7FFFEA')}${glow(`${u}o`, '#FFC46B')}</defs>`
+  s += `<rect width="${W}" height="${H}" fill="url(#${u}s)"/>`
+  s += stars(rand, 90, { bottom: 220 })
+  s += hill(rand, 272, 12, '#05080F', 2)
+  // the shed: tin roof, a door ajar spilling blue light
+  s += `<path d="M70 280 L70 196 L150 160 L230 196 L230 280 Z" fill="#0B1220"/><path d="M62 200 L150 156 L238 200" stroke="#2A3550" stroke-width="5" fill="none"/>`
+  for (let x = 82; x < 222; x += 12) s += `<path d="M${x} ${f(200 - Math.max(0, 70 - Math.abs(x - 150)) * 0.45)} V280" stroke="#131D33" stroke-width="2"/>`
+  s += `<path d="M132 280 L132 222 L168 222 L168 280 Z" fill="#7FFFEA" opacity="0.85"/><path d="M168 222 L184 230 L184 286 L168 280 Z" fill="#0B1220"/>`
+  s += `<path d="M132 280 L60 ${H} L240 ${H} L168 280 Z" fill="#7FFFEA" opacity="0.12"/>`
+  // Sprocket, floating in the doorway
+  s += `<circle cx="150" cy="208" r="34" fill="url(#${u}g)"/><g transform="translate(150 208)"><path d="M-14 0 L14 0" stroke="#E8FFFB" stroke-width="3" stroke-linecap="round"/><circle r="6" fill="#E8FFFB"/><circle r="2.4" fill="#FF5F7E"/></g>`
+  // the town glow, and a black van with a dish on its roof
+  s += `<ellipse cx="40" cy="282" rx="70" ry="18" fill="url(#${u}o)" opacity="0.4"/>`
+  s += `<path d="M236 286 L236 262 L290 262 L300 274 L300 286 Z" fill="#020407"/><path d="M256 262 q8 -16 22 -12" stroke="#020407" stroke-width="4" fill="none"/>`
+  s += `<rect y="286" width="${W}" height="${H - 286}" fill="#03060B"/>`
+  s += runner(96, 362, 56, '#000', false, '#5FE3D2')
+  return s
+}
+
+function signalHome(rand, u) {
+  // Homeward: jagged peaks, observatory domes, and a ship of light easing down out of the stars
+  let s = `<defs>${sky(`${u}s`, [[0, '#02030C'], [0.6, '#151A3A'], [1, '#3A2A55']])}${glow(`${u}g`, '#7FFFEA')}${blur(`${u}b`, 10)}</defs>`
+  s += `<rect width="${W}" height="${H}" fill="url(#${u}s)"/>`
+  s += `<path d="M-20 240 Q140 110 330 30" stroke="#C9D4FF" stroke-width="54" fill="none" opacity="0.14" filter="url(#${u}b)"/>`
+  s += stars(rand, 150, { bottom: 250 })
+  // the ship
+  s += `<ellipse cx="150" cy="92" rx="130" ry="70" fill="url(#${u}g)" opacity="0.55"/>`
+  s += `<ellipse cx="150" cy="92" rx="96" ry="16" fill="#E8FFFB" opacity="0.9"/><ellipse cx="150" cy="86" rx="44" ry="14" fill="#E8FFFB"/>`
+  for (let i = 0; i < 9; i++) s += `<circle cx="${70 + i * 20}" cy="98" r="2.6" fill="#FF5F7E"/>`
+  s += `<path d="M126 104 L96 290 L204 290 L174 104 Z" fill="#7FFFEA" opacity="0.1"/>`
+  // jagged ranges
+  s += `<path d="M0 ${H} L0 250 L40 210 L58 232 L90 160 L112 214 L150 196 L176 226 L206 150 L222 182 L252 170 L300 240 L300 ${H} Z" fill="#050812"/>`
+  // the domes on the summit
+  for (const [x, r] of [[134, 12], [160, 9], [180, 7]]) s += `<path d="M${x - r} ${f(204 - (x - 150) * 0.1)} a${r} ${r} 0 0 1 ${r * 2} 0 Z" fill="#DDE6F5"/>`
+  s += `<circle cx="150" cy="188" r="10" fill="url(#${u}g)"/><circle cx="150" cy="188" r="2.5" fill="#E8FFFB"/>`
+  s += `<rect y="300" width="${W}" height="${H - 300}" fill="#020409"/>`
+  s += runner(110, 364, 56, '#000', false, '#5FE3D2')
+  return s
+}
+
 function signal(m, rand, u) {
+  if (m.id === 'signal-stowaway') return signalStowaway(rand, u)
+  if (m.id === 'signal-home') return signalHome(rand, u)
   const g = SIGNAL[m.id] || SIGNAL['signal-contact']
   let s = `<defs>${sky(`${u}s`, [[0, g.top], [0.7, g.low], [1, g.dawn ? '#C2577A' : g.low]])}${glow(`${u}g`, '#7FFFEA')}${blur(`${u}b`, 10)}`
     + `<linearGradient id="${u}beam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7FFFEA" stop-opacity="0.75"/><stop offset="1" stop-color="#7FFFEA" stop-opacity="0"/></linearGradient></defs>`

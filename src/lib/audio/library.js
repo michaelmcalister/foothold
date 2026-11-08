@@ -18,6 +18,10 @@ export const AMBIENCE = {
   tower: 'Inside an empty office tower stairwell at night: air conditioning hum, fluorescent light buzz, distant lift machinery, echoing footsteps far below, no music, no voices',
   gala: 'A glamorous rooftop party heard from the next room: murmuring crowd, glasses clinking, muffled string quartet music through a wall, laughter, no clear words',
   studio: 'A lively television game show studio: excited audience murmuring, bursts of applause and laughter, light studio band noodling quietly, no clear words',
+  flood: 'A flash flood in a country town during a heavy storm: a swollen creek roaring and churning, torrential rain on tin roofs and trees, water rushing in gutters, rolling thunder, no music, no voices',
+  vivid: 'A huge happy crowd on a Sydney harbour foreshore on a winter night during a light festival: murmuring voices and laughter, footsteps, a ferry engine nearby, distant soft electronic thumping from the light show, no clear words',
+  festival: 'A busy country town main street during a summer street festival at night: crowds chatting and laughing, a rock and roll band playing a few streets away, cheering, footsteps, no clear words',
+  ranges: 'A quiet mountain national park at night in Australia: cool wind through the trees and rocks, crickets, a boobook owl calling far away, a vast still silence, no music, no voices',
   outback: 'Wheat paddocks in country New South Wales on a cold still night: crickets, a light breeze through dry grass and a wire fence, a far off farm dog once, vast quiet open space, no music, no voices',
   dish: 'Beside a giant radio telescope at night in the countryside: deep electrical hum of machinery, slow grinding of huge motors turning, occasional electronic beeps, crickets, no music, no voices',
   swarm: 'A swarm of hundreds of small drones hovering overhead at night: layered high pitched rotor buzzing that swells and fades, a low electronic hum, wind over a field, no music, no voices',
@@ -35,6 +39,8 @@ export const SFX = {
   chatter: { prompt: 'Two or three people chatting and laughing as they walk past on a footpath, no clear words', seconds: 5 },
   'drone-swarm': { prompt: 'A swarm of many small buzzing drones flying fast overhead from one side to the other, high rotor whine with doppler, then fading', seconds: 6 },
   meteor: { prompt: 'A meteor streaking across the night sky with a rushing tearing hiss, then a soft distant rumbling boom', seconds: 5 },
+  'boat-pass': { prompt: 'A small aluminium boat with an outboard motor speeding past on a harbour at night, engine roaring then fading, water slapping', seconds: 5 },
+  boobook: { prompt: 'A southern boobook owl calling its soft two note mopoke call at night in the bush, a few times', seconds: 4 },
   dog: { prompt: 'A small dog barking a few times from behind a backyard fence', seconds: 3 },
 }
 

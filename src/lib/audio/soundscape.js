@@ -234,6 +234,36 @@ export const SCENES = {
     ],
     spots: [{ name: 'clap', rate: 0.08 }],
   },
+  flood: {
+    beds: [
+      { filter: { type: 'lowpass', freq: 600 }, level: 0.07, lfo: { rate: 0.15, depth: 0.5 } }, // the creek roaring
+      { filter: { type: 'highpass', freq: 2500 }, level: 0.025, lfo: { rate: 0.07, depth: 0.4 } }, // rain
+      { filter: { type: 'lowpass', freq: 90 }, level: 0.04 },
+    ],
+    spots: [{ name: 'drip', rate: 2 }],
+  },
+  vivid: {
+    beds: [
+      { filter: { type: 'bandpass', freq: 700, q: 0.7 }, level: 0.045, lfo: { rate: 0.2, depth: 0.4 } }, // a big happy crowd
+      { filter: { type: 'lowpass', freq: 160 }, level: 0.03, lfo: { rate: 0.5, depth: 0.3 } }, // a far off bass from the light show
+    ],
+    hums: [{ freq: 55, level: 0.008 }],
+    spots: [{ name: 'clink', rate: 0.05 }, { name: 'farHorn', rate: 0.01 }],
+  },
+  festival: {
+    beds: [
+      { filter: { type: 'bandpass', freq: 650, q: 0.8 }, level: 0.05, lfo: { rate: 0.3, depth: 0.4 } }, // a street full of people
+      { filter: { type: 'lowpass', freq: 220 }, level: 0.03, lfo: { rate: 2.2, depth: 0.5 } }, // a band thumping a few streets away
+    ],
+    spots: [{ name: 'clap', rate: 0.06 }, { name: 'carHorn', rate: 0.01 }],
+  },
+  ranges: {
+    beds: [
+      { filter: { type: 'lowpass', freq: 450 }, level: 0.04, lfo: { rate: 0.04, depth: 0.7 } }, // mountain wind
+      { filter: { type: 'bandpass', freq: 4200, q: 8 }, level: 0.008, am: { rate: 22, depth: 0.8 } },
+    ],
+    spots: [{ name: 'cricket', rate: 0.4 }],
+  },
   outback: {
     beds: [
       { filter: { type: 'lowpass', freq: 380 }, level: 0.04, lfo: { rate: 0.05, depth: 0.7 } }, // cold wind over the paddocks
@@ -281,6 +311,10 @@ export const AROUND = {
   gala: [{ name: 'chatter', rate: 0.03 }],
   harbour: [{ name: 'chatter', rate: 0.01 }, { name: 'helicopter', rate: 0.003 }],
   studio: [],
+  flood: [{ name: 'helicopter', rate: 0.004 }, { name: 'car', rate: 0.01 }],
+  vivid: [{ name: 'chatter', rate: 0.04 }, { name: 'boat', rate: 0.006 }],
+  festival: [{ name: 'chatter', rate: 0.05 }, { name: 'car', rate: 0.01 }],
+  ranges: [{ name: 'owl', rate: 0.01 }, { name: 'meteor', rate: 0.003 }],
   outback: [{ name: 'dog', rate: 0.004 }, { name: 'meteor', rate: 0.004 }],
   dish: [{ name: 'meteor', rate: 0.003 }],
   swarm: [{ name: 'drones', rate: 0.02 }, { name: 'helicopter', rate: 0.003 }],
@@ -436,6 +470,34 @@ export const STINGS = {
 
 // ---- the cinematic kit: big hits, risers and the like ----
 Object.assign(STINGS, {
+  rush: {
+    dur: 2.4,
+    build(ctx, out, t) {
+      // floodwater surging: a deep roar that swells and churns
+      noise(ctx, out, t, { attack: 0.5, hold: 0.8, decay: 1.0, peak: 0.3, filter: { type: 'lowpass', freq: 300, to: 1100, time: 1.2, q: 1 } })
+      noise(ctx, out, t + 0.3, { attack: 0.4, hold: 0.6, decay: 0.9, peak: 0.08, filter: { type: 'bandpass', freq: 2200, q: 0.8 } })
+      tone(ctx, out, t, { freq: 48, glideTo: 40, glideTime: 2, attack: 0.4, decay: 1.8, peak: 0.18 })
+      return t + 2.3
+    },
+  },
+  splash: {
+    dur: 1.2,
+    build(ctx, out, t) {
+      // a hull slapping the water, spray falling back
+      noise(ctx, out, t, { attack: 0.003, decay: 0.18, peak: 0.3, filter: { type: 'lowpass', freq: 1800, to: 400, time: 0.18 } })
+      for (let i = 0; i < 10; i++) noise(ctx, out, t + 0.08 + i * 0.07, { attack: 0.002, decay: 0.03, peak: 0.05, filter: { type: 'highpass', freq: 3500 } })
+      return t + 1.1
+    },
+  },
+  chirp: {
+    dur: 1.0,
+    build(ctx, out, t) {
+      // Sprocket: a happy little rising trill
+      ;[1320, 1760, 1480, 2200].forEach((f, i) => tone(ctx, out, t + i * 0.09, { freq: f, glideTo: f * 1.25, glideTime: 0.06, attack: 0.004, decay: 0.08, peak: 0.12, fm: { ratio: 2, index: 0.3 } }))
+      bell(ctx, out, t + 0.4, 2640, { peak: 0.06, decay: 0.5 })
+      return t + 0.95
+    },
+  },
   transmission: {
     dur: 2.6,
     build(ctx, out, t) {

@@ -47,10 +47,10 @@ function speakers(m) {
 }
 
 describe('thriller scripts', () => {
-  it('has two four episode series that unlock in order', () => {
+  it('has two five episode series that unlock in order', () => {
     for (const id of ['ember', 'heist']) {
       const eps = MISSIONS.filter((m) => m.saga === id)
-      expect(eps).toHaveLength(4)
+      expect(eps).toHaveLength(5)
       expect(CHAINS[id]).toEqual(eps.map((m) => m.id))
       expect(unlockedBy(eps[0].id)).toBe(null)
       expect(unlockedBy(eps[2].id).id).toBe(eps[1].id)
@@ -61,15 +61,15 @@ describe('thriller scripts', () => {
 
   it('The Parkes Signal: three episodes that build up, unlock in order and end somewhere hopeful', () => {
     const eps = MISSIONS.filter((m) => m.saga === 'signal')
-    expect(eps.map((m) => m.id)).toEqual(['signal-contact', 'signal-swarm', 'signal-starfall'])
+    expect(eps.map((m) => m.id)).toEqual(['signal-contact', 'signal-swarm', 'signal-starfall', 'signal-stowaway', 'signal-home'])
     expect(CHAINS.signal).toEqual(eps.map((m) => m.id))
     expect(unlockedBy('signal-swarm').id).toBe('signal-contact')
-    expect(eps.map((m) => m.minutes)).toEqual([20, 25, 30])
+    expect(eps.map((m) => m.minutes)).toEqual([20, 25, 30, 30, 35])
     expect(sagaById('signal').score).toBe('signal')
-    expect(lineText(eps[2].beats.at(-1).say)).toMatch(/Lumen is going home/)
+    expect(lineText(eps[4].beats.at(-1).say)).toMatch(/Sprocket is home/)
     for (const m of eps) {
       expect(m.beats.filter((b) => b.kind === 'surge').length, m.id).toBeGreaterThanOrEqual(3)
-      for (const b of m.beats) if (b.spatial) expect(['dog', 'drones', 'meteor', 'helicopter']).toContain(b.spatial)
+      for (const b of m.beats) if (b.spatial) expect(['dog', 'drones', 'meteor', 'helicopter', 'chatter', 'owl']).toContain(b.spatial)
     }
   })
 
@@ -102,6 +102,8 @@ describe('thriller scripts', () => {
       for (const b of m.beats.filter((x) => x.kind === 'surge')) expect(lineText(b.okay)).toMatch(/made it|got there|clear|that is what counts/i)
     }
     expect(lineText(missionById('ember-dawn').beats.at(-1).say)).toMatch(/made it through/)
+    expect(lineText(missionById('ember-flood').beats.at(-1).say)).toMatch(/stood together/)
+    expect(lineText(missionById('heist-vivid').beats.at(-1).say)).toMatch(/pool is safe/)
     expect(lineText(missionById('ember-dawn').beats.find((b) => b.at === 1800).say)).toMatch(/Every person in Wattle Creek is safe/)
   })
 

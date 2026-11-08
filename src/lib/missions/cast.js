@@ -30,6 +30,7 @@ export const CAST = {
   anika: { name: 'Dr Anika Rao', voiceId: 'L4bD71zGAYHMT7a6MLwc', pitch: 1.05, rate: 1.02 }, // Brenna
   kip: { name: 'Kip', voiceId: 'fjgAVa6FpNYGo4UpjqML', pitch: 1.15, rate: 1.1, radio: true }, // Ziggy
   hale: { name: 'Major Dan Hale', voiceId: 'M4FiuEOcSLrYgftiXoq9', pitch: 0.72, rate: 0.95, radio: true }, // Blake
+  vance: { name: 'Margot Vance', voiceId: '8WaMCGQzWsKvf7sGPqjE', pitch: 0.95, rate: 1.0 }, // Julieanne
   lumen: { name: 'Lumen', voiceId: 'oKDz3nEzNfwKIVvUwPs0', pitch: 0.8, rate: 0.9 }, // Peter Michael
 
   // Run Your Mouth (the game show)

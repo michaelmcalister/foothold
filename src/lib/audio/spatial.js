@@ -93,6 +93,16 @@ const SYNTH = {
     for (let i = 0; i < 5; i++) tone(ctx, out, t + r() * 0.4, { freq: 380 + r() * 260, glideTo: 300 + r() * 200, glideTime: dur, type: 'sawtooth', detune: (r() - 0.5) * 30, attack: dur * 0.4, decay: dur * 0.55, peak: 0.04, filter: { type: 'bandpass', freq: 1500, q: 2 } })
     noise(ctx, out, t, { attack: dur * 0.4, decay: dur * 0.6, peak: 0.12, filter: { type: 'bandpass', freq: 3000, q: 1.5 } })
   },
+  boat(ctx, out, t, dur) {
+    // an outboard motor roaring past, and the wash
+    tone(ctx, out, t, { freq: 140, glideTo: 105, glideTime: dur, type: 'sawtooth', attack: dur * 0.4, decay: dur * 0.6, peak: 0.08, filter: { freq: 700, q: 2 } })
+    noise(ctx, out, t, { attack: dur * 0.4, decay: dur * 0.6, peak: 0.18, filter: { type: 'bandpass', freq: 900, q: 0.7 } })
+  },
+  owl(ctx, out, t) {
+    // a boobook: two soft hoots, the second lower (mo poke)
+    tone(ctx, out, t, { freq: 520, glideTo: 500, glideTime: 0.2, attack: 0.03, decay: 0.25, peak: 0.12 })
+    tone(ctx, out, t + 0.45, { freq: 430, glideTo: 410, glideTime: 0.2, attack: 0.03, decay: 0.3, peak: 0.12 })
+  },
   meteor(ctx, out, t, dur) {
     // a hiss tearing across the sky, then a far off rumble
     noise(ctx, out, t, { attack: dur * 0.3, decay: dur * 0.5, peak: 0.3, filter: { type: 'bandpass', freq: 5000, to: 600, time: dur * 0.8, q: 1 } })
@@ -118,6 +128,8 @@ export const SPATIAL = {
   chatter: { dur: 4, from: { x: 12, y: 0, z: -4 }, to: { x: -12, y: 0, z: -2 }, recorded: 'chatter', synth: 'chatter' },
   dog: { dur: 2.5, place: 'yard', recorded: 'dog', synth: null },
   drones: { dur: 6, from: { x: -40, y: 12, z: -20 }, to: { x: 50, y: 10, z: 12 }, recorded: 'drone-swarm', synth: 'drones' },
+  boat: { dur: 5, from: { x: -40, y: 0, z: -15 }, to: { x: 45, y: 0, z: -8 }, recorded: 'boat-pass', synth: 'boat' },
+  owl: { dur: 2, place: 'trees', recorded: 'boobook', synth: 'owl' },
   meteor: { dur: 4, from: { x: -90, y: 70, z: -60 }, to: { x: 80, y: 30, z: -40 }, recorded: 'meteor', synth: 'meteor' },
 }
 

@@ -31,7 +31,7 @@ function play(m, { from = 0, to, pace = 360, alt = null, onAsk = null, surgeFast
 
 describe('Run Your Mouth', () => {
   it('is a three show series with its own cast, set and sounds', () => {
-    expect(CHAINS.quiz).toEqual(['quiz-1', 'quiz-2', 'quiz-3'])
+    expect(CHAINS.quiz).toEqual(['quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5'])
     expect(sagaById('quiz').title).toBe('Run Your Mouth')
     for (const k of ['tex', 'milly', 'announcer']) expect(isCast(k)).toBe(true)
     expect(SCENES.studio && SCORES.quiz && THEMES.quiz && STINGS.bonk && STINGS.cash).toBeTruthy()
@@ -152,7 +152,8 @@ describe('the next episode', async () => {
   it('knows what comes next in each series, and that a finale has nothing after it', () => {
     expect(nextEpisode('quiz-1').id).toBe('quiz-2')
     expect(nextEpisode('ember-tower').id).toBe('ember-dawn')
-    expect(nextEpisode('heist-ferry')).toBe(null)
+    expect(nextEpisode('heist-ferry').id).toBe('heist-vivid')
+    expect(nextEpisode('heist-vivid')).toBe(null)
     expect(nextEpisode('first-steps').id).toBe('supply-line')
     expect(nextEpisode('steady-scout')).toBe(null)
   })

@@ -2,7 +2,7 @@
 // Tilley), a sidekick (Milly) and an announcer. Questions are answered out
 // loud or with a tap, and quicker answers score more. The ad breaks are
 // sprints that pay more the harder you push, and every metre you climb earns
-// a hill bonus (engine.js: points, climbPoints). Three shows, unlocking in
+// a hill bonus (engine.js: points, climbPoints). Five shows, unlocking in
 // order. Same beat format as thrillers.js.
 //
 // Every answer here is checked: the marathon is 42.195 km; the emu is on the
@@ -17,7 +17,14 @@
 // Perth is WA's capital; koalas sleep up to about 20 hours a day; the MCG is
 // in Melbourne; an octopus has three hearts; Kosciuszko is the mainland's
 // tallest mountain; the Murray is Australia's longest river; a half marathon
-// is 21.0975 km.
+// is 21.0975 km. Season two: the Big Banana is at Coffs Harbour; a group
+// of kangaroos is a mob; Humpty Doo (NT), Bobs Farm (NSW), Useless Loop (WA)
+// and Doo Town (Tas) are real places; Hobart is Tasmania's capital; there
+// are six states; the Indian Ocean is west of Australia; the Great Barrier
+// Reef is off Queensland; the Dog on the Tuckerbox is near Gundagai; Neil
+// Armstrong first walked on the Moon; wombats do cube shaped poo; Darwin is
+// the NT's capital; a netball team has seven players on court; Mercury is
+// closest to the Sun; Ian Thorpe was nicknamed the Thorpedo.
 //
 // House rules: the host teases, never belittles. A wrong answer is a laugh
 // and the right answer, never a put down.
@@ -211,10 +218,100 @@ export const GAMESHOW = [
       q(1300, 'tex', 'The final question of the season, for five thousand points. Who ran the first marathon under two hours, in 2019?', ['Eliud Kipchoge', 'Mo Farah', 'Usain Bolt'], 'A',
         'Eliud Kipchoge! One hour, 59 minutes and 40 seconds. Absolute legend.', 'It was Eliud Kipchoge, in one hour 59 minutes and 40 seconds. Usain would have needed a lie down.', 5000, { chapter: 'The final question' }),
       { at: 1360, kind: 'steady', seconds: 60, who: 'tex', say: 'While the judges tally it up, ease into a gentle jog. You have earned it.', easyNudge: EASY },
-      talk(1395, 'milly', 'It is official, I have run out of fingers. Tex has lent me his.', { fx: 'timpani' }),
+      talk(1395, 'milly', 'It is official, I have run out of fingers. Tex has lent me his. And next week, season two hits the road!', { fx: 'timpani' }),
       finale(1430),
+    ],
+  },
+  {
+    ...SHOW,
+    id: 'quiz-4',
+    episode: 4,
+    title: 'The Road Trip',
+    minutes: 12,
+    difficulty: 'Steady effort',
+    blurb: 'Show 4, season two. An outside broadcast, the Big Banana, a place called Humpty Doo and a buzzer beater sprint.',
+    loop: line('tex', 'A loop on the road trip! Somebody put that on a postcard.'),
+    early: line('tex', 'Pulling into the servo early? Your points are safe. See you down the road.'),
+    beats: [
+      ...intro('Season two, on the road'),
+      talk(70, 'milly', '[excited] We are on the road! The studio is a caravan now. Tex has packed fourteen hats.', { fx: 'horn' }),
+      q(105, 'tex', 'For a thousand points. The Big Banana is a famous roadside giant in which town?', ['Coffs Harbour', 'Byron Bay', 'Cairns'], 'A',
+        'Coffs Harbour! Big, yellow, and very photogenic.', 'It is Coffs Harbour. Big, yellow, and very photogenic.'),
+      q(170, 'milly', 'True or false. A group of kangaroos is called a mob.', ['True', 'False'], 'A',
+        'True! A mob. They do not wear sunglasses, sadly.', 'True, believe it or not! A mob of kangaroos. No sunglasses, sadly.'),
+      talk(225, 'tex', 'Road trip rules: every hill is a bonus, and every sprint is a ticket out of the back seat.'),
+      scoreboard(260),
+      sprint(290, 45, 'Ad break! Overtaking lane ahead. Sprint for 45 seconds!', 1500, 70, { chapter: 'Ad break', fx: 'riser' }),
+      talk(370, 'milly', 'That was so fast the caravan wobbled. I spilled my iced coffee.'),
+      talk(410, 'milly', 'Road trip Real or Rubbish! Three place names from the map. Which are real?', { chapter: 'Real or Rubbish', fx: 'question' }),
+      realOr(440, 'Humpty Doo, Northern Territory', true, 'Real! Humpty Doo is a town near Darwin.', 'It is real! Humpty Doo is a town just outside Darwin.'),
+      realOr(500, 'Snag Junction, South Australia', false, 'Rubbish! No such place. Snags are for the barbie.', 'Rubbish! There is no Snag Junction. Snags are for the barbie.'),
+      realOr(560, 'Bobs Farm, New South Wales', true, 'Real! Bobs Farm is near Port Stephens. Bob was not available for comment.', 'It is real! Bobs Farm is near Port Stephens. Bob was not available for comment.'),
+      talk(615, 'tex', 'Now, a new round for season two. The Buzzer Beater! Beat the buzzer and the points double.', { chapter: 'Buzzer Beater', fx: 'braam' }),
+      sprint(650, 45, 'Buzzer Beater! The clock is ticking. 45 seconds, flat out!', 2000, 150, { fx: 'clock' }),
+      talk(740, 'tex', '[excited] Buzzer beaten! The judges are standing on their chairs.', { fx: 'cheer' }),
+      talk(785, 'tex', 'Lightning round, road trip edition! Fifteen seconds, five hundred points each.', { chapter: 'Lightning round', fx: 'clock' }),
+      lightning(815, 'The capital of Tasmania?', ['Launceston', 'Hobart', 'Devonport'], 'B', 'Hobart!', 'It is Hobart. Next!'),
+      lightning(850, 'How many states does Australia have?', ['Five', 'Six', 'Seven'], 'B', 'Six!', 'It is six, plus two territories. Next!'),
+      lightning(885, 'Which ocean lies to the west of Australia?', ['The Pacific', 'The Indian', 'The Southern'], 'B', 'The Indian Ocean!', 'It is the Indian Ocean. Last one done!'),
+      sprint(930, 60, 'Last ad break of the trip! 60 seconds to the finish line.', 2500, 160, { chapter: 'Ad break' }),
+      scoreboard(1030),
+      talk(1065, 'tex', 'Double points, road trip edition.', { chapter: 'Double points', fx: 'braam' }),
+      q(1095, 'tex', 'For two thousand points. The Great Barrier Reef lies off the coast of which state?', ['Queensland', 'Western Australia', 'New South Wales'], 'A',
+        'Queensland! The biggest reef on the planet.', 'It is Queensland. The biggest reef on the planet.', 2000),
+      q(1160, 'tex', 'The final question of the trip, for five thousand points. The famous Dog on the Tuckerbox sits near which town?', ['Gundagai', 'Wagga Wagga', 'Dubbo'], 'A',
+        'Gundagai! About eight kilometres out of town, on the old highway.', 'It is Gundagai. A very good dog, sitting on a very good tuckerbox.', 5000, { chapter: 'The final question' }),
+      { at: 1230, kind: 'steady', seconds: 60, who: 'tex', say: 'While the judges tally it up, ease into a gentle jog. Next stop, the champions.', easyNudge: EASY },
+      talk(1265, 'milly', 'Next week, it is Champion of Champions. I am already nervous and I am not even playing.', { fx: 'timpani' }),
+      finale(1300),
+    ],
+  },
+  {
+    ...SHOW,
+    id: 'quiz-5',
+    episode: 5,
+    title: 'Champion of Champions',
+    minutes: 14,
+    difficulty: 'Hard effort',
+    blurb: 'Show 5, the season two final. The Moon, a wombat fact you will never forget, a town called Useless Loop and a winner takes all question.',
+    loop: line('tex', 'A loop in the final! That is champion behaviour.'),
+    early: line('tex', 'Stopping early is fine. Champions rest. Your points are safe.'),
+    beats: [
+      ...intro('Champion of Champions'),
+      talk(70, 'milly', '[excited] Confetti cannons are loaded. Tex has a gold jacket. I have a gold everything.', { fx: 'cheer' }),
+      q(105, 'tex', 'For a thousand points. Who was the first person to walk on the Moon?', ['Buzz Aldrin', 'Neil Armstrong', 'Yuri Gagarin'], 'B',
+        'Neil Armstrong! One small step, and one big thousand points.', 'It was Neil Armstrong. Buzz followed him down the ladder.'),
+      q(170, 'milly', 'True or false. Wombats do cube shaped poo.', ['True', 'False'], 'A',
+        'True! Little cubes. Nature is a genius.', 'True, believe it or not! Little cubes, so they do not roll away.'),
+      talk(225, 'tex', 'Champion rules: everything pays double the nerves. Sprints pay big. Hills pay bigger.'),
+      scoreboard(260),
+      sprint(290, 45, 'Ad break! The champions sprint for 45 seconds. Go!', 1500, 70, { chapter: 'Ad break' }),
+      talk(370, 'milly', 'That is the fastest anyone has run past our camera all season.'),
+      talk(410, 'milly', 'Champion Real or Rubbish! Three place names. Which are real?', { chapter: 'Real or Rubbish', fx: 'question' }),
+      realOr(440, 'Useless Loop, Western Australia', true, 'Real! Useless Loop is in Shark Bay. Not useless at all.', 'It is real! Useless Loop is up in Shark Bay. Not useless at all.'),
+      realOr(500, 'Doo Town, Tasmania', true, 'Real! In Doo Town, the houses have names like Doo Drop Inn.', 'It is real! In Doo Town, the houses have names like Doo Drop Inn.'),
+      realOr(560, 'Lollygag Lagoon, New South Wales', false, 'Rubbish! Lovely name, though. Somebody should lollygag there.', 'Rubbish! There is no Lollygag Lagoon. Lovely name, though.'),
+      talk(615, 'tex', 'The Buzzer Beater, champion edition. Beat the buzzer and the points triple!', { chapter: 'Buzzer Beater', fx: 'braam' }),
+      sprint(650, 60, 'Buzzer Beater! 60 seconds, flat out, and triple points!', 3000, 160, { fx: 'clock' }),
+      talk(750, 'milly', '[excited] Buzzer beaten! The confetti cannons went off by accident. There is gold everywhere.', { fx: 'cheer' }),
+      talk(800, 'tex', 'Lightning round, champion edition! Fifteen seconds, five hundred points each.', { chapter: 'Lightning round', fx: 'clock' }),
+      lightning(830, 'The capital of the Northern Territory?', ['Alice Springs', 'Darwin', 'Katherine'], 'B', 'Darwin!', 'It is Darwin. Next!'),
+      lightning(865, 'How many players does a netball team have on court?', ['Five', 'Seven', 'Eleven'], 'B', 'Seven!', 'It is seven. Next!'),
+      lightning(900, 'Which planet is closest to the Sun?', ['Venus', 'Mercury', 'Mars'], 'B', 'Mercury!', 'It is Mercury. Last one done!'),
+      sprint(945, 60, 'The last ad break of season two! 60 seconds, everything you have got.', 3000, 170, { chapter: 'Ad break', fx: 'riser' }),
+      talk(1045, 'milly', 'Tex is crying. He says it is the confetti. It is not the confetti.'),
+      scoreboard(1085),
+      talk(1120, 'tex', 'Double points, champion edition.', { chapter: 'Double points', fx: 'braam' }),
+      q(1150, 'tex', 'For two thousand points. Which Australian swimmer was nicknamed the Thorpedo?', ['Ian Thorpe', 'Grant Hackett', 'Kieren Perkins'], 'A',
+        'Ian Thorpe! The Thorpedo. Fast in the pool, and that name is perfect.', 'It was Ian Thorpe. The Thorpedo. A perfect name.', 2000),
+      talk(1210, 'tex', 'And now, winner takes all. The champion question.', { chapter: 'The champion question', fx: 'heartbeat' }),
+      q(1250, 'tex', 'For ten thousand points. In a full marathon, how far do you run?', ['40 kilometres', '42.195 kilometres', '45 kilometres'], 'B',
+        '42.195 kilometres! Of course a runner knows that. Champion!', 'It is 42.195 kilometres. You are a runner, you will be doing it next.', 10000),
+      { at: 1320, kind: 'steady', seconds: 60, who: 'tex', say: 'While the judges count every point, ease into a gentle jog. What a season.', easyNudge: EASY },
+      talk(1355, 'milly', 'The judges have run out of calculators. Tex has lent them his phone.', { fx: 'timpani' }),
+      { at: 1390, kind: 'finale', say: ({ score, right, total }) => line('tex', `That is the season! You got ${right} of ${total} right and finished on ${score.toLocaleString('en-AU')} points. You are a champion of champions.`) },
     ],
   },
 ]
 
-export const GAMESHOW_CHAIN = ['quiz-1', 'quiz-2', 'quiz-3']
+export const GAMESHOW_CHAIN = ['quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5']
