@@ -4,7 +4,7 @@
 // event has its words), unlocking, and the coach's mission suggestion.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createMission, MIN_GAP, BRISK_MIN, lineSeconds, surgeCount } from '../src/lib/missions/engine.js'
-import { MISSIONS, CHAIN, missionById } from '../src/lib/missions/scripts.js'
+import { MISSIONS, CHAIN, CHAINS, missionById } from '../src/lib/missions/scripts.js'
 import { unlockedIds, recordTry, loadProgress, saveResult, resultFor } from '../src/lib/missions/progress.js'
 import { suggestMission, missionHeadline, missionMeta } from '../src/lib/missions/index.js'
 import { trainingPaces } from '../src/lib/coach/paces.js'
@@ -320,12 +320,15 @@ describe('progress and suggestions', () => {
   })
 
   it('unlocks the series in order, and any try counts', () => {
-    expect([...unlockedIds({})].sort()).toEqual(['ember-smoke', 'first-steps', 'heist-recruit', 'quiz-1', 'signal-contact', 'steady-scout'])
+    // the first episode of every series is open from the start (plus Steady Scout, which is never locked)
+    const firsts = Object.values(CHAINS).map((c) => c[0])
+    expect(firsts).toEqual(expect.arrayContaining(['ember-smoke', 'first-steps', 'heist-recruit', 'quiz-1', 'signal-contact']))
+    expect([...unlockedIds({})].sort()).toEqual([...firsts, 'steady-scout'].sort())
     recordTry({ id: 'first-steps', completed: false, surgesDone: 0 }) // a short, partial try
     expect(unlockedIds(loadProgress()).has('supply-line')).toBe(true)
     expect(unlockedIds(loadProgress()).has('lantern-night')).toBe(false)
     for (const id of CHAIN) recordTry({ id, completed: true })
-    expect(unlockedIds(loadProgress()).size).toBe(10) // all six, plus the first episode of each other series
+    expect(unlockedIds(loadProgress()).size).toBe(6 + firsts.length - 1) // all six, plus the first episode of each other series
     expect(loadProgress()['first-steps']).toMatchObject({ tries: 2, completed: 1 })
   })
 
