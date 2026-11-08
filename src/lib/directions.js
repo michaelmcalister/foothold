@@ -86,10 +86,15 @@ export function placeSteps(line, steps, { loop = true } = {}) {
     else if (st.turn === 'arrive' && i === all.length - 1) d = g.totalM
     else {
       const p = progressAlong(g, { lat: st.at[1], lng: st.at[0] }, idx, { lookAheadM: 3000 })
+      if (p.offM > 25 || st.turn === 'uturn') return null // on a dead end that was trimmed off
       idx = p.idx
       d = p.d
     }
     return { ...st, d: Math.round(d), text: stepText(st, { loop }), short: stepShort(st) }
+  }).filter(Boolean).filter((st, i, all) => {
+    // two turns a few metres apart (a kink at a corner) read as one: keep the first
+    const prev = all[i - 1]
+    return !(prev && st.turn !== 'arrive' && prev.turn !== 'depart' && st.d - prev.d < 15 && st.turn === prev.turn)
   })
 }
 

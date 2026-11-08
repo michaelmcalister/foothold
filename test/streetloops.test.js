@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { latLngToCell, gridDisk } from 'h3-js'
 import { handleRoute, osrmSteps, orsSteps, googleSteps } from '../worker/routing.js'
 import { cleanSteps, stepText, stepShort, sayName, inWords, placeSteps, createNavigator } from '../src/lib/directions.js'
-import { buildStreetLoops, viaPoints, loopNote } from '../src/lib/loopBuilder.js'
+import { buildStreetLoops, viaPoints, loopNote, trimSpurs } from '../src/lib/loopBuilder.js'
 import { offset, distance } from '../src/lib/engine/geo.js'
 import { lineLength } from '../src/lib/planner.js'
 
@@ -212,6 +212,15 @@ describe('the street loop builder', () => {
     const more = await buildStreetLoops({ start: START, targetKm: 3, route, tries: 2, skip: first.map((l) => l.headingDeg) })
     for (const m of more) for (const f of first) expect(Math.abs(((m.headingDeg - f.headingDeg + 540) % 360) - 180)).toBeGreaterThanOrEqual(30)
     expect(await buildStreetLoops({ start: START, targetKm: 3, route: async () => null })).toEqual([])
+  })
+
+  it('trims dead ends where the route runs up a street and straight back', () => {
+    const loop = square()
+    const at = loop.findIndex((p) => p[0] === corner(500, 0)[0] && p[1] === corner(500, 0)[1])
+    const spur = [corner(530, -20), corner(560, -40), corner(530, -20)] // up a cul-de-sac and back
+    const withSpur = [...loop.slice(0, at + 1), ...spur, loop[at], ...loop.slice(at + 1)]
+    expect(trimSpurs(withSpur)).toEqual(loop)
+    expect(trimSpurs(loop)).toEqual(loop)
   })
 
   it('a loop that does not close says so', () => {

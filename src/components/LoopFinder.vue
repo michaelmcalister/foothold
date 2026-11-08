@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router'
 import { streetLoopsFor, loopKmFor } from '../lib/suggest.js'
 import { setPlanned } from '../lib/plannedRoute.js'
 import { toast } from '../lib/store.js'
-import { duration, MODE_LABEL } from '../lib/format.js'
+import { MODE_LABEL } from '../lib/format.js'
 
 const props = defineProps({
   centre: { type: Object, required: true },
@@ -135,7 +135,7 @@ onMounted(async () => {
       <p class="small">{{ loop.note }}</p>
       <div v-if="streets" class="facts small muted">
         <span>{{ loop.km.toFixed(1) }} km</span>
-        <span v-if="loop.timeS">About {{ duration(loop.timeS) }}</span>
+        <span v-if="loop.timeS">About {{ Math.max(1, Math.round(loop.timeS / 60)) }} min</span>
         <span>{{ turns.length }} {{ turns.length === 1 ? 'turn' : 'turns' }}</span>
         <span v-if="loops.length > 1">Option {{ at + 1 }} of {{ loops.length }}</span>
       </div>
@@ -173,6 +173,8 @@ onMounted(async () => {
 .stepper .btn { min-width: 48px; font-size: 1.3rem; }
 .stepper .km { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 .stepper .km strong { font-size: 1.6rem; }
+.spinner { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--soft); border-top-color: var(--you); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .building { display: flex; align-items: center; gap: 12px; min-height: 64px; }
 .facts { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .actions { display: flex; gap: 10px; }

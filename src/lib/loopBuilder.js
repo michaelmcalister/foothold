@@ -14,6 +14,7 @@
 import { loopRing, loopOptions } from './coach/routes.js'
 import { planRoute } from './planner.js'
 import { visitedCells } from './engine/explore.js'
+import { distance } from './engine/geo.js'
 
 const ROAD_FACTOR = 1.25 // the same guess loopOptions makes
 const POINTS = 6 // points round each oval for the lookup (more makes spurs)
@@ -26,6 +27,23 @@ export function viaPoints(ring, n = POINTS) {
   for (let k = 1; k <= n; k++) pts.push(inner[Math.min(inner.length - 1, Math.round((k * inner.length) / (n + 1)))])
   pts.push(ring[0])
   return pts.map(([lng, lat]) => [Math.round(lng * 1e5) / 1e5, Math.round(lat * 1e5) / 1e5])
+}
+
+/**
+ * Takes out dead ends: where the route runs up a street to reach one of the
+ * points and comes straight back the same way. A route that retraces its
+ * steps comes back through the same corners, so walk the corners and step
+ * back whenever the next one is the corner before last.
+ */
+export function trimSpurs(line, toleranceM = 3) {
+  const pt = ([lng, lat]) => ({ lat, lng })
+  const out = []
+  for (const p of line) {
+    if (out.length && distance(pt(out[out.length - 1]), pt(p)) < 0.5) continue // the same corner twice
+    if (out.length >= 2 && distance(pt(out[out.length - 2]), pt(p)) <= toleranceM) { out.pop(); continue }
+    out.push(p)
+  }
+  return out.length >= 4 ? out : line
 }
 
 /** How much a street loop is worth. Pure. */
@@ -93,13 +111,14 @@ export async function buildStreetLoops({ start, targetKm = 5, cells = new Map(),
     return { o, r }
   }))
 
-  // 4. score them like a real run
+  // 4. score them like a real run, without any dead ends
   const out = []
   for (const b of built) {
     if (!b) continue
-    const c = scoreStreetLoop(b.r.line, { targetKm, cells, me, mode, names, explored, paceSPerKm, now })
+    const line = trimSpurs(b.r.line)
+    const c = scoreStreetLoop(line, { targetKm, cells, me, mode, names, explored, paceSPerKm, now })
     out.push({
-      line: b.r.line, distanceM: c.plan.distanceM, steps: b.r.steps || [], km: c.km,
+      line, distanceM: c.plan.distanceM, steps: b.r.steps || [], km: c.km,
       heading: b.o.heading, headingDeg: b.o.headingDeg, score: c.score, closes: c.closes,
       wild: c.wild, take: c.take, hold: c.hold, mine: c.mine, fresh: c.fresh,
       capture: c.plan.capture, timeS: c.plan.timeS, note: loopNote(c, b.o.heading),
