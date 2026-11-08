@@ -26,6 +26,8 @@ import { ghostAt } from '../../lib/ghost.js'
 import { withDistance } from '../../lib/runStats.js'
 import ReelMaker from '../../components/ReelMaker.vue'
 import { demoRun } from '../../lib/recap/demo.js'
+import { plannedRun } from '../../lib/recap/planned.js'
+import { planned as plannedRoute } from '../../lib/plannedRoute.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
 import { createScore, styleFor, keepStyle, nextStyle } from '../../lib/audio/score.js'
@@ -37,6 +39,7 @@ const props = defineProps({
 const route = useRoute()
 const router = useRouter()
 const rid = computed(() => props.id || route.params.id)
+const isPlanned = computed(() => rid.value === 'planned') // a 3D preview of a loop you haven't done yet
 const el = ref(null)
 const activity = ref(null)
 const state = ref('loading') // loading | playing | done | empty | error
@@ -68,6 +71,7 @@ const shots = computed(() => plan?.timeline || [])
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function back() {
+  if (isPlanned.value) return window.history.state?.back ? router.back() : router.replace({ name: 'map' })
   if (props.trial) router.replace({ name: 'try' })
   else if (window.history.state?.back) router.back()
   else if (rid.value === 'demo') router.replace(store.user?.onboarded ? { name: 'record' } : { name: 'onboarding' })
@@ -146,10 +150,15 @@ function play(from = 'flyin') {
   director.play(from)
 }
 
+function goPlanned() {
+  router.replace({ name: 'record', query: { route: 'planned' } })
+}
+
 onMounted(async () => {
   try {
-    const isDemo = rid.value === 'demo'
-    const r = isDemo ? demoRun() : await api.activity(rid.value)
+    const isDemo = rid.value === 'demo' || isPlanned.value
+    const r = isPlanned.value ? plannedRun(plannedRoute.route) : isDemo ? demoRun() : await api.activity(rid.value)
+    if (!r) { state.value = 'empty'; return }
     activity.value = r.activity
     const track = (reelTrack.value = r.track || [])
     const race = isDemo ? null : ghostRace(rid.value)
@@ -211,6 +220,7 @@ onBeforeUnmount(() => {
       </button>
       <div v-if="activity" class="when">
         <template v-if="activity.demo"><strong>Demo run</strong><span>Over the Harbour Bridge</span></template>
+        <template v-else-if="activity.planned"><strong>Your loop, in 3D</strong><span>A preview before you go</span></template>
         <template v-else>
           <strong>Your {{ MODE_VERB[activity.mode] || 'run' }}</strong>
           <span>{{ dateLong(activity.startedAt) }}</span>
@@ -244,7 +254,7 @@ onBeforeUnmount(() => {
           <polygon class="draw" points="32,4 56,18 56,46 32,60 8,46 8,18" pathLength="100" />
         </svg>
         <strong>Loading your flyover</strong>
-        <span>{{ rid === 'demo' ? 'Lining up the cameras over the Harbour Bridge' : 'Lining up the cameras over your loop' }}</span>
+        <span>{{ rid === 'demo' ? 'Lining up the cameras over the Harbour Bridge' : isPlanned ? 'Lining up the cameras over the loop you picked' : 'Lining up the cameras over your loop' }}</span>
       </div>
     </Transition>
     <div v-if="state === 'empty'" class="middle card">
@@ -260,7 +270,7 @@ onBeforeUnmount(() => {
       <p class="count" aria-live="off">
         <span class="num">{{ km(shot === 'flyin' ? 0 : metres) }}</span><span class="unit">km</span>
       </p>
-      <p v-if="shot === 'orbit' || shot === 'overview'" class="taken">{{ plural(hexCount, 'hex', 'hexes') }} taken</p>
+      <p v-if="shot === 'orbit' || shot === 'overview'" class="taken">{{ plural(hexCount, 'hex', 'hexes') }} {{ isPlanned ? 'inside this loop' : 'taken' }}</p>
       <nav class="shots" aria-label="Camera angle">
         <button v-for="s in shots" :key="s.id" type="button" :aria-pressed="shot === s.id" @click="play(s.id)">{{ s.label }}</button>
       </nav>
@@ -269,11 +279,16 @@ onBeforeUnmount(() => {
     <section v-if="state === 'done' && activity" class="end" aria-label="Recap summary">
       <div class="stats">
         <div><span class="num">{{ km(activity.distanceM) }}</span><span class="lbl">km</span></div>
-        <div><span class="num">{{ duration(activity.movingS || activity.durationS) }}</span><span class="lbl">moving</span></div>
-        <div v-if="activity.mode !== 'ride'"><span class="num">{{ pace(activity.paceSPerKm) }}</span><span class="lbl">per km</span></div>
-        <div><span class="num">{{ hexCount }}</span><span class="lbl">{{ hexCount === 1 ? 'hex' : 'hexes' }}</span></div>
+        <div><span class="num">{{ duration(activity.movingS || activity.durationS) }}</span><span class="lbl">{{ activity.planned ? 'about' : 'moving' }}</span></div>
+        <div v-if="activity.mode !== 'ride' && !activity.planned"><span class="num">{{ pace(activity.paceSPerKm) }}</span><span class="lbl">per km</span></div>
+        <div><span class="num">{{ hexCount }}</span><span class="lbl">{{ hexCount === 1 ? 'hex' : 'hexes' }}{{ activity.planned ? ' inside' : '' }}</span></div>
       </div>
-      <div v-if="trial" class="actions">
+      <div v-if="isPlanned" class="actions">
+        <button class="btn" type="button" @click="goPlanned">Go with directions</button>
+        <button class="btn ghost" type="button" @click="play()">Watch again</button>
+        <button class="btn ghost" type="button" @click="back">Back to the map</button>
+      </div>
+      <div v-else-if="trial" class="actions">
         <RouterLink class="btn" :to="{ name: 'try-report' }">See your run report</RouterLink>
         <button class="btn ghost" type="button" @click="play()">Watch again</button>
         <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
@@ -283,7 +298,7 @@ onBeforeUnmount(() => {
         <ReelMaker class="btn ghost reelbtn" :activity="activity" :track="reelTrack" :hex-count="hexCount" />
         <button class="btn ghost" type="button" @click="back">{{ rid === 'demo' ? 'Done' : 'See your run report' }}</button>
       </div>
-      <PracticeSignup v-if="rid !== 'demo'" dark class="keep" :simulated="!!activity?.simulated" />
+      <PracticeSignup v-if="rid !== 'demo' && !isPlanned" dark class="keep" :simulated="!!activity?.simulated" />
       <p v-if="engine === 'google'" class="credit">3D imagery from Google</p>
     </section>
   </div>

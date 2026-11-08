@@ -5,7 +5,7 @@
 // "Try another" walks through the others (and builds more in new
 // directions). Run it with spoken turn by turn directions, read the
 // directions first, or open it in the planner to change it.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { streetLoopsFor, loopKmFor } from '../lib/suggest.js'
 import { setPlanned } from '../lib/plannedRoute.js'
@@ -18,7 +18,7 @@ const props = defineProps({
   startKm: { type: Number, default: null }, // a distance to start with (the first week's loop)
   auto: { type: Boolean, default: false }, // build straight away
 })
-const emit = defineEmits(['show', 'close'])
+const emit = defineEmits(['show', 'close', 'compact'])
 const router = useRouter()
 
 const CHIPS = { run: [3, 5, 8, 10, 15], walk: [2, 3, 5, 8], ride: [10, 20, 30, 50] }
@@ -32,6 +32,9 @@ const at = ref(0)
 const streets = ref(true)
 const shown = ref([]) // headings shown so far
 const showDirs = ref(false)
+const mini = ref(false) // tucked down to one line so the map shows
+watch(mini, (v) => emit('compact', v))
+watch(() => phase.value, (p) => { if (p !== 'result') mini.value = false })
 const loop = computed(() => loops.value[at.value] || null)
 const turns = computed(() => (loop.value?.directions || []).filter((d) => d.turn !== 'depart'))
 
@@ -89,6 +92,10 @@ function run() {
   hand()
   router.push({ name: 'record', query: { route: 'planned' } })
 }
+function preview() {
+  hand()
+  router.push({ name: 'recap', params: { id: 'planned' } })
+}
 function edit() {
   hand()
   router.push({ name: 'plan', query: { from: 'loop' } })
@@ -109,8 +116,17 @@ onMounted(async () => {
     <div class="head">
       <strong v-if="phase === 'ask'">How far do you want to {{ mode }}?</strong>
       <strong v-else-if="phase === 'building'">Finding streets</strong>
+      <strong v-else-if="mini && loop">{{ loop.km.toFixed(1) }} km loop<span class="muted opt"> · option {{ at + 1 }} of {{ loops.length }}</span></strong>
       <strong v-else>Your loop</strong>
+      <button v-if="phase === 'result' && loop" class="close" type="button" :aria-label="mini ? 'Show the loop details' : 'Minimise, to see the map'" :aria-expanded="!mini" @click="mini = !mini">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path :d="mini ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
       <button class="close" type="button" aria-label="Close" @click="emit('close')">×</button>
+    </div>
+    <div v-if="mini && loop" class="actions">
+      <button class="btn small" type="button" @click="run">{{ streets ? 'Go' : 'Start' }}</button>
+      <button class="btn quiet small" type="button" @click="another">Try another</button>
+      <button class="btn quiet small" type="button" @click="preview">3D</button>
     </div>
 
     <template v-if="phase === 'ask'">
@@ -131,7 +147,7 @@ onMounted(async () => {
       <span class="small muted">Trying loops in a few directions and checking which takes the most ground.</span>
     </div>
 
-    <template v-else-if="loop">
+    <template v-else-if="loop && !mini">
       <p class="small">{{ loop.note }}</p>
       <div v-if="streets" class="facts small muted">
         <span>{{ loop.km.toFixed(1) }} km</span>
@@ -143,6 +159,10 @@ onMounted(async () => {
         <button class="btn" type="button" @click="run">{{ streets ? 'Go with directions' : `Start this ${MODE_LABEL[mode].toLowerCase()}` }}</button>
         <button class="btn quiet" type="button" @click="another">Try another</button>
       </div>
+      <button class="preview3d" type="button" @click="preview">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5 M12 12v9 M12 12L4 7.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" /></svg>
+        See it in 3D, with a flyover
+      </button>
       <div class="actions minor">
         <button v-if="turns.length" class="link small" type="button" :aria-expanded="showDirs" @click="showDirs = !showDirs">{{ showDirs ? 'Hide directions' : 'See directions' }}</button>
         <button class="link small" type="button" @click="edit">Edit in planner</button>
@@ -162,7 +182,13 @@ onMounted(async () => {
 .finder { display: grid; gap: 10px; }
 .head { display: flex; align-items: center; gap: 10px; }
 .head strong { flex: 1; }
-.close { border: 0; background: none; font-size: 1.5rem; line-height: 1; color: var(--ink-60); cursor: pointer; min-width: 44px; min-height: 44px; }
+.head .opt { font-weight: 600; }
+.head .close + .close { margin-left: -10px; }
+.preview3d {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: transparent; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer;
+}
+.close { display: grid; place-items: center; border: 0; padding: 0; background: none; font-size: 1.5rem; line-height: 1; color: var(--ink-60); cursor: pointer; min-width: 44px; min-height: 44px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; cursor: pointer;

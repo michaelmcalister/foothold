@@ -167,15 +167,22 @@ function suggest() {
   hot.value = false
   finder.value = { startKm: null, auto: false, key: Date.now() }
 }
+const loopCompact = ref(false)
 function showLoop(line) {
   suggestion.value = line ? { ring: line } : null
   const m = tmap.value?.map
   if (!line || !m || line.length < 2) return
   const b = line.reduce((bb, p) => bb.extend(p), new LngLatBounds(line[0], line[0]))
-  m.fitBounds(b, { padding: { top: 90, bottom: 340, left: 30, right: 30 }, duration: 600, maxZoom: 16 })
+  m.fitBounds(b, { padding: { top: 200, bottom: loopCompact.value ? 150 : 380, left: 30, right: 30 }, duration: 600, maxZoom: 16 })
+}
+// The loop card tucked down to one line: give the map the room
+function compactLoop(v) {
+  loopCompact.value = v
+  if (suggestion.value?.ring) showLoop(suggestion.value.ring)
 }
 function closeFinder() {
   finder.value = null
+  loopCompact.value = false
   suggestion.value = null
 }
 </script>
@@ -248,7 +255,7 @@ function closeFinder() {
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
 
-    <div class="sheet" :class="{ tall: shPicked }">
+    <div class="sheet" :class="{ tall: shPicked, glass: finder && suggestion }">
       <template v-if="shPicked">
         <div class="shtop">
           <RouterLink class="small" :to="{ name: 'strongholds', params: { id: shPicked.id } }">All strongholds</RouterLink>
@@ -308,7 +315,7 @@ function closeFinder() {
         <button class="btn block" type="button" @click="closeSummary">Let's go</button>
       </template>
       <template v-else-if="finder">
-        <LoopFinder :key="finder.key" :centre="store.centre" :mode="store.mode" :start-km="finder.startKm" :auto="finder.auto" @show="showLoop" @close="closeFinder" />
+        <LoopFinder :key="finder.key" :centre="store.centre" :mode="store.mode" :start-km="finder.startKm" :auto="finder.auto" @show="showLoop" @close="closeFinder" @compact="compactLoop" />
       </template>
       <template v-else-if="showJourney">
         <FirstWeekCard :journey="journey" compact :finding="suggesting" @see-loop="seeFirstLoop" />
@@ -361,6 +368,10 @@ function closeFinder() {
   background: var(--card); border-radius: 16px; padding: 14px; display: grid; gap: 12px;
   box-shadow: 0 10px 30px -14px rgba(22, 48, 42, 0.55);
   max-width: 520px; margin: 0 auto;
+}
+.sheet.glass {
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
 }
 .sheet.tall { max-height: 62%; overflow-y: auto; overscroll-behavior: contain; }
 .shtop { display: flex; justify-content: space-between; align-items: center; }
