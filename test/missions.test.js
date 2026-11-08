@@ -3,7 +3,7 @@
 // never crowding each other), the script lint (lengths, house rules, every
 // event has its words), unlocking, and the coach's mission suggestion.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createMission, MIN_GAP, surgeCount } from '../src/lib/missions/engine.js'
+import { createMission, MIN_GAP, BRISK_MIN, lineSeconds, surgeCount } from '../src/lib/missions/engine.js'
 import { MISSIONS, CHAIN, missionById } from '../src/lib/missions/scripts.js'
 import { unlockedIds, recordTry, loadProgress, saveResult, resultFor } from '../src/lib/missions/progress.js'
 import { suggestMission, missionHeadline, missionMeta } from '../src/lib/missions/index.js'
@@ -138,7 +138,10 @@ describe('mission engine', () => {
       for (const paceS of [270, 420, 600]) {
         const { said } = sim(script, { paceS })
         for (let i = 1; i < said.length; i++) {
-          expect(said[i].t - said[i - 1].t, `${script.id} ${paceS}: ${said[i].line}`).toBeGreaterThanOrEqual(MIN_GAP)
+          // a brisk show (the game show) waits for the last line to finish instead
+          const prev = said[i - 1].line
+          const need = script.brisk ? Math.max(BRISK_MIN, lineSeconds(typeof prev === 'string' ? prev : prev.text) + (prev.fx ? 2 : 0) + 1) - 1 : MIN_GAP
+          expect(said[i].t - said[i - 1].t, `${script.id} ${paceS}: ${JSON.stringify(said[i].line)}`).toBeGreaterThanOrEqual(need)
         }
       }
     }
@@ -249,7 +252,7 @@ describe('mission scripts', () => {
   })
 
   it('every mission runs about as long as it says', () => {
-    for (const m of MISSIONS) {
+    for (const m of MISSIONS.filter((x) => !x.brisk)) { // a brisk show moves at its own speed (gameshow.test.js times it)
       const finaleAt = m.beats.at(-1).at / 60
       expect(m.beats.at(-1).kind, m.id).toBe('finale')
       expect(finaleAt, m.id).toBeGreaterThan(m.minutes - 3)

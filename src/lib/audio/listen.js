@@ -9,15 +9,24 @@ import { ref } from 'vue'
 
 /** True while the microphone is open for an answer (the screen shows it). */
 export const listening = ref(false)
+/** Why voice answers aren't working here, in plain words (null when they are). */
+export const listenProblem = ref(null)
+const PROBLEMS = {
+  'not-allowed': 'The microphone or speech recognition isn\u2019t allowed for Foothold. Check Settings, then Safari (or your browser), then Microphone and Speech Recognition.',
+  'service-not-allowed': 'This phone won\u2019t let Foothold use speech recognition here. Tap your answers instead.',
+  'audio-capture': 'The microphone couldn\u2019t be used. Another app may have it.',
+  network: 'Speech recognition needs a connection, and the phone couldn\u2019t reach it.',
+  'language-not-supported': 'Speech recognition doesn\u2019t support Australian English on this phone.',
+}
 
 const Recognition = () => (typeof window === 'undefined' ? null : window.SpeechRecognition || window.webkitSpeechRecognition || null)
 export const canListen = () => !!Recognition()
 
 // How speech recognition tends to hear single letters
 const LETTER_SOUNDS = {
-  A: ['a', 'ay', 'eh', 'hey', 'aye', 'option a', 'answer a', 'letter a'],
-  B: ['b', 'be', 'bee', 'option b', 'answer b', 'letter b'],
-  C: ['c', 'see', 'sea', 'option c', 'answer c', 'letter c'],
+  A: ['a', 'ay', 'eh', 'hey', 'aye', 'ey', 'option a', 'answer a', 'letter a'],
+  B: ['b', 'be', 'bee', 'bea', 'bey', 'option b', 'answer b', 'letter b'],
+  C: ['c', 'see', 'sea', 'si', 'cee', 'option c', 'answer c', 'letter c'],
 }
 const ORDER = [['first', 'one', '1', 'number one'], ['second', 'two', '2', 'number two'], ['third', 'three', '3', 'number three']]
 const SMALL = new Set(['the', 'a', 'an', 'to', 'of', 'and', 'or', 'it', 'in', 'on', 'at', 'for', 'with', 'your', 'you', 'them', 'him', 'her', 'his', 'take', 'go', 'get', 'by'])
@@ -77,34 +86,63 @@ export function listenFor(options, { timeoutMs = 12000, lang = 'en-AU' } = {}) {
   stopListening()
   return new Promise((resolve) => {
     let done = false
-    const r = new R()
-    current = r
-    r.lang = lang
-    r.interimResults = true
-    r.continuous = true
-    r.maxAlternatives = 3
+    let r = null
+    let tries = 0
     const finish = (key) => {
       if (done) return
       done = true
       listening.value = false
       clearTimeout(timer)
-      try { r.abort() } catch { /* fine */ }
+      try { r?.abort() } catch { /* fine */ }
       if (current === r) current = null
       resolve(key)
     }
     const timer = setTimeout(() => finish(null), timeoutMs)
-    r.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        for (let j = 0; j < e.results[i].length; j++) {
-          const key = matchAnswer(e.results[i][j].transcript, options)
-          if (key && (e.results[i].isFinal || j === 0)) return finish(key)
+    // Phones (iPhone especially) stop listening after a moment of quiet, so
+    // keep starting again until there's an answer or time is up
+    const begin = () => {
+      if (done) return
+      if (++tries > 12) return finish(null)
+      r = new R()
+      current = r
+      r.lang = lang
+      r.interimResults = true
+      r.continuous = false
+      r.maxAlternatives = 3
+      r.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          for (let j = 0; j < e.results[i].length; j++) {
+            const key = matchAnswer(e.results[i][j].transcript, options)
+            if (key) { listenProblem.value = null; return finish(key) }
+          }
         }
       }
+      r.onerror = (e) => {
+        if (PROBLEMS[e.error]) { listenProblem.value = PROBLEMS[e.error]; finish(null) }
+        // 'no-speech' and 'aborted' just mean try again
+      }
+      r.onend = () => { if (!done) setTimeout(begin, 120) }
+      try { r.start(); listening.value = true } catch { setTimeout(begin, 300) }
     }
-    r.onerror = () => finish(null)
-    r.onend = () => finish(null)
-    try { r.start(); listening.value = true } catch { finish(null) }
+    begin()
   })
+}
+
+/**
+ * From a tap (the Start button): start and stop speech recognition once, so
+ * the phone asks for the microphone and speech recognition then, not in the
+ * middle of a question. Some phones only allow listening that began from a tap.
+ */
+export function primeListening() {
+  const R = Recognition()
+  if (!R) return
+  try {
+    const r = new R()
+    r.lang = 'en-AU'
+    r.onerror = (e) => { if (PROBLEMS[e.error] && e.error !== 'network') listenProblem.value = PROBLEMS[e.error] }
+    r.onstart = () => setTimeout(() => { try { r.abort() } catch { /* fine */ } }, 400)
+    r.start()
+  } catch { /* not this time */ }
 }
 
 /** Ask for the microphone once, from a tap (the Start button), so a question mid-run doesn't stop to ask. */

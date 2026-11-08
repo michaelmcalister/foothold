@@ -406,3 +406,30 @@ describe('answering out loud', async () => {
     expect(optionsPrompt([{ key: 'A', label: 'Radio Bluey' }, { key: 'B', label: 'Carry the cage' }])).toBe('Say A for radio Bluey, or B for carry the cage.')
   })
 })
+
+describe('listening keeps going', async () => {
+  const { listenFor, listening, listenProblem } = await import('../src/lib/audio/listen.js')
+  it('starts again when the phone stops listening early, and hears the answer the second time', async () => {
+    let n = 0
+    class FakeRecognition {
+      start() {
+        n++
+        const me = this
+        setTimeout(() => (n === 1 ? me.onend?.() : me.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: 'option b' }], { isFinal: true })] })), 5)
+      }
+      abort() {}
+    }
+    globalThis.window = { SpeechRecognition: FakeRecognition }
+    const key = await listenFor([{ key: 'A', label: 'Yes' }, { key: 'B', label: 'No' }], { timeoutMs: 2000 })
+    expect(key).toBe('B')
+    expect(n).toBe(2)
+    expect(listening.value).toBe(false)
+  })
+  it('explains when the phone won’t allow it', async () => {
+    class Refused { start() { setTimeout(() => this.onerror?.({ error: 'not-allowed' }), 5) } abort() {} }
+    globalThis.window = { SpeechRecognition: Refused }
+    expect(await listenFor([{ key: 'A', label: 'Yes' }, { key: 'B', label: 'No' }], { timeoutMs: 2000 })).toBe(null)
+    expect(listenProblem.value).toMatch(/Microphone and Speech Recognition/)
+    delete globalThis.window
+  })
+})

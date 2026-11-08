@@ -106,6 +106,20 @@ describe('Run Your Mouth', () => {
 })
 
 describe('pacing', () => {
+  it('each show runs about as long as the picker says, answering promptly', () => {
+    for (const m of GAMESHOW) {
+      const mm = createMission(m, { paces })
+      let d = 0, asked = null, t = 0
+      for (; t < 3000 && !mm.view().done; t++) {
+        d += 1000 / (mm.view().kind === 'surge' ? 300 : 360)
+        mm.update({ elapsedS: t, distanceM: d, toStartM: 2000 })
+        const a = mm.view().ask
+        if (a) { if (asked == null) asked = t; if (t - asked >= 8) { mm.answer(a.options[0].key); asked = null } }
+      }
+      expect(Math.abs(t / 60 - m.minutes), m.id).toBeLessThanOrEqual(3)
+    }
+  })
+
   it('someone is talking at least every 45 seconds when you answer promptly', () => {
     for (const m of GAMESHOW) {
       play.dist = 0

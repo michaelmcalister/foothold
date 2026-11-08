@@ -28,6 +28,10 @@ const segmentKinds = ['surge', 'steady', 'recover']
 const askKinds = ['choice', 'quiz', 'puzzle']
 export const ASK_WAIT_S = 30
 export const BRISK_GAP = 18 // seconds from an answer to the next beat in a brisk show
+export const BRISK_PAUSE = 6 // seconds of air after a line ends, in a brisk show
+export const BRISK_MIN = 3
+/** About how long a line takes to say (a brisk show waits for it to finish). */
+export const lineSeconds = (text) => Math.max(1.5, String(text || '').replace(/\[[^\]]*\]/g, '').length / 14)
 export const CLIMB_STEP = 6 // metres: phone GPS heights wobble by a few metres even after smoothing // how long a question waits before the story answers for you
 
 /** The words of a line, without performance cues like [whispers]. */
@@ -56,6 +60,7 @@ export function createMission(script, { paces = null } = {}) {
     next: 0, // index of the next beat
     shift: 0, // seconds the timeline has slid
     lastLineAt: -Infinity,
+    lastLineS: 0, // about how long the last line takes to say
     seg: null, // the active surge, steady or recover stretch
     chapter: script.beats.find((b) => b.chapter)?.chapter || null,
     samples: [], // [clock, dist] for the pace before a surge
@@ -79,7 +84,9 @@ export function createMission(script, { paces = null } = {}) {
   }
   const total = surgeCount(script)
 
-  const canSpeak = () => st.clock - st.lastLineAt >= MIN_GAP
+  // A brisk show (the game show) only waits for the last line to finish
+  // (estimated from its length), not the usual MIN_GAP
+  const canSpeak = () => st.clock - st.lastLineAt >= (script.brisk ? Math.max(BRISK_MIN, st.lastLineS + 1) : MIN_GAP)
 
   function distSince(clock) {
     // distance covered since the given clock time, from the samples
@@ -147,6 +154,7 @@ export function createMission(script, { paces = null } = {}) {
     const speaker = (typeof line === 'object' && line.who) || who
     out.lines.push(speaker || fx ? { text, who: speaker || null, fx: fx || null } : text)
     st.lastLineAt = st.clock
+    st.lastLineS = lineSeconds(text) + (fx ? 2 : 0)
   }
 
   function segmentOver(seg) {
@@ -288,6 +296,11 @@ export function createMission(script, { paces = null } = {}) {
     // beats that depend on a choice you didn't make are skipped quietly
     while (script.beats[st.next] && !applies(script.beats[st.next])) st.next++
     const beat = script.beats[st.next]
+    // a brisk show keeps moving: the next beat comes BRISK_PAUSE seconds after the last line ends
+    if (beat && script.brisk && st.lastLineAt > -Infinity) {
+      const soonest = st.lastLineAt + st.lastLineS + BRISK_PAUSE
+      if (beat.at + st.shift > soonest) st.shift = soonest - beat.at
+    }
     if (!beat || st.clock < beat.at + st.shift) return
     if (beat.say && !canSpeak()) return
     if (beat.kind === 'surge' && st.seg?.kind === 'recover' && !st.seg.beat.say) return // a surge's own recovery always runs in full

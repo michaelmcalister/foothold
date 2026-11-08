@@ -64,7 +64,8 @@ export const QUIZ_SAGA = {
 
 const intro = (show) => [
   { at: 3, kind: 'recover', seconds: 150, chapter: 'Welcome', scene: 'studio', who: 'announcer', fx: 'cheer', say: `From the Foothold studios, it is the trivia show you play on your feet. It is Run Your Mouth! ${show}. And here is your host, Tex Tilley!` },
-  { at: 45, kind: 'story', who: 'tex', say: 'Thank you, thank you! Here is how it works. Answer out loud or tap. Quicker answers score more. Sprints pay bonus points, and so does every hill.' },
+  { at: 14, kind: 'story', who: 'tex', fx: 'hostin', say: '[excited] Thank you, thank you! What a crowd! Here is how it works. Answer out loud or tap, and quicker answers score more.' },
+  { at: 26, kind: 'story', who: 'tex', say: 'Sprints pay bonus points, and so does every hill you climb. Let us play!' },
 ]
 
 const scoreboard = (at, who = 'tex') => ({
@@ -82,7 +83,7 @@ export const GAMESHOW = [
     id: 'quiz-1',
     episode: 1,
     title: 'The Warm Up',
-    minutes: 22,
+    minutes: 10,
     difficulty: 'Gentle',
     blurb: 'Show 1. Marathons, emus, a place called Nowhere Else and a lightning round.',
     loop: line('tex', 'You closed a loop! The hexes are yours, and so is my respect.'),
@@ -128,7 +129,7 @@ export const GAMESHOW = [
     id: 'quiz-2',
     episode: 2,
     title: 'Snags and Servos',
-    minutes: 22,
+    minutes: 10,
     difficulty: 'Steady effort',
     blurb: 'Show 2. Pavlova, City2Surf, a town called Wonglepong and a lightning round.',
     loop: line('tex', 'Loop closed! That is ground and points. A great combination.'),
@@ -173,7 +174,7 @@ export const GAMESHOW = [
     id: 'quiz-3',
     episode: 3,
     title: 'The Grand Final',
-    minutes: 25,
+    minutes: 12,
     difficulty: 'Hard effort',
     blurb: 'Show 3. Uluru, the Melbourne Cup, the fastest marathon ever and a lightning round.',
     loop: line('tex', 'A loop in the grand final! The crowd goes wild.'),

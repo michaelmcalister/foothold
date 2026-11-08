@@ -2,7 +2,7 @@
 // A mission question on the Record screen: a choice in the story, a quiz or
 // a puzzle. Big buttons to tap while moving, a bar showing how long until
 // the story answers for you, and a note while the microphone is listening.
-import { listening } from '../lib/audio/listen.js'
+import { listening, listenProblem } from '../lib/audio/listen.js'
 
 const props = defineProps({ ask: { type: Object, required: true }, dark: { type: Boolean, default: false } })
 const emit = defineEmits(['answer'])
@@ -22,6 +22,7 @@ const HEAD = { choice: 'Your call', quiz: 'Quick quiz', puzzle: 'Puzzle' }
         <span class="key" aria-hidden="true">{{ o.key }}</span><span>{{ o.label }}</span>
       </button>
     </div>
+    <p v-if="listenProblem" class="problem">{{ listenProblem }}</p>
     <div class="bar" aria-hidden="true"><span :style="{ width: Math.round((props.ask.remainingS / props.ask.waitS) * 100) + '%' }"></span></div>
   </div>
 </template>
@@ -42,6 +43,7 @@ const HEAD = { choice: 'Your call', quiz: 'Quick quiz', puzzle: 'Puzzle' }
 }
 .opt .key { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #16302A; color: #fff; font-size: 0.95rem; }
 .opt:active { transform: scale(0.98); }
+.problem { margin: 0; font-size: 0.8rem; color: #FFD9A0; }
 .bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
 .bar span { display: block; height: 100%; background: #fff; transition: width 0.9s linear; }
 .ask.dark { background: #0d0d0d; }

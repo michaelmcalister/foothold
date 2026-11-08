@@ -529,6 +529,27 @@ Object.assign(STINGS, {
       return t + 0.45
     },
   },
+  hostin: {
+    dur: 3.4,
+    build(ctx, out, t) {
+      // the host walks on: a bright brassy jingle over a wave of applause
+      const notes = ['C5', 'E5', 'G5', 'C6', 'G5', 'C6']
+      const lens = [0.12, 0.12, 0.12, 0.3, 0.12, 0.7]
+      let at = t
+      notes.forEach((n, i) => {
+        for (const d of [-7, 7]) tone(ctx, out, at, { freq: note(n), type: 'sawtooth', detune: d, attack: 0.01, hold: lens[i] * 0.7, decay: 0.25, peak: 0.06, filter: { freq: 2600, q: 1 } })
+        tone(ctx, out, at, { freq: note(n) / 2, type: 'triangle', attack: 0.01, hold: lens[i] * 0.6, decay: 0.2, peak: 0.08 })
+        at += lens[i]
+      })
+      kick(ctx, out, t, { peak: 0.3 })
+      kick(ctx, out, t + 0.66, { peak: 0.3 })
+      // applause: a swell of many hands, and a cheer on top
+      noise(ctx, out, t + 0.3, { attack: 0.5, hold: 1.6, decay: 1.0, peak: 0.12, filter: { type: 'bandpass', freq: 1500, q: 0.6 } })
+      for (let i = 0; i < 60; i++) noise(ctx, out, t + 0.3 + i * 0.045 + ((i * 37) % 7) * 0.006, { attack: 0.002, decay: 0.035, peak: 0.05 + ((i * 13) % 5) * 0.01, filter: { type: 'bandpass', freq: 1300 + ((i * 211) % 1300), q: 1.2 } })
+      swell(ctx, out, t + 0.4, 1.2, { peak: 0.06, from: 900, to: 2200 })
+      return t + 3.3
+    },
+  },
   bonk: {
     dur: 0.8,
     build(ctx, out, t) {

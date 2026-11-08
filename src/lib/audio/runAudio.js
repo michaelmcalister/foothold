@@ -20,7 +20,7 @@ import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.
 import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
 import { CAST, stripTags } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
-import { listenFor, stopListening as stopMic, canListen, primeMicrophone, optionsPrompt } from './listen.js'
+import { listenFor, stopListening as stopMic, canListen, primeListening, optionsPrompt } from './listen.js'
 import { loadBuffer, createRunMusic } from './recorded.js'
 import { CHASE_TRACK, AMBIENCE } from './library.js'
 
@@ -157,6 +157,7 @@ function askAloud() {
     if (!now) return // answered with a tap while the options were read
     const s = scape
     s?.duck(true)
+    sfx.play('kudos', { wait: false }) // a little blip: the microphone is open, say your answer
     const key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
     s?.duck(false)
     if (key) applyAnswer(key)
@@ -218,7 +219,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   unlock()
   // a mission that asks questions: ask for the microphone now, inside the tap
   const asks = missionId && missionById(missionId)?.beats.some((b) => b.options)
-  if (asks && audio.answerByVoice && canListen()) primeMicrophone()
+  if (asks && audio.answerByVoice && canListen()) primeListening()
   sfx.resume() // the same tap wakes the sound effects
   sfx.cue('start')
   if (audio.spotifyAutoplay && spotify.isLinked()) {
