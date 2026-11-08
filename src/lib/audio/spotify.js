@@ -143,7 +143,7 @@ export async function startMusic({ context = '', shuffle = true } = {}) {
   const dev = await device()
   if (!dev) throw new Error('Open Spotify on this phone and play anything for a second, then try again.')
   session = { deviceId: dev.id, volume: dev.volume_percent ?? null, canVolume: !!dev.supports_volume && dev.volume_percent != null }
-  const done = { device: dev.name, canVolume: session.canVolume }
+  const done = { device: dev.name, canVolume: session.canVolume, ios: isIOS() }
   if (dev.is_restricted) throw new Error(RESTRICTED)
   if (!context && (await playingOn(dev.id))) return done // already going here: leave it be
   if (!dev.is_active) {
@@ -184,8 +184,14 @@ async function setVolume(v) {
  * how: 'duck' | 'pause' | 'none'. Phones that won't take volume changes
  * from other apps (iPhone) get a short pause instead of a dip.
  */
+export const isIOS = () => typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
 export async function aroundSpeech(fn, { how = 'duck', duckTo = 25 } = {}) {
   if (!isLinked() || how === 'none') return fn()
+  // iPhone: never pause Spotify from here. A paused Spotify in the background
+  // can't start again, so the music would stop for good. iOS lowers it under
+  // the voice instead (voice.js asAnnouncement).
+  if (isIOS()) return fn()
   let undo = null
   try {
     if (how === 'duck' && session.canVolume && session.volume != null) {

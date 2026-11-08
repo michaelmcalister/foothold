@@ -71,6 +71,20 @@ export function unlock() {
   serverVoices() // warm the config
 }
 
+// ---- sharing the speaker with your music ----
+// On iPhone a web page's sound normally takes over the audio, which stops
+// Spotify or Apple Music (and iPhone won't let them start again from the
+// background). Safari can mark a page's sound as a short announcement
+// instead ('transient'): your music dips under the voice and comes back up
+// after. Elsewhere, and on older iPhones, this does nothing.
+export async function asAnnouncement(fn) {
+  const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
+  if (!s || !('type' in s)) return fn()
+  const was = s.type
+  try { s.type = 'transient' } catch { /* not allowed: carry on */ }
+  try { return await fn() } finally { try { s.type = was === 'transient' ? 'auto' : was } catch { /* fine */ } }
+}
+
 function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {
   if (!text || !('speechSynthesis' in window)) return Promise.resolve()
   return new Promise((resolve) => {
@@ -164,11 +178,11 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
     try {
       const k = madeKey(who, text)
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 9000))
-      await playBlob(blob, text)
+      await asAnnouncement(() => playBlob(blob, text))
       return
     } catch { /* fall back to the phone voice below */ }
   }
-  await speakPhone(stripTags(text), voiceName, { pitch: c.pitch, rate: c.rate * 1.02 })
+  await asAnnouncement(() => speakPhone(stripTags(text), voiceName, { pitch: c.pitch, rate: c.rate * 1.02 }))
 }
 
 /**
@@ -179,11 +193,11 @@ export async function speak(text, { coachVoice = 'charlie', voiceName = '' } = {
   if (!text) return
   if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
     try {
-      await speakServer(text, coachVoice)
+      await asAnnouncement(() => speakServer(text, coachVoice))
       return
     } catch { /* fall back to the phone voice below */ }
   }
-  await speakPhone(text, voiceName)
+  await asAnnouncement(() => speakPhone(text, voiceName))
 }
 
 export function hush() {

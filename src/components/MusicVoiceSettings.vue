@@ -58,14 +58,15 @@ function disconnect() {
   lists.value = []
 }
 
+const iphone = spotify.isIOS()
 async function testMusic() {
   error.value = ''
   busy.value = true
   unlock() // straight away, inside the tap, or iPhone won't let the voice play
   try {
     const r = await spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle })
-    await spotify.aroundSpeech(() => speak(`Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
-    if (!r.canVolume && audio.music === 'duck') toast("This phone won't let other apps change Spotify's volume, so the music will pause briefly instead.")
+    await spotify.aroundSpeech(() => speak(r.ios ? 'This is how updates will sound over your music.' : `Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
+    if (!r.ios && !r.canVolume && audio.music === 'duck') toast("This phone won't let other apps change Spotify's volume, so the music will pause briefly instead.")
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }
 
@@ -115,7 +116,8 @@ function testVoice() {
           <button class="btn quiet" type="button" :disabled="busy" @click="testMusic">Test music and voice</button>
           <button class="btn quiet" type="button" @click="disconnect">Disconnect</button>
         </div>
-        <p class="hint">Open Spotify on this phone first so Foothold can find it.</p>
+        <p v-if="iphone" class="hint">On iPhone, start your music in the Spotify app first, then come back. iPhone won't let Spotify start playing from the background. Once it's going, Foothold keeps it going and lowers it while the coach talks.</p>
+        <p v-else class="hint">Open Spotify on this phone first so Foothold can find it.</p>
       </template>
       <p v-if="error" class="notice bad">{{ error }}</p>
     </div>

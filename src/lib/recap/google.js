@@ -50,23 +50,17 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
   map.style.height = '100%'
   el.append(map)
 
-  // The trail: a bold line with a white edge, over a soft dark shadow so it
-  // stands out on bright satellite ground as well as dark trees and water.
-  // It sits a little above the 3D surface (RELATIVE_TO_MESH), so it runs
-  // along bridge decks and paths instead of the ground hidden under them.
-  const shadow = new Polyline3DElement({
-    strokeColor: 'rgba(0, 0, 0, 0.4)',
-    strokeWidth: 30,
-    altitudeMode: 'RELATIVE_TO_MESH',
-    drawsOccludedSegments: true,
-  })
+  // The trail: a bold line with a wide white edge, so it stands out on
+  // bright satellite ground as well as dark trees and water. It sits a little
+  // above the 3D surface (RELATIVE_TO_MESH), so it runs along bridge decks and
+  // paths instead of the ground hidden under them.
   const trail = new Polyline3DElement({
     strokeColor: colour,
     outerColor: '#FFFFFF',
-    strokeWidth: 20,
-    outerWidth: 0.45,
+    strokeWidth: 18,
+    outerWidth: 0.5,
     altitudeMode: 'RELATIVE_TO_MESH',
-    drawsOccludedSegments: true,
+    drawsOccludedSegments: false,
   })
   let hexEls = []
   let ghostEl = null
@@ -127,12 +121,9 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
       if (!force && now - lastTrail < 120) return
       lastTrail = now
       // Google refuses an empty path, so take the line off the map until there's something to draw
-      if (points.length < 2) { shadow.remove(); trail.remove(); return }
-      const path = points.map((p) => ({ lat: p.lat, lng: p.lng, altitude: TRAIL_UP_M }))
-      shadow.path = path
-      trail.path = path
-      if (!shadow.isConnected) map.append(shadow)
-      if (!trail.isConnected) map.append(trail) // after the shadow, so it sits on top
+      if (points.length < 2) { trail.remove(); return }
+      trail.path = points.map((p) => ({ lat: p.lat, lng: p.lng, altitude: TRAIL_UP_M }))
+      if (!trail.isConnected) map.append(trail)
     },
     // The ghost you raced, as a marker beside the trail (null hides it)
     setGhost(p) {

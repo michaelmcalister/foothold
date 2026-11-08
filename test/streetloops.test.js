@@ -291,7 +291,7 @@ describe('Spotify start', () => {
   it('leaves music alone when it is already playing', async () => {
     const { startMusic } = await import('../src/lib/audio/spotify.js')
     setFetch({ 'GET /me/player/devices': { body: { devices: [phone] } }, 'GET /me/player': { body: { is_playing: true, device: { id: 'p1' } } } })
-    expect(await startMusic()).toEqual({ device: 'iPhone', canVolume: false })
+    expect(await startMusic()).toMatchObject({ device: 'iPhone', canVolume: false })
     expect(calls).not.toContain('PUT /me/player/play')
   })
 
@@ -306,6 +306,19 @@ describe('Spotify start', () => {
     })
     expect((await startMusic()).device).toBe('iPhone')
     expect(calls).toContain('PUT /me/player')
+  })
+
+  it('on iPhone, never pauses Spotify around the voice, and asks iOS to lower it instead', async () => {
+    const { aroundSpeech } = await import('../src/lib/audio/spotify.js')
+    const { asAnnouncement } = await import('../src/lib/audio/voice.js')
+    const session = { type: 'auto' }
+    Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'iPhone', audioSession: session }, configurable: true })
+    setFetch({ 'GET /me/player': { body: { is_playing: true } } })
+    let during = null
+    await aroundSpeech(() => asAnnouncement(async () => { during = session.type }), { how: 'duck' })
+    expect(during).toBe('transient')
+    expect(session.type).toBe('auto')
+    expect(calls.filter((c) => c.startsWith('PUT'))).toEqual([])
   })
 
   it('explains what to do when Spotify still won’t start', async () => {
