@@ -4,17 +4,22 @@
 // small control sounds share one queue so they never overlap. With a story
 // mission on, the mission's lines go first in the queue and the coach's
 // regular updates shrink to the headline while the mission is talking.
+// The thriller series (Ember Run, The Night Job) also bring a cast of voices,
+// made ahead of the run, and a soundscape: scene sounds, a score that follows
+// the surges, and effects before some lines.
 import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { speak, unlock, hush } from './voice.js'
+import { speak, speakAs, prepareLines, forgetLines, unlock, hush } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
 import { api } from '../api/index.js'
 import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.js'
-import { createMission, missionById, recordTry } from '../missions/index.js'
+import { createMission, missionById, recordTry, sagaById } from '../missions/index.js'
+import { CAST } from '../missions/cast.js'
+import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
 
 let stopWatch = null
 let announcer = null
@@ -22,6 +27,9 @@ let lastStatus = 'idle'
 let loopWasReady = false
 let mission = null
 let missionSpokeAt = -Infinity
+let scape = null // the thriller soundscape, when one is playing
+let narrator = null // who reads lines with no speaker
+let level = 0 // the score's intensity
 
 /** What the Record screen's mission strip shows (null with no mission). */
 export const missionLive = ref(null)
@@ -35,7 +43,63 @@ export function coachSays(text) { say(text) }
 
 function say(text) {
   if (!text || !audio.voice) return
-  enqueue(() => spotify.aroundSpeech(() => speak(text, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo }))
+  enqueue(() => spotify.aroundSpeech(() => talking(() => speak(text, { coachVoice: audio.coachVoice, voiceName: audio.voiceName })), { how: audio.music, duckTo: audio.duckTo }))
+}
+
+// The soundscape dips while anyone talks
+async function talking(fn) {
+  const s = scape
+  s?.duck(true)
+  try { await fn() } finally { s?.duck(false) }
+}
+
+/**
+ * A mission line: plain text (the coach voice) or { text, who, fx }. A sound
+ * effect plays first, and radio characters get a squelch either side.
+ */
+function sayLine(line) {
+  if (typeof line === 'string' && !narrator) return say(line)
+  const { text, who: w, fx } = typeof line === 'string' ? { text: line } : line
+  const who = w || narrator
+  const s = scape
+  if (fx && s && STINGS[fx]) enqueue(() => s.sting(fx))
+  if (!text || !audio.voice) return
+  const radio = CAST[who]?.radio && s
+  enqueue(() => spotify.aroundSpeech(async () => {
+    if (radio) await s.sting('squelch')
+    await talking(() => speakAs(text, who, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }))
+    if (radio) await s.sting('squelch')
+  }, { how: audio.music, duckTo: audio.duckTo }))
+}
+
+/** Every line a mission can say, with its speaker, to get ready before the run. */
+export function missionLines(script, narratorKey) {
+  const out = []
+  const add = (l, who) => {
+    if (!l) return
+    if (typeof l === 'string') out.push({ text: l, who: who || narratorKey })
+    else out.push({ text: l.text, who: l.who || who || narratorKey })
+  }
+  add(script.loop)
+  add(script.early)
+  for (const b of script.beats) {
+    add(b.say, b.who)
+    for (const k of ['success', 'okay', 'half', 'done', 'easyNudge']) add(b[k], b.who)
+  }
+  const seen = new Set()
+  return out.filter((l) => l.who && !seen.has(l.who + l.text) && seen.add(l.who + l.text))
+}
+
+function startScape(saga) {
+  if (!saga?.score || !audio.sfx || !audio.storySound) return null
+  const ctx = sfx.context()
+  const out = sfx.musicOut()
+  if (!ctx || !out) return null
+  // your own Spotify music takes the place of the score
+  const music = !(audio.spotifyAutoplay && spotify.isLinked())
+  const s = createSoundscape(ctx, out, { score: saga.score, music, seed: Date.now() % 9973 })
+  s.start()
+  return s
 }
 
 // Today's planned session, so the coach can say if an easy run is too quick
@@ -60,6 +124,13 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   const { paces, target } = await todaysTarget()
   const script = missionId ? missionById(missionId) : null
   mission = script ? createMission(script, { paces }) : null
+  const saga = script ? sagaById(script.saga) : null
+  narrator = saga?.narrator || null
+  level = 0
+  if (narrator) {
+    prepareLines(missionLines(script, narrator), { coachVoice: audio.coachVoice }) // in the background
+    scape = startScape(saga)
+  }
   missionSpokeAt = -Infinity
   missionLive.value = mission ? mission.view() : null
   // the mission is the encouragement, so the coach's cheers step aside
@@ -88,9 +159,15 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
           const out = mission.update(live)
           for (const e of out.events) {
             if (e.type === 'loop') loopSaid = true
-            if (MISSION_SFX[e.type]) sfx.cue(MISSION_SFX[e.type])
+            if (e.type === 'scene') scape?.setScene(e.scene)
+            if (scape) {
+              level = intensityFor(e.type, level)
+              scape.setIntensity(level)
+            }
+            // the thrillers' score marks chapters and endings itself
+            if (MISSION_SFX[e.type] && !(narrator && ['chapter', 'finale'].includes(e.type))) sfx.cue(MISSION_SFX[e.type])
           }
-          for (const line of out.lines) say(line)
+          for (const line of out.lines) sayLine(line)
           if (out.lines.length) missionSpokeAt = rec.elapsedS
         }
         const busy = mission && (mission.view().kind === 'surge' || rec.elapsedS - missionSpokeAt < 20)
@@ -114,10 +191,13 @@ export function finishRun({ elapsedS, distanceM }) {
   if (mission) {
     const out = mission.finish()
     summary = out.summary
-    for (const line of out.lines) say(line)
+    for (const line of out.lines) sayLine(line)
     if (summary.clockS >= 60) recordTry(summary) // any real try unlocks the next mission
   }
   if (announcer && distanceM > 50) say(announcer.finish({ elapsedS, distanceM }))
+  const s = scape
+  if (s) enqueue(() => s.stop(5)) // fades out after the last word
+  scape = null
   stopListening()
   return summary
 }
@@ -127,11 +207,15 @@ function stopListening() {
   stopWatch = null
   announcer = null
   mission = null
+  narrator = null
   missionLive.value = null
 }
 
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
+  scape?.stop(0.6)
+  scape = null
+  forgetLines()
   stopListening()
   hush()
   clear()

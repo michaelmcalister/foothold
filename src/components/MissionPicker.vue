@@ -1,10 +1,11 @@
 <script setup>
-// Choose a story mission before a run: None, or one of the six, with its
-// length, effort and a one line blurb. Missions unlock in order on this
-// device (any try unlocks the next). Shows the coach's pick for today when
-// today's planned session suits one.
+// Choose a story mission before a run: None, or an episode from one of the
+// series (the Trailkeepers, Ember Run, The Night Job), with its length,
+// effort and a one line blurb. Episodes unlock in order within a series on
+// this device (any try unlocks the next). Shows the coach's pick for today
+// when today's planned session suits one.
 import { ref, computed, onMounted } from 'vue'
-import { MISSIONS, CHAIN, missionById, missionMeta, unlockedIds, loadProgress, suggestMission } from '../lib/missions/index.js'
+import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
 
@@ -19,10 +20,8 @@ const suggestion = computed(() => {
   return s && s.id !== model.value ? s : null
 })
 
-const lockedBy = (m) => {
-  const i = CHAIN.indexOf(m.id)
-  return i > 0 ? missionById(CHAIN[i - 1]).title : null
-}
+const lockedBy = (m) => unlockedBy(m.id)?.title || null
+const groups = SAGAS.map((g) => ({ ...g, missions: MISSIONS.filter((m) => (m.saga || 'trailkeepers') === g.id) }))
 
 function pick(id) {
   model.value = id
@@ -57,13 +56,20 @@ onMounted(async () => {
           <span class="small muted">Just the run, with the usual voice coach.</span>
         </button>
       </li>
-      <li v-for="m in MISSIONS" :key="m.id">
-        <button type="button" class="opt" :aria-pressed="model === m.id" :disabled="!unlocked.has(m.id)" @click="pick(m.id)">
-          <strong>{{ m.title }}</strong>
-          <span class="meta small">{{ missionMeta(m) }}</span>
-          <span v-if="unlocked.has(m.id)" class="small muted">{{ m.blurb }}</span>
-          <span v-else class="small muted">Play {{ lockedBy(m) }} to unlock.</span>
-        </button>
+      <li v-for="g in groups" :key="g.id" class="group">
+        <h3 class="gtitle" :class="g.id">{{ g.title }}</h3>
+        <p class="small muted gblurb">{{ g.blurb }}<template v-if="g.score"> Full cast, scene sounds and music.</template></p>
+        <p v-if="g.note" class="small note">{{ g.note }}</p>
+        <ul class="list" role="list">
+          <li v-for="m in g.missions" :key="m.id">
+            <button type="button" class="opt" :aria-pressed="model === m.id" :disabled="!unlocked.has(m.id)" @click="pick(m.id)">
+              <strong>{{ m.title }}</strong>
+              <span class="meta small">{{ missionMeta(m) }}</span>
+              <span v-if="unlocked.has(m.id)" class="small muted">{{ m.blurb }}</span>
+              <span v-else class="small muted">Play {{ lockedBy(m) }} to unlock.</span>
+            </button>
+          </li>
+        </ul>
       </li>
     </ul>
   </div>
@@ -90,4 +96,10 @@ onMounted(async () => {
 .opt[aria-pressed='true'] { box-shadow: inset 0 0 0 2.5px var(--you); }
 .opt:disabled { opacity: 0.6; cursor: default; background: var(--soft); }
 .opt .meta { font-weight: 650; color: var(--ink-60); }
+.group { display: grid; gap: 6px; margin-top: 8px; }
+.gtitle { margin: 0; font-size: 1rem; font-weight: 800; }
+.gtitle.ember { color: #B4441C; }
+.gtitle.heist { color: #34407A; }
+.gblurb { margin: 0; }
+.note { margin: 0; padding: 6px 10px; border-radius: 10px; background: #FFF1E6; color: #6B3517; }
 </style>

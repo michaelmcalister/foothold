@@ -22,6 +22,7 @@ export const DEFAULTS = {
   sfx: true, // sound effects (claiming ground, level ups, the record buttons)
   sfxVolume: 0.6, // 0 to 1
   recapMusic: true, // music in the run recap flyover
+  storySound: true, // scene sounds and music in the thriller missions
   tapSound: false, // a very soft tick on button taps
 }
 

@@ -106,7 +106,7 @@ export function tone(ctx, dest, t, o) {
 }
 
 const noiseBuffers = new WeakMap()
-function noiseBuffer(ctx) {
+export function noiseBuffer(ctx) {
   let b = noiseBuffers.get(ctx)
   if (!b) {
     const len = Math.floor(ctx.sampleRate)

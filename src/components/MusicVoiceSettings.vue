@@ -201,6 +201,10 @@ function testVoice() {
           <span>Music in run recaps</span>
         </label>
         <label v-if="audio.sfx" class="check">
+          <input v-model="audio.storySound" type="checkbox" />
+          <span>Scene sounds and music in Ember Run and The Night Job (the music sits out when Spotify is playing)</span>
+        </label>
+        <label v-if="audio.sfx" class="check">
           <input v-model="audio.tapSound" type="checkbox" />
           <span>A soft tick when I tap a button</span>
         </label>

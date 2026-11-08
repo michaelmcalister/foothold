@@ -8,6 +8,8 @@
 //
 // House rules: Australian English, no dashes, no guilt, never scary or mean.
 
+import { THRILLERS, THRILLER_CHAINS, SAGAS as THRILLER_SAGAS } from './thrillers.js'
+
 const WIN = 'You lost them. Brilliant running. Ease right back now.'
 const OKAY = 'You got away anyway. Nice work. Ease right back now.'
 const MADE_IT = 'Made it. Brilliant running. Ease right back now.'
@@ -20,7 +22,7 @@ const TIP_CHAT = 'Kofi here. If you can chat in full sentences, your pace is jus
 const chase = (at, seconds, say, recover, extra = {}) => ({ at, kind: 'surge', seconds, say, success: WIN, okay: OKAY, recover, ...extra })
 const dash = (at, seconds, say, recover, extra = {}) => ({ at, kind: 'surge', seconds, say, success: MADE_IT, okay: MADE_IT_OKAY, recover, ...extra })
 
-export const MISSIONS = [
+const TRAILKEEPERS = [
   {
     id: 'first-steps',
     title: 'First Steps',
@@ -183,7 +185,29 @@ export const MISSIONS = [
   },
 ]
 
-/** The order missions unlock in. Steady Scout is always open. */
+/** Every mission: the Trailkeepers first, then the thriller series (thrillers.js). */
+export const MISSIONS = [...TRAILKEEPERS.map((m) => ({ saga: 'trailkeepers', ...m })), ...THRILLERS]
+
+/** The series, in the order the picker shows them. */
+export const SAGAS = [
+  { id: 'trailkeepers', title: 'The Trailkeepers', blurb: 'A friendly crew, a cheeky rival and a suburb to hold.', narrator: null, score: null },
+  ...THRILLER_SAGAS,
+]
+export const sagaById = (id) => SAGAS.find((s) => s.id === id) || SAGAS[0]
+
+/** The order the Trailkeepers missions unlock in. Steady Scout is always open. */
 export const CHAIN = ['first-steps', 'supply-line', 'lantern-night', 'magpie-season', 'hilltop-crown']
 
+/** Each series unlocks in its own order; the first episode of each is always open. */
+export const CHAINS = { trailkeepers: CHAIN, ...THRILLER_CHAINS }
+
 export const missionById = (id) => MISSIONS.find((m) => m.id === id) || null
+
+/** The mission before this one in its series, if it has to be played first. */
+export function unlockedBy(id) {
+  for (const chain of Object.values(CHAINS)) {
+    const i = chain.indexOf(id)
+    if (i > 0) return missionById(chain[i - 1])
+  }
+  return null
+}

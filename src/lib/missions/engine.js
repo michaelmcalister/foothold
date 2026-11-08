@@ -21,6 +21,9 @@ const STEADY_QUICK_S = 15 // this much quicker than easy pace gets a gentle word
 
 const segmentKinds = ['surge', 'steady', 'recover']
 
+/** The words of a line, without performance cues like [whispers]. */
+export const lineText = (line) => String((typeof line === 'string' ? line : line?.text) || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim()
+
 /** How many surges a script has. */
 export const surgeCount = (script) => script.beats.filter((b) => b.kind === 'surge').length
 
@@ -97,7 +100,7 @@ export function createMission(script, { paces = null } = {}) {
       st.surgesDone++
       if (result === 'success') st.surgesWon++
       out.events.push({ type: 'surge-end', result, paceS: paceS && Math.round(paceS), beforeS: Math.round(seg.before) })
-      if (!quiet) say(out, result === 'success' ? seg.beat.success : seg.beat.okay)
+      if (!quiet) say(out, result === 'success' ? seg.beat.success : seg.beat.okay, seg.beat.who)
       if (seg.beat.recover) {
         st.seg = { kind: 'recover', beat: { kind: 'recover' }, at: st.clock, dist: st.dist, seconds: seg.beat.recover, metres: null }
         out.events.push({ type: 'recover-start', seconds: seg.beat.recover })
@@ -105,12 +108,16 @@ export function createMission(script, { paces = null } = {}) {
       return
     }
     out.events.push({ type: `${seg.kind}-end` })
-    if (!quiet && seg.beat.done) say(out, seg.beat.done)
+    if (!quiet && seg.beat.done) say(out, seg.beat.done, seg.beat.who)
   }
 
-  function say(out, text) {
+  // A line is plain text, or { who, text } for the cast missions. Lines with
+  // a speaker or a sound to go with them go out as { text, who, fx }.
+  function say(out, line, who = null, fx = null) {
+    const text = typeof line === 'string' ? line : line?.text
     if (!text) return
-    out.lines.push(text)
+    const speaker = (typeof line === 'object' && line.who) || who
+    out.lines.push(speaker || fx ? { text, who: speaker || null, fx: fx || null } : text)
     st.lastLineAt = st.clock
   }
 
@@ -126,12 +133,13 @@ export function createMission(script, { paces = null } = {}) {
       st.chapter = beat.chapter
       out.events.push({ type: 'chapter', chapter: beat.chapter })
     }
-    say(out, beat.say)
+    if (beat.scene) out.events.push({ type: 'scene', scene: beat.scene })
+    say(out, beat.say, beat.who, beat.fx)
     if (segmentKinds.includes(beat.kind)) startSegment(beat, out)
     if (beat.kind === 'finale') {
       if (st.seg) endSegment(out, { quiet: true })
       st.done = true
-      st.closing = beat.say
+      st.closing = lineText(beat.say)
       out.events.push({ type: 'finale' })
     }
   }
@@ -148,11 +156,11 @@ export function createMission(script, { paces = null } = {}) {
       }
       if (seg.kind === 'surge' && seg.beat.half && !seg.halfSaid && canSpeak()) {
         const half = seg.metres ? st.dist - seg.dist >= seg.metres / 2 : st.clock - seg.at >= seg.seconds / 2
-        if (half) { seg.halfSaid = true; say(out, seg.beat.half); return }
+        if (half) { seg.halfSaid = true; say(out, seg.beat.half, seg.beat.who); return }
       }
       if (seg.kind === 'steady' && seg.beat.easyNudge && !seg.nudged && st.clock - seg.at >= 60 && canSpeak()) {
         const d = distSince(st.clock - 60)
-        if (d > 50 && 60 / (d / 1000) < easy[0] - STEADY_QUICK_S) { seg.nudged = true; say(out, seg.beat.easyNudge); return }
+        if (d > 50 && 60 / (d / 1000) < easy[0] - STEADY_QUICK_S) { seg.nudged = true; say(out, seg.beat.easyNudge, seg.beat.who); return }
       }
       if (seg.kind === 'surge') return // nothing else talks over a surge
     }
@@ -223,8 +231,9 @@ export function createMission(script, { paces = null } = {}) {
       if (st.seg?.kind === 'surge') endSegment(out, { quiet: true })
       else if (st.seg) st.seg = null
       if (!st.done) {
-        st.closing = script.early
-        out.lines.push(script.early)
+        st.closing = lineText(script.early)
+        const e = script.early
+        out.lines.push(typeof e === 'string' ? e : { text: e.text, who: e.who || null, fx: null })
         out.events.push({ type: 'early' })
       }
       st.finished = true

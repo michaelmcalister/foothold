@@ -1,0 +1,254 @@
+// Tests for the thriller missions (Ember Run, The Night Job): the cast and
+// script rules, the engine passing speakers and effects through, the lines
+// gathered before a run, the server's cast voices, and the soundscape
+// (scenes, effects and the score) on a fake AudioContext.
+import { describe, it, expect } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
+import { readFileSync, readdirSync } from 'node:fs'
+import { MISSIONS, SAGAS, CHAINS, missionById, unlockedBy, sagaById } from '../src/lib/missions/scripts.js'
+import { THRILLERS } from '../src/lib/missions/thrillers.js'
+import { createMission, lineText, surgeCount } from '../src/lib/missions/engine.js'
+import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
+import { trainingPaces } from '../src/lib/coach/paces.js'
+import { SCENES, STINGS, SCORES, musicStep, stepSeconds, spotTimes, rng, startScene, scheduleSting, createSoundscape, intensityFor } from '../src/lib/audio/soundscape.js'
+import { handleTts, STORY_MODEL } from '../worker/tts.js'
+
+const paces = trainingPaces(30 * 60)
+
+// Minimal D1 stand-in for the rate limiter (as in tts.test.js)
+function fakeDb() {
+  const db = new DatabaseSync(':memory:')
+  const dir = new URL('../migrations/', import.meta.url)
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'))
+  return { prepare: (sql) => ({ bind: (...a) => ({ first: async () => db.prepare(sql).get(...a) ?? null, run: async () => db.prepare(sql).run(...a), all: async () => ({ results: db.prepare(sql).all(...a) }) }) }) }
+}
+
+function run(script, { paceS = 360, surge = 1.2 } = {}) {
+  const m = createMission(script, { paces })
+  const lines = []
+  const events = []
+  let dist = 0
+  for (let t = 0; t <= script.beats.at(-1).at + 900; t++) {
+    const out = m.update({ elapsedS: t, distanceM: dist, toStartM: 2000 })
+    lines.push(...out.lines)
+    events.push(...out.events)
+    dist += 1000 / (m.view().kind === 'surge' ? paceS / surge : paceS)
+  }
+  return { m, lines, events }
+}
+
+// every line in a script, with the speaker it ends up with
+function speakers(m) {
+  const out = []
+  const add = (l, who) => l && out.push({ text: typeof l === 'string' ? l : l.text, who: (typeof l === 'object' && l.who) || who || null })
+  add(m.loop); add(m.early)
+  for (const b of m.beats) { add(b.say, b.who); for (const k of ['success', 'okay', 'half', 'easyNudge']) add(b[k], b.who) }
+  return out
+}
+
+describe('thriller scripts', () => {
+  it('has two four episode series that unlock in order', () => {
+    for (const id of ['ember', 'heist']) {
+      const eps = MISSIONS.filter((m) => m.saga === id)
+      expect(eps).toHaveLength(4)
+      expect(CHAINS[id]).toEqual(eps.map((m) => m.id))
+      expect(unlockedBy(eps[0].id)).toBe(null)
+      expect(unlockedBy(eps[2].id).id).toBe(eps[1].id)
+      expect(eps.at(-1).minutes).toBeGreaterThan(eps[0].minutes) // they build up
+    }
+    expect(sagaById('ember').note).toMatch(/fire service/) // a real world reminder
+  })
+
+  it('every speaker is in the cast, and every effect and scene exists', () => {
+    for (const m of THRILLERS) {
+      const narrator = sagaById(m.saga).narrator
+      expect(isCast(narrator)).toBe(true)
+      for (const l of speakers(m)) expect(isCast(l.who || narrator), `${m.id}: ${l.text}`).toBe(true)
+      for (const b of m.beats) {
+        if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
+        if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.at} ${b.scene}`).toBeTruthy()
+      }
+      expect(m.beats[0].scene, `${m.id} sets a scene at the start`).toBeTruthy()
+    }
+  })
+
+  it('only uses performance cues the expressive voice knows, and lines fit the server limit', () => {
+    const known = new Set(['whispers', 'laughs', 'sighs', 'excited', 'curious', 'sarcastic', 'mischievously'])
+    for (const m of THRILLERS) {
+      for (const l of speakers(m)) {
+        for (const [, tag] of l.text.matchAll(/\[([^\]]+)\]/g)) expect(known.has(tag), `${tag} in ${l.text}`).toBe(true)
+        expect(l.text.length).toBeLessThanOrEqual(300)
+        expect(stripTags(l.text)).not.toMatch(/\[|\]/)
+      }
+    }
+  })
+
+  it('keeps it kind: slow surges are never judged, and each series ends somewhere safe', () => {
+    for (const m of THRILLERS) {
+      for (const b of m.beats.filter((x) => x.kind === 'surge')) expect(lineText(b.okay)).toMatch(/made it|got there|clear|that is what counts/i)
+    }
+    expect(lineText(missionById('ember-dawn').beats.at(-1).say)).toMatch(/made it through/)
+    expect(lineText(missionById('ember-dawn').beats.find((b) => b.at === 1800).say)).toMatch(/Every person in Wattle Creek is safe/)
+  })
+
+  it('every cast member has a voice and a phone fallback', () => {
+    for (const [key, c] of Object.entries(CAST)) {
+      expect(c.voiceId, key).toMatch(/^[A-Za-z0-9]{20}$/)
+      expect(c.pitch).toBeGreaterThan(0.5)
+      expect(c.rate).toBeGreaterThan(0.5)
+    }
+    expect(stripTags('[whispers] Go. [laughs] Now.')).toBe('Go. Now.')
+  })
+})
+
+describe('the engine with a cast', () => {
+  it('passes speakers, effects and scenes through', () => {
+    const ep = missionById('heist-gala')
+    const { m, lines, events } = run(ep)
+    const reg = lines.find((l) => typeof l === 'object' && l.who === 'reg')
+    expect(reg.text).toMatch(/Reg, night security/)
+    expect(lines.some((l) => l.fx === 'alarm' && l.who === 'viv')).toBe(true)
+    expect(events.filter((e) => e.type === 'scene').map((e) => e.scene)).toEqual(['city', 'tower', 'gala', 'tower', 'city'])
+    // surge results keep their own speaker; narrator lines have none (the app fills it in)
+    expect(lines.some((l) => l.who === 'viv' && /Clean getaway|Bit close/.test(l.text))).toBe(true)
+    expect(lines.some((l) => l.who === null && /^The study/.test(l.text))).toBe(true)
+    const s = m.finish().summary
+    expect(s.completed).toBe(true)
+    expect(s.surgesDone).toBe(surgeCount(ep))
+    expect(s.closing).not.toMatch(/\[/) // the result screen shows words, not cues
+  })
+
+  it('finishing early says the series goodbye in a character voice', () => {
+    const ep = missionById('ember-wind')
+    const m = createMission(ep, { paces })
+    m.update({ elapsedS: 0, distanceM: 0 })
+    m.update({ elapsedS: 100, distanceM: 300 })
+    const out = m.finish()
+    expect(out.lines.at(-1)).toEqual({ text: ep.early.text, who: 'jo', fx: null })
+    expect(out.summary.closing).toBe(ep.early.text)
+  })
+
+  it('the old missions still speak plain text', () => {
+    const { lines } = run(missionById('first-steps'))
+    expect(lines.every((l) => typeof l === 'string')).toBe(true)
+  })
+})
+
+describe('server cast voices', () => {
+  const env = { ELEVENLABS_API_KEY: 'k', DB: null }
+  const req = (body) => new Request('https://x/api/tts', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) })
+  it('speaks a cast line with its own voice and the expressive model', async () => {
+    const calls = []
+    const fetcher = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return new Response(new Uint8Array([1, 2, 3]), { status: 200 }) }
+    const res = await handleTts(req({ text: '[whispers] Swap them.', voice: 'viv' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    expect(res.status).toBe(200)
+    expect(calls[0].url).toContain(CAST.viv.voiceId)
+    expect(calls[0].body).toMatchObject({ model_id: STORY_MODEL, text: '[whispers] Swap them.' })
+  })
+
+  it('falls back to the steady model, without the cues, if the expressive one says no', async () => {
+    const calls = []
+    const fetcher = async (url, init) => {
+      calls.push(JSON.parse(init.body))
+      return calls.length === 1 ? new Response('no', { status: 400 }) : new Response(new Uint8Array([1]), { status: 200 })
+    }
+    const res = await handleTts(req({ text: '[laughs] Beauty.', voice: 'bluey' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    expect(res.status).toBe(200)
+    expect(calls[1]).toMatchObject({ model_id: 'eleven_multilingual_v2', text: 'Beauty.' })
+  })
+
+  it('an unknown voice is the coach voice, never a cast member', async () => {
+    const calls = []
+    const fetcher = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return new Response(new Uint8Array([1]), { status: 200 }) }
+    await handleTts(req({ text: 'Hi.', voice: 'toString' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    expect(calls[0].body.model_id).not.toBe(STORY_MODEL)
+  })
+})
+
+// ---- a fake AudioContext ----
+function fakeCtx() {
+  const log = { started: 0, stopped: 0 }
+  const param = () => {
+    const p = { value: 0 }
+    for (const m of ['setValueAtTime', 'linearRampToValueAtTime', 'exponentialRampToValueAtTime', 'setTargetAtTime', 'cancelScheduledValues']) {
+      p[m] = (v, t) => {
+        if (m === 'exponentialRampToValueAtTime' && !(v > 0)) throw new Error('exp ramp to ' + v)
+        if (m !== 'cancelScheduledValues' && !Number.isFinite(t)) throw new Error('bad time ' + m)
+      }
+    }
+    return p
+  }
+  const node = (extra = {}) => ({ connect() {}, disconnect() {}, ...extra })
+  const src = (extra) => node({ start() { log.started++ }, stop() { log.stopped++ }, ...extra })
+  return {
+    currentTime: 5, sampleRate: 8000, destination: node(), log,
+    createOscillator: () => src({ type: 'sine', frequency: param(), detune: param() }),
+    createGain: () => node({ gain: param() }),
+    createBiquadFilter: () => node({ type: 'lowpass', frequency: param(), Q: param() }),
+    createBufferSource: () => src({ buffer: null, loop: false }),
+    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len) }),
+  }
+}
+
+describe('soundscape', () => {
+  it('every scene and effect builds cleanly', () => {
+    for (const name of Object.keys(SCENES)) {
+      const ctx = fakeCtx()
+      const sc = startScene(ctx, ctx.destination, name, 5)
+      expect(ctx.log.started, name).toBeGreaterThan(0)
+      sc.stop(10, 2)
+      expect(ctx.log.stopped, name).toBe(ctx.log.started) // nothing left running
+    }
+    for (const name of Object.keys(STINGS)) {
+      const ctx = fakeCtx()
+      const end = scheduleSting(ctx, ctx.destination, name, 5)
+      expect(end - 5, name).toBeLessThanOrEqual(STINGS[name].dur + 0.01)
+    }
+  })
+
+  it('scene spots come at about their rate, from a repeatable random source', () => {
+    const a = spotTimes('fire', 0, 60, rng(3))
+    const b = spotTimes('fire', 0, 60, rng(3))
+    expect(a).toEqual(b)
+    const crackles = a.filter((s) => s.name === 'crackle').length
+    expect(crackles).toBeGreaterThan(200)
+    expect(crackles).toBeLessThan(400)
+    expect(a.every((s) => s.at >= 0 && s.at <= 60)).toBe(true)
+    expect(spotTimes('nowhere', 0, 10, rng(1))).toEqual([])
+  })
+
+  it('the score builds from a drone to a chase and back', () => {
+    for (const score of Object.keys(SCORES)) {
+      const bar = (lvl) => Array.from({ length: 64 }, (_, i) => musicStep(score, lvl, i)).flat()
+      const calm = bar(0), tense = bar(1), chase = bar(2), lift = bar(3)
+      expect(calm.every((n) => n.inst === 'pad')).toBe(true)
+      expect(tense.some((n) => n.inst === 'bass')).toBe(true)
+      expect(chase.length).toBeGreaterThan(tense.length * 1.8)
+      expect(chase.some((n) => n.inst === 'run')).toBe(true)
+      expect(lift.some((n) => n.inst === 'bell')).toBe(true)
+      expect(stepSeconds(score, 2)).toBeLessThan(stepSeconds(score, 1)) // the chase is faster
+      for (const n of chase) expect(n.peak).toBeLessThan(0.25) // the score stays under the voice
+    }
+  })
+
+  it('surges drive the score, and it settles after', () => {
+    let lvl = 0
+    const seq = ['chapter', 'surge-start', 'surge-end', 'recover-start', 'steady-start', 'finale'].map((e) => (lvl = intensityFor(e, lvl)))
+    expect(seq).toEqual([1, 2, 1, 0, 1, 3])
+  })
+
+  it('plays, ducks under the voice and fades out', async () => {
+    const ctx = fakeCtx()
+    const s = createSoundscape(ctx, ctx.destination, { score: 'heist', seed: 2 })
+    s.start()
+    s.setScene('gala')
+    s.setIntensity(2)
+    s.duck(true)
+    expect(s.state).toEqual({ scene: 'gala', intensity: 2, ducked: true })
+    s.duck(false)
+    s.setScene('nowhere') // ignored
+    expect(s.state.scene).toBe('gala')
+    s.stop(0.01)
+    expect(ctx.log.started).toBeGreaterThan(5) // the scene beds and the opening drone
+  })
+})

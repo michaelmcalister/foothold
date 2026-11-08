@@ -1,7 +1,7 @@
 // Mission progress on this device: which missions you've tried (any try,
 // however short, unlocks the next one; never gated on how fast you went),
 // and each run's mission result so the result screen can show it.
-import { MISSIONS, CHAIN } from './scripts.js'
+import { MISSIONS, CHAINS } from './scripts.js'
 
 const KEY = 'fh-missions'
 const RESULTS = 'fh-mission-results'
@@ -18,10 +18,13 @@ export const loadProgress = () => read(KEY)
 
 /** Missions you can pick, given progress. Pure. */
 export function unlockedIds(progress = {}) {
-  const open = new Set(MISSIONS.filter((m) => !CHAIN.includes(m.id)).map((m) => m.id))
-  for (let i = 0; i < CHAIN.length; i++) {
-    open.add(CHAIN[i])
-    if (!progress[CHAIN[i]]?.tries) break
+  const chained = new Set(Object.values(CHAINS).flat())
+  const open = new Set(MISSIONS.filter((m) => !chained.has(m.id)).map((m) => m.id))
+  for (const chain of Object.values(CHAINS)) {
+    for (let i = 0; i < chain.length; i++) {
+      open.add(chain[i])
+      if (!progress[chain[i]]?.tries) break
+    }
   }
   return open
 }

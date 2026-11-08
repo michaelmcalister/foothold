@@ -231,10 +231,11 @@ describe('mission engine', () => {
 
 describe('mission scripts', () => {
   const DASH = /[‒–—―]|--/
-  const all = (m) => [m.blurb, m.loop, m.early, ...m.beats.flatMap((b) => [b.say, b.success, b.okay, b.half, b.done, b.easyNudge])].filter(Boolean)
+  const text = (l) => (typeof l === 'string' ? l : l?.text)
+  const all = (m) => [m.blurb, m.loop, m.early, ...m.beats.flatMap((b) => [b.say, b.success, b.okay, b.half, b.done, b.easyNudge])].map(text).filter(Boolean)
 
-  it('has six missions: three intro, two longer surge missions and one steady scout', () => {
-    expect(MISSIONS).toHaveLength(6)
+  it('has the six Trailkeepers missions: three intro, two longer surge missions and one steady scout', () => {
+    expect(MISSIONS.filter((m) => m.saga === 'trailkeepers')).toHaveLength(6)
     const intro = MISSIONS.filter((m) => m.series === 'intro')
     expect(intro).toHaveLength(3)
     for (const m of intro) expect(m.minutes).toBeGreaterThanOrEqual(15)
@@ -244,7 +245,7 @@ describe('mission scripts', () => {
     for (const m of main) expect(m.minutes).toBeGreaterThanOrEqual(30)
     for (const m of main) expect(m.minutes).toBeLessThanOrEqual(40)
     expect(surgeCount(missionById('steady-scout'))).toBe(0)
-    expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(6)
+    expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length)
   })
 
   it('every mission runs about as long as it says', () => {
@@ -310,12 +311,12 @@ describe('progress and suggestions', () => {
   })
 
   it('unlocks the series in order, and any try counts', () => {
-    expect([...unlockedIds({})].sort()).toEqual(['first-steps', 'steady-scout'])
+    expect([...unlockedIds({})].sort()).toEqual(['ember-smoke', 'first-steps', 'heist-recruit', 'steady-scout'])
     recordTry({ id: 'first-steps', completed: false, surgesDone: 0 }) // a short, partial try
     expect(unlockedIds(loadProgress()).has('supply-line')).toBe(true)
     expect(unlockedIds(loadProgress()).has('lantern-night')).toBe(false)
     for (const id of CHAIN) recordTry({ id, completed: true })
-    expect(unlockedIds(loadProgress()).size).toBe(6)
+    expect(unlockedIds(loadProgress()).size).toBe(8) // all six, plus the first episode of each thriller
     expect(loadProgress()['first-steps']).toMatchObject({ tries: 2, completed: 1 })
   })
 

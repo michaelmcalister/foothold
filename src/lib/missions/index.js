@@ -1,4 +1,4 @@
-// Story missions: scripts, the engine that plays them during a run, progress
+// Story missions (the Trailkeepers, Ember Run and The Night Job): scripts, the engine that plays them during a run, progress
 // on this device, and the small helpers the Record and Result screens use.
 import { CHAIN, missionById } from './scripts.js'
 import { surgeCount } from './engine.js'

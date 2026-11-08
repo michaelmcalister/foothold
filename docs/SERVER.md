@@ -121,6 +121,10 @@ The voice coach speaks with an Australian ElevenLabs voice (Charlie, or
 Brenna) through `POST /api/tts`, so the key never reaches the app. Repeated
 lines come from Cloudflare's cache, and fresh lines are limited to 150 an
 hour per address. Without the key, the app uses the phone's own voice.
+The coach has 14 Australian voices to pick from (Music and voice settings),
+and the thriller missions (Ember Run, The Night Job) use a cast of 12
+character voices from the same account. The key only needs the Text to
+Speech permission. Character voices must stay in the account's My Voices.
 
 1. In ElevenLabs, create an API key with Text to Speech access (the same
    account FormTrack uses is fine).

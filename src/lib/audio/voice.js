@@ -3,6 +3,8 @@
 // voices otherwise or whenever the server voice can't answer. Lines queue
 // so they never talk over each other; speak() resolves when the line ends.
 
+import { CAST, isCast, stripTags } from '../missions/cast.js'
+
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
 let serverPaused = 0 // after a refusal, use the phone voice for a while
@@ -69,35 +71,44 @@ export function unlock() {
   serverVoices() // warm the config
 }
 
-function speakPhone(text, voiceName) {
+function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {
   if (!text || !('speechSynthesis' in window)) return Promise.resolve()
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
     const v = pickVoice(voiceName)
     if (v) { u.voice = v; u.lang = v.lang } else u.lang = 'en-AU'
-    u.rate = 1.02
+    u.rate = rate
+    u.pitch = pitch
     const t = setTimeout(resolve, 2000 + text.length * 90) // some browsers never fire onend
     u.onend = u.onerror = () => { clearTimeout(t); resolve() }
     speechSynthesis.speak(u)
   })
 }
 
-async function speakServer(text, voiceKey) {
+// Story lines made ahead of time: 'voice|text' -> Promise<Blob | null>
+const made = new Map()
+const madeKey = (voiceKey, text) => voiceKey + '|' + text
+
+async function fetchVoice(text, voiceKey, timeoutMs = 6000) {
   const r = await fetch(import.meta.env.BASE_URL + 'api/tts', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text, voice: voiceKey }),
-    signal: AbortSignal.timeout(6000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   if (!r.ok) {
     if (r.status === 429 || r.status === 503) serverPaused = Date.now() + 10 * 60000
     throw new Error('server voice ' + r.status)
   }
-  const url = URL.createObjectURL(await r.blob())
+  return r.blob()
+}
+
+async function playBlob(blob, text) {
+  const url = URL.createObjectURL(blob)
   if (!player) player = new Audio()
   try {
     await new Promise((resolve, reject) => {
-      const t = setTimeout(resolve, 2000 + text.length * 120)
+      const t = setTimeout(resolve, 3000 + text.length * 130)
       player.onended = () => { clearTimeout(t); resolve() }
       player.onerror = () => { clearTimeout(t); reject(new Error('playback')) }
       player.src = url
@@ -106,6 +117,58 @@ async function speakServer(text, voiceKey) {
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+async function speakServer(text, voiceKey) {
+  await playBlob(await fetchVoice(text, voiceKey), text)
+}
+
+/**
+ * Get a story's lines ready before the run, a few at a time, so each one
+ * plays the moment it's due (and with no signal later on). lines: [{ who, text }].
+ * Quietly gives up if the server voice isn't there.
+ */
+export async function prepareLines(lines, { coachVoice = 'charlie' } = {}) {
+  if (coachVoice === 'phone' || !(await serverVoices())) return 0
+  const todo = lines.filter((l) => isCast(l.who) && !made.has(madeKey(l.who, l.text)))
+  let i = 0
+  let ready = 0
+  const worker = async () => {
+    while (i < todo.length && Date.now() > serverPaused) {
+      const l = todo[i++]
+      const k = madeKey(l.who, l.text)
+      if (made.has(k)) continue
+      const p = fetchVoice(l.text, l.who, 20000).catch(() => null)
+      made.set(k, p)
+      if (await p) ready++
+      else made.delete(k) // try again when it's due
+    }
+  }
+  await Promise.all([worker(), worker(), worker()])
+  return ready
+}
+
+/** Forget the story lines made for the last run. */
+export function forgetLines() { made.clear() }
+
+/**
+ * Say a story line in a character's voice: the cast voice from the server
+ * when it's there (made ahead by prepareLines, or fetched now), else the
+ * phone's voice with the character's pitch and pace.
+ */
+export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '' } = {}) {
+  if (!text) return
+  const c = CAST[who]
+  if (!c) return speak(stripTags(text), { coachVoice, voiceName })
+  if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
+    try {
+      const k = madeKey(who, text)
+      const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 9000))
+      await playBlob(blob, text)
+      return
+    } catch { /* fall back to the phone voice below */ }
+  }
+  await speakPhone(stripTags(text), voiceName, { pitch: c.pitch, rate: c.rate * 1.02 })
 }
 
 /**
