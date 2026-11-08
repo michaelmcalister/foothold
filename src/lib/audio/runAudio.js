@@ -11,7 +11,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { speak, speakAs, prepareLines, forgetLines, unlock, hush } from './voice.js'
+import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
@@ -35,6 +35,7 @@ let narrator = null // who reads lines with no speaker
 let level = 0 // the score's intensity
 let episode = null // the thriller episode's title and teaser lines
 let runMusic = null // Foothold's own music, when Spotify isn't playing
+let keepAwake = 0 // wakes the sound if the phone pauses it mid run
 let probe = null // asks the record screen's map what's around you
 let probedAt = -Infinity
 
@@ -220,7 +221,13 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   // a mission that asks questions: ask for the microphone now, inside the tap
   const asks = missionId && missionById(missionId)?.beats.some((b) => b.options)
   if (asks && audio.answerByVoice && canListen()) primeListening()
-  sfx.resume() // the same tap wakes the sound effects
+  // One sound mode for the whole run: playback (ignores the silent switch) on
+  // our own, or ambient alongside Spotify. Then the same tap wakes the sound.
+  setRunSession(audio.spotifyAutoplay && spotify.isLinked() ? 'ambient' : 'playback')
+  sfx.resume()
+  // iPhone pauses web sound when the mic opens or a call comes in: wake it again
+  clearInterval(keepAwake)
+  keepAwake = setInterval(() => { if (sfx.sound.state !== 'running') sfx.resume() }, 2000)
   sfx.cue('start')
   if (audio.spotifyAutoplay && spotify.isLinked()) {
     spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle }).catch((e) => onError(e.message))
@@ -333,6 +340,7 @@ export function finishRun({ elapsedS, distanceM }) {
   const m = runMusic
   if (m) enqueue(() => m.stop(6))
   runMusic = null
+  enqueue(async () => { clearInterval(keepAwake); setRunSession(null) }) // after the last word
   stopListening()
   return summary
 }
@@ -348,6 +356,8 @@ function stopListening() {
 
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
+  clearInterval(keepAwake)
+  setRunSession(null)
   stopMic()
   runMusic?.stop(0.6)
   runMusic = null

@@ -78,9 +78,21 @@ export function unlock() {
 // background). Safari can mark a page's sound as a short announcement
 // instead ('transient'): your music dips under the voice and comes back up
 // after. Elsewhere, and on older iPhones, this does nothing.
+// During a run the page keeps one sound mode (setRunSession): 'playback' when
+// it has the speaker to itself (ignores the silent switch, so the effects and
+// music play too), or 'ambient' alongside Spotify. Switching modes line by
+// line can pause the effects on iPhone, so only the Spotify case switches.
+let runSession = null
+export function setRunSession(kind) {
+  runSession = kind
+  const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
+  if (!s || !('type' in s)) return
+  try { s.type = kind || 'auto' } catch { /* not allowed here */ }
+}
+
 export async function asAnnouncement(fn) {
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
-  if (!s || !('type' in s)) return fn()
+  if (!s || !('type' in s) || runSession === 'playback') return fn()
   const was = s.type
   try { s.type = 'transient' } catch { /* not allowed: carry on */ }
   try { return await fn() } finally { try { s.type = was === 'transient' ? 'auto' : was } catch { /* fine */ } }
