@@ -1,11 +1,14 @@
 <script setup>
-// Choose a story mission before a run: None, or an episode from one of the
-// series (the Trailkeepers, Ember Run, The Night Job), with its length,
-// effort and a one line blurb. Episodes unlock in order within a series on
-// this device (any try unlocks the next). Shows the coach's pick for today
-// when today's planned session suits one.
-import { ref, computed, onMounted } from 'vue'
+// Choose a story mission before a run. Closed, it shows the chosen mission as
+// a poster banner. Open, it's a full screen browser: a big preview of one
+// episode at the top (the whole screen takes on that series' colour), then a
+// row of poster cards per series. Tap a card to preview it, then Run this
+// mission. Episodes unlock in order within a series on this device (any try
+// unlocks the next). Shows the coach's pick for today when today's planned
+// session suits one. Cover art comes from lib/missions/covers.js.
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
+import { coverSvg, lookFor } from '../lib/missions/covers.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
 
@@ -20,58 +23,194 @@ const suggestion = computed(() => {
   return s && s.id !== model.value ? s : null
 })
 
+const sagaOf = (m) => m.saga || 'trailkeepers'
 const lockedBy = (m) => unlockedBy(m.id)?.title || null
-const groups = SAGAS.map((g) => ({ ...g, missions: MISSIONS.filter((m) => (m.saga || 'trailkeepers') === g.id) }))
+const played = (m) => !!progress.value[m.id]?.tries
+const groups = SAGAS.map((g) => ({ ...g, look: lookFor(g.id), missions: MISSIONS.filter((m) => sagaOf(m) === g.id) }))
+const sagaTitle = (m) => SAGAS.find((g) => g.id === sagaOf(m))?.title || ''
 
-function pick(id) {
-  model.value = id
-  open.value = false
+// Covers are drawn once per mission and reused
+const covers = new Map()
+const cover = (m) => {
+  if (!covers.has(m.id)) covers.set(m.id, coverSvg(m))
+  return covers.get(m.id)
 }
 
+// The next episode to play in each series you've started
+const upNext = computed(() => groups.map((g) => {
+  if (!g.missions.some(played)) return null
+  return g.missions.find((m) => unlocked.value.has(m.id) && !played(m)) || null
+}).filter(Boolean))
+
+// What the big preview shows
+const previewId = ref(null)
+const preview = computed(() => missionById(previewId.value) || chosen.value || missionById(suggestion.value?.id) || upNext.value[0] || MISSIONS[0])
+const look = computed(() => lookFor(sagaOf(preview.value)))
+const previewNote = computed(() => SAGAS.find((g) => g.id === sagaOf(preview.value))?.note || null)
+const isPick = computed(() => suggestion.value?.id === preview.value.id)
+
+const sheet = ref(null)
+const closeBtn = ref(null)
+let opener = null
+
+function show(m) {
+  previewId.value = m.id
+  sheet.value?.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+}
+function pick(id) {
+  model.value = id
+  close()
+}
+async function openBrowser(e) {
+  opener = e?.currentTarget || null
+  progress.value = loadProgress()
+  previewId.value = null
+  open.value = true
+  await nextTick()
+  closeBtn.value?.focus()
+}
+function close() {
+  open.value = false
+  opener?.focus?.()
+}
+function onKey(e) { if (open.value && e.key === 'Escape') close() }
+watch(open, (v) => { document.documentElement.classList.toggle('mbrowse-open', v) })
+
 onMounted(async () => {
+  window.addEventListener('keydown', onKey)
   try {
     const { plan } = await api.plan()
     const s = plan ? nextSession(plan, toISO(Date.now())) : null
     if (s && s.date === toISO(Date.now())) todayType.value = s.type
   } catch { /* no plan: no suggestion */ }
 })
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  document.documentElement.classList.remove('mbrowse-open')
+})
+
+const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionById('quiz-1')].filter(Boolean)
 </script>
 
 <template>
   <div class="mpick">
-    <div v-if="suggestion && !open" class="suggest">
+    <div v-if="suggestion" class="suggest">
       <span>{{ suggestion.text }}</span>
       <button type="button" class="btn small" @click="pick(suggestion.id)">Choose</button>
     </div>
-    <button type="button" class="current" :aria-expanded="open" aria-controls="mission-list" @click="open = !open">
-      <span class="lbl">Mission</span>
-      <span class="val">{{ chosen ? chosen.title : 'None' }}</span>
-      <span class="chg">{{ open ? 'Close' : 'Change' }}</span>
+
+    <!-- Closed: the chosen mission as a poster banner -->
+    <button v-if="chosen" type="button" class="mb-banner" :style="{ '--accent': lookFor(sagaOf(chosen)).accent, '--deep': lookFor(sagaOf(chosen)).deep }" aria-haspopup="dialog" @click="openBrowser">
+      <span class="mb-art" v-html="cover(chosen)" />
+      <span class="mb-shade" />
+      <span class="btext">
+        <span class="mb-series">{{ sagaTitle(chosen) }}<template v-if="chosen.episode">, episode {{ chosen.episode }}</template></span>
+        <span class="btitle">{{ chosen.title }}</span>
+        <span class="bmeta">{{ missionMeta(chosen) }}</span>
+      </span>
+      <span class="mb-chg">Change</span>
     </button>
-    <p v-if="chosen && !open" class="small muted blurb">{{ missionMeta(chosen) }}. {{ chosen.blurb }}</p>
-    <ul v-if="open" id="mission-list" class="list" role="list">
-      <li>
-        <button type="button" class="opt" :aria-pressed="!model" @click="pick(null)">
-          <strong>None</strong>
-          <span class="small muted">Just the run, with the usual voice coach.</span>
-        </button>
-      </li>
-      <li v-for="g in groups" :key="g.id" class="group">
-        <h3 class="gtitle" :class="g.id">{{ g.title }}</h3>
-        <p class="small muted gblurb">{{ g.blurb }}<template v-if="g.score"> Full cast, scene sounds and music, and choices that change the story. Answer out loud or tap.</template></p>
-        <p v-if="g.note" class="small note">{{ g.note }}</p>
-        <ul class="list" role="list">
-          <li v-for="m in g.missions" :key="m.id">
-            <button type="button" class="opt" :aria-pressed="model === m.id" :disabled="!unlocked.has(m.id)" @click="pick(m.id)">
-              <strong>{{ m.title }}</strong>
-              <span class="meta small">{{ missionMeta(m) }}</span>
-              <span v-if="unlocked.has(m.id)" class="small muted">{{ m.blurb }}</span>
-              <span v-else class="small muted">Play {{ lockedBy(m) }} to unlock.</span>
+    <button v-else type="button" class="mb-banner mb-empty" aria-haspopup="dialog" @click="openBrowser">
+      <span class="mb-strip" aria-hidden="true">
+        <span v-for="m in teaser" :key="m.id" class="mb-tile" v-html="cover(m)" />
+      </span>
+      <span class="mb-shade" />
+      <span class="btext">
+        <span class="btitle">Add a story to this run</span>
+        <span class="bmeta">Thrillers, a game show and adventures, told while you run.</span>
+      </span>
+      <span class="mb-chg">Browse</span>
+    </button>
+
+    <!-- Open: the full screen browser -->
+    <Teleport to="body">
+      <Transition name="mb">
+        <div v-if="open" ref="sheet" class="browse" role="dialog" aria-modal="true" aria-labelledby="mb-title" :style="{ '--accent': look.accent, '--deep': look.deep }">
+          <header class="mb-top">
+            <h2 id="mb-title" class="htitle">Missions</h2>
+            <button ref="closeBtn" type="button" class="mb-x" aria-label="Close missions" @click="close">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
             </button>
-          </li>
-        </ul>
-      </li>
-    </ul>
+          </header>
+
+          <section class="mb-hero" aria-live="polite">
+            <div class="hstage">
+              <Transition name="xf">
+                <div :key="preview.id" class="hart" v-html="cover(preview)" />
+              </Transition>
+              <div class="hfade" />
+            </div>
+            <div class="hinfo">
+              <p class="hseries">
+                <span>{{ sagaTitle(preview) }}</span>
+                <span v-if="isPick" class="mb-pill">Coach's pick today</span>
+                <span v-else-if="played(preview)" class="mb-pill mb-quiet">Played</span>
+              </p>
+              <h3 class="htitle2">{{ preview.title }}</h3>
+              <p class="hmeta">{{ missionMeta(preview) }}</p>
+              <p class="hblurb">{{ preview.blurb }}</p>
+              <p v-if="previewNote" class="hnote">{{ previewNote }}</p>
+              <div class="hact">
+                <button v-if="unlocked.has(preview.id)" type="button" class="mb-play" @click="pick(preview.id)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
+                  {{ model === preview.id ? 'Keep this mission' : 'Run this mission' }}
+                </button>
+                <p v-else class="mb-locked">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
+                  Play {{ lockedBy(preview) }} to unlock
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <button type="button" class="norun" :aria-pressed="!model" @click="pick(null)">
+            {{ model ? 'No story this time, just the usual coach' : 'Just the run, with the usual coach (chosen)' }}
+          </button>
+
+          <section v-if="upNext.length" class="mb-row">
+            <h3 class="rtitle">Up next for you</h3>
+            <ul class="mb-cards" role="list">
+              <li v-for="m in upNext" :key="m.id">
+                <button type="button" class="mb-card" :class="{ 'is-on': preview.id === m.id, 'is-picked': model === m.id }" :style="{ '--ring': lookFor(sagaOf(m)).accent }" :aria-label="`${sagaTitle(m)}: ${m.title}. ${missionMeta(m)}`" @click="show(m)">
+                  <span class="cart" v-html="cover(m)" />
+                  <span class="cfade" />
+                  <span class="ctext"><span class="cep">{{ sagaTitle(m) }}</span><span class="ctitle">{{ m.title }}</span></span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <section v-for="g in groups" :key="g.id" class="mb-row" :style="{ '--ring': g.look.accent }">
+            <h3 class="rtitle"><span>{{ g.title }}</span> <span class="rtag">{{ g.look.tag }}</span></h3>
+            <p class="rblurb">{{ g.blurb }}</p>
+            <ul class="mb-cards" role="list">
+              <li v-for="m in g.missions" :key="m.id">
+                <button
+                  type="button" class="mb-card"
+                  :class="{ 'is-on': preview.id === m.id, 'is-picked': model === m.id, 'is-lock': !unlocked.has(m.id) }"
+                  :aria-label="`${m.title}. ${missionMeta(m)}${unlocked.has(m.id) ? '' : '. Locked'}${played(m) ? '. Played' : ''}`"
+                  @click="show(m)"
+                >
+                  <span class="cart" v-html="cover(m)" />
+                  <span class="cfade" />
+                  <span v-if="!unlocked.has(m.id)" class="clock" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
+                  </span>
+                  <span v-else-if="played(m)" class="cdone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  </span>
+                  <span class="ctext">
+                    <span class="cep">{{ m.episode ? `Episode ${m.episode}` : `${m.minutes} min` }}</span>
+                    <span class="ctitle">{{ m.title }}</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </section>
+          <p class="mb-foot">Full cast, scene sounds and music. Answer out loud or tap.</p>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -80,32 +219,124 @@ onMounted(async () => {
 .suggest { display: flex; align-items: center; gap: 10px; background: var(--tint); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }
 .suggest span { flex: 1; min-width: 0; }
 .suggest .btn { flex: none; }
-.current {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px;
-  font: inherit; border: 0; border-radius: 12px; background: var(--soft); color: var(--ink); cursor: pointer; text-align: left;
+
+/* ---- the closed banner ---- */
+.mb-banner {
+  position: relative; display: block; width: 100%; height: 132px; padding: 0; border: 0; border-radius: 16px; overflow: hidden;
+  font: inherit; text-align: left; color: #fff; cursor: pointer; background: var(--deep, #10131C); isolation: isolate;
 }
-.current .lbl { color: var(--ink-60); font-size: 0.9rem; }
-.current .val { flex: 1; min-width: 0; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.current .chg { color: var(--you-ink); font-weight: 650; font-size: 0.9rem; }
-.blurb { margin: 0; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.opt {
-  display: grid; gap: 2px; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
-  background: var(--card); border: 0; border-radius: 12px; padding: 10px 14px; box-shadow: inset 0 0 0 1.5px var(--line); min-height: 48px;
+.mb-banner .mb-art, .mb-banner .mb-strip { position: absolute; inset: 0; z-index: -2; }
+.mb-banner .mb-art :deep(svg), .mb-tile :deep(svg) { width: 100%; height: 100%; display: block; }
+.mb-banner .mb-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
+.mb-banner .mb-tile { display: block; overflow: hidden; }
+.mb-banner .mb-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.1) 100%); }
+.mb-banner.mb-empty .mb-shade { background: linear-gradient(0deg, rgba(4, 6, 12, 0.9) 10%, rgba(4, 6, 12, 0.35) 100%); }
+.btext { position: absolute; left: 16px; right: 92px; bottom: 14px; display: grid; gap: 2px; }
+.mb-series { font-size: 0.8rem; font-weight: 700; color: var(--accent, #fff); }
+.btitle { font-weight: 900; font-stretch: 62%; font-size: 1.85rem; line-height: 0.95; letter-spacing: 0.005em; text-wrap: balance; }
+.mb-empty .btitle { font-size: 1.6rem; }
+.bmeta { font-size: 0.82rem; opacity: 0.85; }
+.mb-chg {
+  position: absolute; right: 12px; bottom: 14px; padding: 7px 12px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  font-weight: 750; font-size: 0.85rem;
 }
-.opt[aria-pressed='true'] { box-shadow: inset 0 0 0 2.5px var(--you); }
-.opt:disabled { opacity: 0.6; cursor: default; background: var(--soft); }
-.opt .meta { font-weight: 650; color: var(--ink-60); }
-.group { display: grid; gap: 6px; margin-top: 8px; }
-.gtitle { margin: 0; font-size: 1rem; font-weight: 800; }
-.gtitle.ember { color: #B4441C; }
-.gtitle.heist { color: #34407A; }
-.gtitle.quiz { color: #8A3FA8; }
-.gblurb { margin: 0; }
-.note { margin: 0; padding: 6px 10px; border-radius: 10px; background: #FFF1E6; color: #6B3517; }
-/* Night mode: the same group colours, lifted to read on the dark cards */
-html.night .gtitle.ember { color: #F08A5D; }
-html.night .gtitle.heist { color: #A8B3F2; }
-html.night .gtitle.quiz { color: #D7A6EE; }
-html.night .note { background: var(--notice-bg); color: var(--notice-ink); }
+.mb-banner:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
+
+/* ---- the browser ---- */
+.browse {
+  position: fixed; inset: 0; z-index: 80; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: var(--deep); color: #F4F6FA; transition: background-color 0.6s ease;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+}
+.mb-top {
+  position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+.htitle { margin: 0; font-size: 1.15rem; font-weight: 850; letter-spacing: 0.01em; }
+.mb-x {
+  display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45); color: #fff; cursor: pointer;
+}
+.mb-x:focus-visible, .mb-play:focus-visible, .norun:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.mb-hero { position: relative; margin-top: calc(-1 * (env(safe-area-inset-top) + 64px)); }
+.hstage { position: relative; height: min(calc(112vw / var(--zoom, 1)), 540px); overflow: hidden; }
+.hart { position: absolute; inset: 0; }
+.hart :deep(svg) { width: 100%; height: 100%; display: block; animation: drift 18s ease-in-out infinite alternate; transform-origin: 50% 40%; }
+@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.12) translateY(-1.5%); } }
+.hfade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, var(--deep) 98%); }
+.hinfo { position: relative; margin-top: -92px; padding: 0 16px 6px; display: grid; gap: 6px; }
+.hseries { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 750; font-size: 0.9rem; color: var(--accent); }
+.mb-pill { padding: 3px 9px; border-radius: 999px; background: var(--accent); color: #0B0D12; font-size: 0.75rem; font-weight: 800; }
+.mb-pill.mb-quiet { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.htitle2 {
+  margin: 0; font-weight: 900; font-stretch: 62%; font-size: clamp(2.6rem, calc(14vw / var(--zoom, 1)), 3.6rem);
+  line-height: 0.9; text-wrap: balance; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+.hmeta { margin: 0; font-size: 0.88rem; font-weight: 650; opacity: 0.85; }
+.hblurb { margin: 0; font-size: 0.98rem; line-height: 1.45; max-width: 38ch; color: rgba(244, 246, 250, 0.9); }
+.hnote { margin: 2px 0 0; font-size: 0.82rem; line-height: 1.4; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); }
+.hact { margin-top: 8px; }
+.mb-play {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border: 0; border-radius: 12px;
+  background: #fff; color: #0B0D12; font: inherit; font-weight: 850; font-size: 1.05rem; cursor: pointer;
+}
+.mb-play:active { transform: scale(0.98); }
+.mb-locked { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 52px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); font-weight: 700; }
+.norun {
+  display: block; margin: 10px 16px 0; padding: 10px 0; border: 0; background: none; color: rgba(244, 246, 250, 0.75);
+  font: inherit; font-size: 0.9rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.norun[aria-pressed='true'] { color: var(--accent); }
+
+.mb-row { margin-top: 22px; }
+.rtitle { margin: 0 16px; font-size: 1.12rem; font-weight: 850; display: flex; align-items: baseline; gap: 8px; }
+.rtag { font-size: 0.78rem; font-weight: 700; color: var(--ring, var(--accent)); }
+.rblurb { margin: 3px 16px 0; font-size: 0.84rem; line-height: 1.4; color: rgba(244, 246, 250, 0.7); max-width: 46ch; }
+.mb-cards {
+  list-style: none; margin: 10px 0 0; padding: 4px 16px 8px; display: flex; gap: 10px; overflow-x: auto;
+  scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none;
+}
+.mb-cards::-webkit-scrollbar { display: none; }
+.mb-cards li { flex: none; scroll-snap-align: start; }
+.mb-card {
+  position: relative; display: block; width: calc(34vw / var(--zoom, 1)); max-width: 150px; min-width: 112px; aspect-ratio: 2 / 3;
+  padding: 0; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: #000; color: #fff; font: inherit; text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.mb-card .cart { position: absolute; inset: 0; }
+.mb-card .cart :deep(svg) { width: 100%; height: 100%; display: block; }
+.cfade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.85) 100%); }
+.ctext { position: absolute; left: 8px; right: 8px; bottom: 8px; display: grid; gap: 1px; }
+.cep { font-size: 0.68rem; font-weight: 750; color: var(--ring, #fff); }
+.ctitle { font-weight: 900; font-stretch: 62%; font-size: 1.12rem; line-height: 0.98; text-wrap: balance; }
+.mb-card.is-on { box-shadow: 0 0 0 3px #fff; transform: translateY(-2px); }
+.mb-card.is-picked:not(.is-on) { box-shadow: 0 0 0 3px var(--ring); }
+.mb-card.is-lock .cart { filter: grayscale(0.85) brightness(0.55); }
+.mb-card:focus-visible { outline: 3px solid var(--ring, #fff); outline-offset: 3px; }
+.clock, .cdone {
+  position: absolute; top: 7px; right: 7px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+}
+.cdone { background: var(--ring); color: #0B0D12; width: 22px; height: 22px; }
+.mb-foot { margin: 26px 16px 0; font-size: 0.82rem; color: rgba(244, 246, 250, 0.6); }
+
+/* Opening and changing the preview */
+.mb-enter-active, .mb-leave-active { transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.mb-enter-from, .mb-leave-to { opacity: 0; transform: translateY(24px); }
+.xf-enter-active, .xf-leave-active { transition: opacity 0.5s ease; }
+.xf-leave-active { position: absolute; inset: 0; }
+.xf-enter-from, .xf-leave-to { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hart :deep(svg) { animation: none; }
+  .mb-enter-active, .mb-leave-active, .xf-enter-active, .xf-leave-active, .mb-card, .browse, .hfade { transition: none; }
+}
+</style>
+
+<style>
+/* No page scroll behind the open mission browser */
+html.mbrowse-open, html.mbrowse-open body { overflow: hidden; }
 </style>
