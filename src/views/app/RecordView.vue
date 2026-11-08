@@ -47,17 +47,24 @@ const missionId = ref(null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)
+// Racing a past run: its route replaces any planned or suggested loop, so you
+// follow exactly where your ghost went (ghostPick and ghost are set up below)
+const ghostRoute = computed(() => (ghostPick.value?.kind === 'run' && ghost.value ? ghost.value.pts.map((p) => [p.lng, p.lat]) : null))
+const routeRing = computed(() => ghostRoute.value || plannedRing.value)
 const offRoute = computed(() => {
-  if (!plannedRing.value || !me.value) return null
-  return Math.round(offRouteM(me.value, plannedRing.value))
+  if (!routeRing.value || !me.value) return null
+  return Math.round(offRouteM(me.value, routeRing.value))
 })
 const routeLine = computed(() => {
-  if (!plannedRing.value) return null
-  if (!live.value) return `Following ${planned.route.name}. The dashed line is your route.`
+  if (!routeRing.value) return null
+  if (!live.value) return ghostRoute.value
+    ? `Racing your ghost${plannedRing.value ? ' instead of the planned loop' : ''}. The dashed line is the route it took.`
+    : `Following ${planned.route.name}. The dashed line is your route.`
   if (offRoute.value == null) return null
   return offRoute.value <= 25 ? 'On route.' : `${offRoute.value} m off route. Head back to the dashed line when you can.`
 })
 function dropRoute() {
+  if (ghostRoute.value) { ghostPick.value = null; return } // stop racing; any planned loop comes back
   plannedRing.value = null
   setPlanned(null)
 }
@@ -72,7 +79,7 @@ const pocket = ref(false)
 watch(() => rec.status, (st) => { if (st !== 'recording' && st !== 'paused') pocket.value = false })
 
 // ---- turn by turn directions, when the planned route came with them ----
-const hasDirections = computed(() => !!(plannedRing.value && planned.route?.steps?.length))
+const hasDirections = computed(() => !!(plannedRing.value && !ghostRoute.value && planned.route?.steps?.length))
 const nextTurn = ref(null)
 let nav = null
 watch(() => rec.points.length, () => {
@@ -338,7 +345,7 @@ onBeforeUnmount(() => {})
   <div class="rec">
     <PocketMode v-if="pocket" :next-turn="nextTurn" :ask="missionLive?.ask || null" @answer="answerMission" @close="pocket = false" />
     <div class="maparea">
-      <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" :ghost="ghostLive?.pos || null" />
+      <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="routeRing" :fit="!!routeRing" :ghost="ghostLive?.pos || null" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
