@@ -116,6 +116,23 @@ describe('directions', () => {
     expect(placed.map((p) => Math.round(p.d / 50) * 50)).toEqual([0, 500, 1000, 1500, 2000])
   })
 
+  it('ignores footpath jogs and piles of steps at one corner, and works out the real turn', () => {
+    const line = square()
+    // a little sideways jog 250 m along the first side, where the path crosses a side street
+    const jog = line.findIndex((p) => p[0] >= corner(250, 0)[0])
+    line.splice(jog, 1, corner(240, 0), corner(244, 6), corner(256, 6), corner(260, 0))
+    const raw = [
+      RAW[0],
+      { turn: 'left', name: '', distanceM: 4, at: corner(244, 6) },
+      { turn: 'right', name: '', distanceM: 12, at: corner(256, 6) },
+      { turn: 'right', name: '', distanceM: 2, at: corner(500, 0) }, // the router's words disagree with the shape
+      { turn: 'left', name: 'High St', distanceM: 500, at: corner(501, 1) },
+      ...RAW.slice(5),
+    ]
+    const placed = placeSteps(line, raw)
+    expect(placed.map((p) => `${p.turn} ${p.name}`)).toEqual(['depart Station St', 'left High St', 'left Lawson St', 'left Belmore St', 'arrive '])
+  })
+
   it('talks you round: a heads up, the turn, and the finish', () => {
     const line = square()
     const nav = createNavigator(line, placeSteps(line, RAW))

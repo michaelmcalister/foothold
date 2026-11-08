@@ -4,7 +4,7 @@
 // via point), words them in plain Australian English, places each one along
 // the line, and follows you during a run: a heads up before a turn, the turn
 // itself, and a word if you wander off the route. Pure, unit tested.
-import { makeGhost, progressAlong } from './ghost.js'
+import { makeGhost, progressAlong, ghostAt } from './ghost.js'
 
 const TURN_WORDS = {
   left: 'Turn left', right: 'Turn right',
@@ -71,31 +71,82 @@ export function inWords(m) {
   return `In ${Math.max(10, Math.round(m / 10) * 10)} metres`
 }
 
+// ---- turns worked out from the shape of the route ----
+// Walking routers report every little jog where a footpath crosses a side
+// street. What matters is how much your direction really changes, so steps
+// close together are grouped, and the change is measured over 30 metres
+// either side. Under 35 degrees is just following the path.
+const LOOK_M = 30
+const GROUP_M = 30
+const MIN_TURN = 35
+
+function bearing(a, b) {
+  const toRad = (x) => (x * Math.PI) / 180
+  const y = Math.sin(toRad(b.lng - a.lng)) * Math.cos(toRad(b.lat))
+  const x = Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) - Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(toRad(b.lng - a.lng))
+  return (Math.atan2(y, x) * 180) / Math.PI
+}
+const along = (g, d) => ghostAt(g, (Math.max(0, Math.min(g.totalM, d)) / 1000) * 360)
+
+/** The change of direction (degrees, right is positive) between before `from` and after `to`. */
+export function turnAngle(g, from, to = from) {
+  const inB = bearing(along(g, from - LOOK_M), along(g, from))
+  const outB = bearing(along(g, to), along(g, to + LOOK_M))
+  return ((outB - inB + 540) % 360) - 180
+}
+
+/** The kind of turn for an angle. */
+export function turnFor(angle) {
+  const a = Math.abs(angle)
+  const side = angle > 0 ? 'right' : 'left'
+  if (a < MIN_TURN) return 'straight'
+  if (a < 60) return `slight ${side}`
+  if (a < 135) return side
+  if (a < 165) return `sharp ${side}`
+  return 'uturn'
+}
+
 /**
  * Places each step along the line (metres from the start), searching
- * forward so a loop that passes its own start doesn't jump ahead.
+ * forward so a loop that passes its own start doesn't jump ahead, then
+ * keeps only real turns, measured from the line itself.
  * Returns [{ ...step, d, text, short }].
  */
 export function placeSteps(line, steps, { loop = true } = {}) {
   const g = makeGhost(line.map(([lng, lat]) => ({ lat, lng })), { paceSPerKm: 360 })
   if (!g) return []
+  const clean = cleanSteps(steps)
+  if (!clean.length) return []
   let idx = 0
-  return cleanSteps(steps).map((st, i, all) => {
-    let d
-    if (st.turn === 'depart') d = 0
-    else if (st.turn === 'arrive' && i === all.length - 1) d = g.totalM
-    else {
-      const p = progressAlong(g, { lat: st.at[1], lng: st.at[0] }, idx, { lookAheadM: 3000 })
-      if (p.offM > 25 || st.turn === 'uturn') return null // on a dead end that was trimmed off
-      idx = p.idx
-      d = p.d
-    }
-    return { ...st, d: Math.round(d), text: stepText(st, { loop }), short: stepShort(st) }
-  }).filter(Boolean).filter((st, i, all) => {
-    // two turns a few metres apart (a kink at a corner) read as one: keep the first
-    const prev = all[i - 1]
-    return !(prev && st.turn !== 'arrive' && prev.turn !== 'depart' && st.d - prev.d < 15 && st.turn === prev.turn)
-  })
+  const mid = []
+  for (const st of clean.slice(1, -1)) {
+    const p = progressAlong(g, { lat: st.at[1], lng: st.at[0] }, idx, { lookAheadM: 3000 })
+    if (p.offM > 25) continue // on a dead end that was trimmed off
+    idx = p.idx
+    mid.push({ ...st, d: p.d })
+  }
+  // group steps that sit close together, and measure the turn across each group
+  const turns = []
+  for (let i = 0; i < mid.length;) {
+    let j = i
+    while (j + 1 < mid.length && mid[j + 1].d - mid[j].d < GROUP_M) j++
+    const group = mid.slice(i, j + 1)
+    const from = group[0].d
+    const to = group[group.length - 1].d
+    const roundabout = group.some((x) => x.turn === 'roundabout')
+    const turn = roundabout ? 'roundabout' : turnFor(turnAngle(g, from, to))
+    const name = [...group].reverse().find((x) => x.name)?.name || ''
+    if (turn !== 'straight' && from > 15 && g.totalM - to > 15) turns.push({ turn, name, at: group[group.length - 1].at, d: to, distanceM: 0 })
+    i = j + 1
+  }
+  const all = [{ ...clean[0], d: 0 }, ...turns, { ...clean[clean.length - 1], d: g.totalM }]
+  return all.map((st, i) => ({
+    ...st,
+    d: Math.round(st.d),
+    distanceM: Math.round((all[i + 1]?.d ?? st.d) - st.d),
+    text: stepText(st, { loop }),
+    short: stepShort(st),
+  }))
 }
 
 export const PRE_M = 150 // the heads up
