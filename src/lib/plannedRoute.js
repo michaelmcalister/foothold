@@ -12,9 +12,9 @@ function read() {
 
 export const planned = reactive({ route: read() })
 
-// route: { name, mode, ring: [[lng, lat], ...] }
+// route: { name, mode, ring: [[lng, lat], ...], steps? } (steps: turn by turn, from directions.placeSteps)
 export function setPlanned(route) {
-  planned.route = route ? { name: route.name || 'Planned route', mode: route.mode || 'run', ring: route.ring } : null
+  planned.route = route ? { name: route.name || 'Planned route', mode: route.mode || 'run', ring: route.ring, steps: Array.isArray(route.steps) && route.steps.length ? route.steps : null } : null
   try {
     if (planned.route) sessionStorage.setItem(KEY, JSON.stringify(planned.route))
     else sessionStorage.removeItem(KEY)

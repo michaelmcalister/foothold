@@ -12,6 +12,7 @@ export const DEFAULTS = {
   sayPace: true,
   sayTime: true,
   sayTerritory: true, // loop closing hints
+  directions: true, // turn by turn on a planned route that has them
   cheer: 'some', // encouragement: 'off' | 'some' | 'lots'
   music: 'duck', // while talking: 'duck' (lower) | 'pause' | 'none' (talk over)
   duckTo: 25, // percent volume while talking, when the phone allows it

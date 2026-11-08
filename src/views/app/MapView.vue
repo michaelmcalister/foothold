@@ -7,6 +7,7 @@
 // one for its holder and leaderboards. New players see the first week
 // journey in place of the nudge, and the strip shows the weekly streak.
 // Hills show as lines with a small crown; tap one for its King of the hill page.
+// Suggest a loop asks how far, then builds loops on real streets (LoopFinder).
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -14,6 +15,8 @@ import QuestList from '../../components/QuestList.vue'
 import Crest from '../../components/Crest.vue'
 import StrongholdCard from '../../components/StrongholdCard.vue'
 import FirstWeekCard from '../../components/FirstWeekCard.vue'
+import LoopFinder from '../../components/LoopFinder.vue'
+import { LngLatBounds } from 'maplibre-gl'
 import { loadJourney, freshSteps } from '../../lib/journey.js'
 import { exploredShare } from '../../lib/engine/explore.js'
 import { freshlyDone } from '../../lib/questSeen.js'
@@ -68,14 +71,10 @@ async function loadHabits() {
 watch(() => store.stats, loadHabits)
 // Shown while under way, and once more to celebrate the last step
 const showJourney = computed(() => journey.value && (journey.value.active || (journey.value.complete && freshSteps(journey.value).length)))
-async function seeFirstLoop() {
-  suggesting.value = true
-  try {
-    const { suggestLoopFor } = await import('../../lib/suggest.js')
-    suggestion.value = await suggestLoopFor(store.user?.homeCentre || store.centre, store.mode, { targetKm: journey.value.loopKm })
-  } finally {
-    suggesting.value = false
-  }
+function seeFirstLoop() {
+  picked.value = null
+  pickedSh.value = null
+  finder.value = { startKm: journey.value.loopKm, auto: true, key: Date.now() }
 }
 
 // Explored view: dims every hex your tracks haven't passed through
@@ -110,9 +109,11 @@ const shRoute = computed(() => (shPicked.value ? decodePolyline(shPicked.value.l
 function pickStronghold(id) {
   picked.value = null
   suggestion.value = null
+  finder.value = null
   pickedSh.value = id
 }
 function pickCell(c) {
+  if (finder.value) return // keep the loop up while it's open
   pickedSh.value = null
   picked.value = c
 }
@@ -121,7 +122,7 @@ function onMoved({ bbox: b }) {
   clearTimeout(t)
   t = setTimeout(load, 250)
 }
-watch(() => store.mode, () => { picked.value = null; suggestion.value = null; pickedSh.value = null; load() })
+watch(() => store.mode, () => { picked.value = null; suggestion.value = null; finder.value = null; pickedSh.value = null; load() })
 
 onMounted(async () => {
   loadQuests()
@@ -158,14 +159,24 @@ async function recentre() {
   load()
 }
 
-async function suggest() {
-  suggesting.value = true
-  try {
-    const { suggestLoopFor } = await import('../../lib/suggest.js')
-    suggestion.value = await suggestLoopFor(store.centre, store.mode)
-  } finally {
-    suggesting.value = false
-  }
+// Suggest a loop: the finder asks how far and shows street loops on the map
+const finder = ref(null)
+function suggest() {
+  picked.value = null
+  pickedSh.value = null
+  hot.value = false
+  finder.value = { startKm: null, auto: false, key: Date.now() }
+}
+function showLoop(line) {
+  suggestion.value = line ? { ring: line } : null
+  const m = tmap.value?.map
+  if (!line || !m || line.length < 2) return
+  const b = line.reduce((bb, p) => bb.extend(p), new LngLatBounds(line[0], line[0]))
+  m.fitBounds(b, { padding: { top: 90, bottom: 340, left: 30, right: 30 }, duration: 600, maxZoom: 16 })
+}
+function closeFinder() {
+  finder.value = null
+  suggestion.value = null
 }
 </script>
 
@@ -296,19 +307,8 @@ async function suggest() {
         </div>
         <button class="btn block" type="button" @click="closeSummary">Let's go</button>
       </template>
-      <template v-else-if="suggestion">
-        <div class="pick">
-          <span class="hexdot" style="background: #16302A" aria-hidden="true"></span>
-          <div>
-            <strong>Suggested loop</strong>
-            <p class="small muted">{{ suggestion.note }}</p>
-          </div>
-          <button class="close" type="button" aria-label="Close" @click="suggestion = null">×</button>
-        </div>
-        <div class="actions">
-          <RouterLink class="btn" :to="{ name: 'record' }">Start this loop</RouterLink>
-          <RouterLink class="btn quiet" :to="{ name: 'plan', query: { suggest: 1, km: suggestion.distanceKm } }">Edit in planner</RouterLink>
-        </div>
+      <template v-else-if="finder">
+        <LoopFinder :key="finder.key" :centre="store.centre" :mode="store.mode" :start-km="finder.startKm" :auto="finder.auto" @show="showLoop" @close="closeFinder" />
       </template>
       <template v-else-if="showJourney">
         <FirstWeekCard :journey="journey" compact :finding="suggesting" @see-loop="seeFirstLoop" />

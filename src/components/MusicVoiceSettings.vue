@@ -61,9 +61,9 @@ function disconnect() {
 async function testMusic() {
   error.value = ''
   busy.value = true
+  unlock() // straight away, inside the tap, or iPhone won't let the voice play
   try {
     const r = await spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle })
-    unlock()
     await spotify.aroundSpeech(() => speak(`Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
     if (!r.canVolume && audio.music === 'duck') toast("This phone won't let other apps change Spotify's volume, so the music will pause briefly instead.")
   } catch (e) { error.value = e.message } finally { busy.value = false }
@@ -143,6 +143,7 @@ function testVoice() {
           <label class="check"><input v-model="audio.sayTime" type="checkbox" /><span>Time</span></label>
           <label class="check"><input v-model="audio.sayPace" type="checkbox" /><span>Pace (speed on rides)</span></label>
           <label class="check"><input v-model="audio.sayTerritory" type="checkbox" /><span>When I'm close to closing a loop</span></label>
+          <label class="check"><input v-model="audio.directions" type="checkbox" /><span>Turn by turn directions on a planned route</span></label>
         </fieldset>
         <div class="field">
           <label for="s-cheer">Encouragement</label>

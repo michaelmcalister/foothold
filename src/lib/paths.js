@@ -56,3 +56,24 @@ export async function fillPaths(pairs, mode, onEach = () => {}) {
   }
   await Promise.all([worker(), worker(), worker(), worker()])
 }
+
+/**
+ * A whole route through several points in one lookup (up to 25), with turn
+ * by turn steps: { line, distanceM, steps } or null if there's no path, no
+ * server, or the lookup failed. Used by the street loop builder.
+ */
+export async function routeVia(points, mode, { steps = true } = {}) {
+  if (!canSnap() || Date.now() < quietUntil || points.length < 2) return null
+  try {
+    const res = await fetch(API + '/api/route', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode, points: points.slice(0, 25), steps }),
+      signal: AbortSignal.timeout(15000),
+    })
+    if (res.status === 429 || res.status >= 500) { quietUntil = Date.now() + 60000; return null }
+    if (!res.ok) return null
+    const j = await res.json()
+    return Array.isArray(j.line) && j.line.length > 1 ? { line: j.line, distanceM: j.distanceM, steps: j.steps || [] } : null
+  } catch { return null }
+}

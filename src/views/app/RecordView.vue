@@ -29,6 +29,7 @@ import { audio } from '../../lib/audio/settings.js'
 import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
 import { offRouteM } from '../../lib/planner.js'
+import { createNavigator } from '../../lib/directions.js'
 
 const router = useRouter()
 const here = useRoute()
@@ -57,6 +58,24 @@ function dropRoute() {
   plannedRing.value = null
   setPlanned(null)
 }
+
+// ---- turn by turn directions, when the planned route came with them ----
+const hasDirections = computed(() => !!(plannedRing.value && planned.route?.steps?.length))
+const nextTurn = ref(null)
+let nav = null
+watch(() => rec.points.length, () => {
+  if (!nav || rec.status !== 'recording' || !rec.points.length) return
+  const out = nav.update(rec.points[rec.points.length - 1], rec.elapsedS)
+  nextTurn.value = out.next
+  if (audio.directions) for (const line of out.say) coachSays(line)
+})
+const turnText = computed(() => {
+  const n = nextTurn.value
+  if (!n) return null
+  const when = n.inM >= 1000 ? `${(n.inM / 1000).toFixed(1)} km` : `${Math.max(10, Math.round(n.inM / 10) * 10)} m`
+  return { short: n.short, when, turn: n.turn }
+})
+const ARROWS = { left: -90, 'sharp left': -135, 'slight left': -40, 'keep left': -25, right: 90, 'sharp right': 135, 'slight right': 40, 'keep right': 25, uturn: 180, roundabout: 0, straight: 0, arrive: 0 }
 const loopReady = computed(() => rec.distanceM > 400 && rec.toStartM != null && rec.toStartM <= 30)
 const loopHint = computed(() => {
   if (rec.status !== 'recording' || rec.distanceM < 150) return null
@@ -146,6 +165,10 @@ function begin() {
   start(mode.value)
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
   beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' ? null : missionId.value })
+  nav = hasDirections.value ? createNavigator(plannedRing.value, planned.route.steps) : null
+  nextTurn.value = null
+  const first = nav && planned.route.steps[0]
+  if (first?.turn === 'depart' && audio.directions) coachSays(first.text)
 }
 const audioLine = computed(() => {
   const parts = []
@@ -352,6 +375,11 @@ onBeforeUnmount(() => {})
         </div>
         <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
         <div v-if="rec.notice" class="notice gap" role="status">{{ rec.notice }}</div>
+        <div v-if="turnText && rec.status === 'recording'" class="turnstrip" :class="{ soon: nextTurn.inM <= 60 }" aria-live="off">
+          <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" :style="{ transform: `rotate(${ARROWS[turnText.turn] || 0}deg)` }"><path d="M12 20V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <span class="what">{{ turnText.short }}</span>
+          <span class="when">{{ turnText.when }}</span>
+        </div>
         <div v-if="ghostStrip" class="ghoststrip" :class="ghostStrip.cls" aria-live="polite"><span class="g" aria-hidden="true"></span>{{ ghostStrip.text }}</div>
         <div class="live">
           <div class="stat"><span class="big-num">{{ duration(rec.elapsedS) }}</span><span class="label">Time</span></div>
@@ -425,4 +453,9 @@ onBeforeUnmount(() => {})
 .ghoststrip .g { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
 .ghoststrip.ahead { background: #E3F3E6; }
 .ghoststrip.behind { background: #FCEBD9; }
+.turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 750; }
+.turnstrip svg { flex: none; transition: transform 0.3s; }
+.turnstrip .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turnstrip .when { flex: none; font-variant-numeric: tabular-nums; }
+.turnstrip.soon { background: var(--you); }
 </style>

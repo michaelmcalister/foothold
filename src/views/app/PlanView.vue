@@ -15,7 +15,9 @@ import { store, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL, plural } from '../../lib/format.js'
 import { routeLine, planRoute, usualPace, rivalLine, previewGroups, routeTrackPoints, escapeXml, pathLine, routePairs, pointsFor, groundOutline } from '../../lib/planner.js'
 import { loopOptions } from '../../lib/coach/routes.js'
-import { fillPaths, knownPaths, canSnap } from '../../lib/paths.js'
+import { fillPaths, knownPaths, canSnap, routeVia } from '../../lib/paths.js'
+import { streetLoopsFor } from '../../lib/suggest.js'
+import { placeSteps } from '../../lib/directions.js'
 import { withDistance, sampleByDistance, heights } from '../../lib/runStats.js'
 import { elevationFor } from '../../lib/elevation.js'
 import ProfileChart from '../../components/ProfileChart.vue'
@@ -25,7 +27,7 @@ import RouteWhen from '../../components/RouteWhen.vue'
 import { addRouteToCalendar } from '../../lib/routeShare.js'
 import { cellToLatLng } from 'h3-js'
 import { toGpx } from '../../lib/tracks.js'
-import { setPlanned } from '../../lib/plannedRoute.js'
+import { setPlanned, planned } from '../../lib/plannedRoute.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,17 +235,44 @@ watch(mode, loadCells)
 let options = []
 let optionAt = -1
 const built = ref(false)
+let streetOpts = []
 async function autoBuild() {
   busy.value = true
   try {
-    if (!built.value || !options.length) {
-      const start = waypoints.value.length ? { lng: waypoints.value[0][0], lat: waypoints.value[0][1] } : (map.value ? map.value.getCenter() : store.centre)
-      const usual = { run: 4, walk: 3, ride: 12 }[mode.value]
-      const asked = Number(route.query.km)
-      const targetKm = plan.value.distanceM >= 500 ? plan.value.distanceM / 1000 : Number.isFinite(asked) && asked > 0 ? asked : usual
-      await loadCells()
-      options = loopOptions({ start: { lat: start.lat, lng: start.lng }, targetKm, cells: cellsMap.value, me: store.user.id, mode: mode.value })
+    const start = waypoints.value.length ? { lng: waypoints.value[0][0], lat: waypoints.value[0][1] } : (map.value ? map.value.getCenter() : store.centre)
+    const usual = { run: 4, walk: 3, ride: 12 }[mode.value]
+    const asked = Number(route.query.km)
+    if (!built.value) {
+      options = []
+      streetOpts = []
       optionAt = -1
+    }
+    const targetKm = !built.value && plan.value.distanceM >= 500 ? plan.value.distanceM / 1000 : options.targetKm || (Number.isFinite(asked) && asked > 0 ? asked : usual)
+    options.targetKm = targetKm
+    // Real streets when the route lookup is there: loops chosen for the ground they take
+    if (canSnap()) {
+      if (optionAt + 1 >= streetOpts.length) {
+        const r = await streetLoopsFor({ lat: start.lat, lng: start.lng }, mode.value, targetKm, { skip: streetOpts.map((o) => o.headingDeg) })
+        if (r.streets) streetOpts.push(...r.loops)
+      }
+      if (streetOpts.length) {
+        optionAt = (optionAt + 1) % streetOpts.length
+        const o = streetOpts[optionAt]
+        closed.value = true
+        follow.value = true
+        commit(pointsFor(o.line.slice(0, -1), 14))
+        built.value = true
+        await snapPaths()
+        fitRoute()
+        toast(o.note)
+        return
+      }
+    }
+    // No street lookup: a rough oval to start from
+    if (!options.length) {
+      await loadCells()
+      const opts = loopOptions({ start: { lat: start.lat, lng: start.lng }, targetKm, cells: cellsMap.value, me: store.user.id, mode: mode.value })
+      options.push(...opts)
     }
     optionAt = (optionAt + 1) % options.length
     const o = options[optionAt]
@@ -352,9 +381,18 @@ async function removeSaved(r) {
   }
 }
 
-function runIt() {
+async function runIt() {
   if (plan.value.line.length < 2) return
-  setPlanned({ name: name.value || 'Planned route', mode: mode.value, ring: plan.value.line })
+  // Turn by turn directions for the same points, when the route lookup is there
+  let steps = null
+  const wps = waypoints.value
+  if (follow.value && canSnap() && wps.length >= 2 && wps.length <= 24) {
+    busy.value = true
+    const r = await routeVia(closed.value ? [...wps, wps[0]] : wps, mode.value).catch(() => null)
+    busy.value = false
+    if (r?.steps?.length) steps = placeSteps(plan.value.line, r.steps, { loop: closed.value })
+  }
+  setPlanned({ name: name.value || 'Planned route', mode: mode.value, ring: plan.value.line, steps })
   router.push({ name: 'record', query: { route: 'planned' } })
 }
 
@@ -378,6 +416,8 @@ onMounted(async () => {
     if (r) openSaved(r)
   }
   if (route.query.suggest) await autoBuild()
+  // From Suggest a loop on the map: the street loop, ready to change
+  if (route.query.from === 'loop' && planned.route) openShared({ ring: planned.route.ring, mode: planned.route.mode, name: planned.route.name })
   if (route.query.copy) await copyGround(String(route.query.copy))
   // From a hill page (King of the hill): its line, ready to run or build a loop round
   if (route.query.hill) {

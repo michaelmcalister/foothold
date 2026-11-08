@@ -119,23 +119,45 @@ async function device() {
 
 let session = { deviceId: null, volume: null, canVolume: false }
 
-// Start (or resume) music for a run
+const RESTRICTED = 'Spotify wouldn\u2019t start from here. Press play in the Spotify app, then come back. Foothold will still pause it while the coach talks.'
+const isRestriction = (e) => /restriction/i.test(e?.message || '')
+const playingOn = async (id) => {
+  const st = await call('GET', '/me/player').catch(() => null)
+  return !!(st?.is_playing && (!id || st.device?.id === id))
+}
+
+// Start (or resume) music for a run. Spotify answers "Restriction violated"
+// when asked to resume something that's already playing, or when the phone
+// app hasn't handed control over yet, so: skip what's already playing, then
+// try a plain play, then a hand over to this phone, and check what's
+// actually playing before calling it a failure.
 export async function startMusic({ context = '', shuffle = true } = {}) {
   const dev = await device()
   if (!dev) throw new Error('Open Spotify on this phone and play anything for a second, then try again.')
   session = { deviceId: dev.id, volume: dev.volume_percent ?? null, canVolume: !!dev.supports_volume && dev.volume_percent != null }
+  const done = { device: dev.name, canVolume: session.canVolume }
+  if (dev.is_restricted) throw new Error(RESTRICTED)
+  if (!context && (await playingOn(dev.id))) return done // already going: leave it be
   const q = `?device_id=${encodeURIComponent(dev.id)}`
-  if (context) {
-    await call('PUT', `/me/player/shuffle?state=${shuffle ? 'true' : 'false'}&device_id=${encodeURIComponent(dev.id)}`).catch(() => {})
-    await call('PUT', '/me/player/play' + q, { context_uri: context })
-  } else {
-    await call('PUT', '/me/player/play' + q)
+  try {
+    if (context) {
+      await call('PUT', `/me/player/shuffle?state=${shuffle ? 'true' : 'false'}&device_id=${encodeURIComponent(dev.id)}`).catch(() => {})
+      await call('PUT', '/me/player/play' + q, { context_uri: context })
+    } else {
+      await call('PUT', '/me/player/play' + q)
+    }
+  } catch (e) {
+    if (!isRestriction(e)) throw e
+    // hand playback to this phone and play
+    await call('PUT', '/me/player', { device_ids: [dev.id], play: true }).catch(() => {})
+    await new Promise((r) => setTimeout(r, 700))
+    if (!(await playingOn(dev.id))) throw new Error(RESTRICTED)
   }
-  return { device: dev.name, canVolume: session.canVolume }
+  return done
 }
 
 export async function pauseMusic() { await call('PUT', '/me/player/pause').catch(() => {}) }
-export async function resumeMusic() { await call('PUT', '/me/player/play').catch(() => {}) }
+export async function resumeMusic() { await call('PUT', '/me/player/play' + (session.deviceId ? `?device_id=${encodeURIComponent(session.deviceId)}` : '')).catch(() => {}) }
 
 async function setVolume(v) {
   await call('PUT', `/me/player/volume?volume_percent=${Math.round(v)}${session.deviceId ? `&device_id=${encodeURIComponent(session.deviceId)}` : ''}`)
