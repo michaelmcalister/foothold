@@ -110,16 +110,24 @@ export async function playlists() {
   return out
 }
 
-// The device to play on: the active one, else this phone's Spotify app, else any
+// The device to play on. On a phone it's this phone's Spotify app, even when
+// a laptop or TV was the last one playing (otherwise the music starts over
+// there and Spotify on the phone says it's in use on another device). On a
+// computer, whatever is active. Exported for tests.
+export function pickDevice(list, { mobile = typeof navigator !== 'undefined' && /iPhone|iPad|Android/i.test(navigator.userAgent) } = {}) {
+  const usable = (list || []).filter((x) => x && x.id && !x.is_restricted)
+  const phones = usable.filter((x) => x.type === 'Smartphone')
+  if (mobile && phones.length) return phones.find((x) => x.is_active) || phones[0]
+  return usable.find((x) => x.is_active) || phones[0] || usable[0] || (list || [])[0] || null
+}
 async function device() {
   const d = await call('GET', '/me/player/devices')
-  const list = d?.devices || []
-  return list.find((x) => x.is_active) || list.find((x) => x.type === 'Smartphone') || list[0] || null
+  return pickDevice(d?.devices || [])
 }
 
 let session = { deviceId: null, volume: null, canVolume: false }
 
-const RESTRICTED = 'Spotify wouldn\u2019t start from here. Press play in the Spotify app, then come back. Foothold will still pause it while the coach talks.'
+const RESTRICTED = 'Spotify wouldn\u2019t start from here. Open Spotify, tap the speaker icon and pick this phone, press play, then come back. Foothold will still pause it while the coach talks.'
 const isRestriction = (e) => /restriction/i.test(e?.message || '')
 const playingOn = async (id) => {
   const st = await call('GET', '/me/player').catch(() => null)
@@ -137,7 +145,15 @@ export async function startMusic({ context = '', shuffle = true } = {}) {
   session = { deviceId: dev.id, volume: dev.volume_percent ?? null, canVolume: !!dev.supports_volume && dev.volume_percent != null }
   const done = { device: dev.name, canVolume: session.canVolume }
   if (dev.is_restricted) throw new Error(RESTRICTED)
-  if (!context && (await playingOn(dev.id))) return done // already going: leave it be
+  if (!context && (await playingOn(dev.id))) return done // already going here: leave it be
+  if (!dev.is_active) {
+    // bring playback to this phone first, so nothing else keeps it
+    await call('PUT', '/me/player', { device_ids: [dev.id], play: !context }).catch(() => {})
+    if (!context) {
+      await new Promise((r) => setTimeout(r, 700))
+      if (await playingOn(dev.id)) return done
+    }
+  }
   const q = `?device_id=${encodeURIComponent(dev.id)}`
   try {
     if (context) {

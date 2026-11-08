@@ -264,6 +264,30 @@ describe('Spotify start', () => {
   })
   const phone = { id: 'p1', name: 'iPhone', type: 'Smartphone', is_active: true, supports_volume: false, volume_percent: null }
 
+  it('plays on this phone, not the laptop or TV that played last', async () => {
+    const { pickDevice } = await import('../src/lib/audio/spotify.js')
+    const laptop = { id: 'm1', name: 'MacBook', type: 'Computer', is_active: true }
+    const tv = { id: 't1', name: 'Lounge TV', type: 'TV', is_active: false }
+    expect(pickDevice([laptop, tv, { ...phone, is_active: false }], { mobile: true }).id).toBe('p1')
+    expect(pickDevice([laptop, tv, { ...phone, is_active: false }], { mobile: false }).id).toBe('m1')
+    expect(pickDevice([laptop], { mobile: true }).id).toBe('m1') // no phone app open: the only one there
+    expect(pickDevice([], { mobile: true })).toBe(null)
+  })
+
+  it('moves playback over to the phone when something else had it', async () => {
+    const { startMusic } = await import('../src/lib/audio/spotify.js')
+    let on = 'm1'
+    setFetch({
+      'GET /me/player/devices': { body: { devices: [{ id: 'm1', name: 'MacBook', type: 'Computer', is_active: true }, { ...phone, is_active: false }] } },
+      'GET /me/player': () => ({ body: { is_playing: true, device: { id: on } } }),
+      'PUT /me/player': () => { on = 'p1'; return null },
+    })
+    Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'iPhone' }, configurable: true })
+    expect((await startMusic()).device).toBe('iPhone')
+    expect(on).toBe('p1')
+    expect(calls).not.toContain('PUT /me/player/play')
+  })
+
   it('leaves music alone when it is already playing', async () => {
     const { startMusic } = await import('../src/lib/audio/spotify.js')
     setFetch({ 'GET /me/player/devices': { body: { devices: [phone] } }, 'GET /me/player': { body: { is_playing: true, device: { id: 'p1' } } } })
@@ -291,6 +315,6 @@ describe('Spotify start', () => {
       'GET /me/player': { body: { is_playing: false } },
       'PUT /me/player/play': { status: 403, body: { error: { message: 'Player command failed: Restriction violated' } } },
     })
-    await expect(startMusic()).rejects.toThrow(/Press play in the Spotify app/)
+    await expect(startMusic()).rejects.toThrow(/pick this phone, press play/)
   })
 })

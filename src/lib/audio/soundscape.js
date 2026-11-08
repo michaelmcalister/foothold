@@ -337,6 +337,229 @@ export const STINGS = {
   },
 }
 
+// ---- the cinematic kit: big hits, risers and the like ----
+Object.assign(STINGS, {
+  braam: {
+    dur: 3.2,
+    build(ctx, out, t) {
+      // the trailer horn: stacked low saws opening up, with a thump under it
+      for (const [n, d] of [['D1', -9], ['D2', 7], ['A2', -5], ['D3', 4]]) tone(ctx, out, t, { freq: note(n), type: 'sawtooth', detune: d, attack: 0.05, hold: 1.2, decay: 1.8, peak: 0.07, filter: { freq: 180, to: 1400, time: 0.5, q: 2 } })
+      tone(ctx, out, t, { freq: 55, glideTo: 30, glideTime: 0.8, attack: 0.005, decay: 1.4, peak: 0.45 })
+      noise(ctx, out, t, { attack: 0.01, decay: 1.2, peak: 0.08, filter: { type: 'lowpass', freq: 600, to: 100, time: 1.2 } })
+      return t + 3.1
+    },
+  },
+  impact: {
+    dur: 2.0,
+    build(ctx, out, t) {
+      tone(ctx, out, t, { freq: 90, glideTo: 38, glideTime: 0.35, attack: 0.002, decay: 1.1, peak: 0.38 })
+      noise(ctx, out, t, { attack: 0.001, decay: 0.25, peak: 0.25, filter: { type: 'lowpass', freq: 3000, to: 300, time: 0.25 } })
+      noise(ctx, out, t + 0.02, { attack: 0.01, decay: 1.6, peak: 0.05, filter: { type: 'highpass', freq: 4000, to: 2500, time: 1.6 } })
+      return t + 1.9
+    },
+  },
+  riser: {
+    dur: 4.0,
+    build(ctx, out, t) {
+      swell(ctx, out, t, 3.8, { peak: 0.2, from: 200, to: 6000 })
+      tone(ctx, out, t, { freq: 110, glideTo: 880, glideTime: 3.8, type: 'sawtooth', attack: 3.6, decay: 0.15, peak: 0.05, filter: { freq: 2400 } })
+      return t + 3.95
+    },
+  },
+  downer: {
+    dur: 2.2,
+    build(ctx, out, t) {
+      tone(ctx, out, t, { freq: 420, glideTo: 50, glideTime: 1.8, type: 'sawtooth', attack: 0.02, decay: 2, peak: 0.22, filter: { freq: 1200, to: 200, time: 1.8 } })
+      return t + 2.1
+    },
+  },
+  timpani: {
+    dur: 2.4,
+    build(ctx, out, t) {
+      // a roll that swells into a hit
+      for (let i = 0; i < 18; i++) tone(ctx, out, t + i * 0.09, { freq: 82, glideTo: 70, glideTime: 0.1, attack: 0.003, decay: 0.2, peak: 0.05 + i * 0.012 })
+      tone(ctx, out, t + 1.65, { freq: 98, glideTo: 60, glideTime: 0.3, attack: 0.003, decay: 0.7, peak: 0.45 })
+      return t + 2.35
+    },
+  },
+  taiko: {
+    dur: 1.6,
+    build(ctx, out, t) {
+      for (const [at, f, pk] of [[0, 70, 0.45], [0.38, 70, 0.3], [0.75, 58, 0.55]]) {
+        tone(ctx, out, t + at, { freq: f, glideTo: f * 0.6, glideTime: 0.3, attack: 0.002, decay: 0.6, peak: pk })
+        noise(ctx, out, t + at, { attack: 0.001, decay: 0.06, peak: pk * 0.25, filter: { type: 'lowpass', freq: 900 } })
+      }
+      return t + 1.5
+    },
+  },
+  clock: {
+    dur: 3.0,
+    build(ctx, out, t) {
+      for (let i = 0; i < 6; i++) noise(ctx, out, t + i * 0.5, { attack: 0.001, decay: 0.02, peak: 0.6, filter: { type: 'bandpass', freq: i % 2 ? 2600 : 3400, q: 6 } })
+      return t + 3.0
+    },
+  },
+  smash: {
+    dur: 1.4,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.001, decay: 0.4, peak: 0.25, filter: { type: 'highpass', freq: 2500 } })
+      for (let i = 0; i < 12; i++) bell(ctx, out, t + 0.03 + i * 0.05 + (i % 3) * 0.013, 3000 + ((i * 937) % 2500), { peak: 0.03, decay: 0.25 })
+      return t + 1.3
+    },
+  },
+  creak: {
+    dur: 1.6,
+    build(ctx, out, t) {
+      for (let i = 0; i < 26; i++) tone(ctx, out, t + i * 0.055, { freq: 180 + Math.sin(i * 0.6) * 60, type: 'sawtooth', attack: 0.004, decay: 0.05, peak: 0.28, filter: { type: 'bandpass', freq: 900, q: 4 } })
+      return t + 1.55
+    },
+  },
+  footsteps: {
+    dur: 2.6,
+    build(ctx, out, t) {
+      // someone running up behind you, getting closer
+      for (let i = 0; i < 9; i++) {
+        const near = (i + 1) / 9
+        noise(ctx, out, t + i * 0.29, { attack: 0.002, decay: 0.07, peak: 0.04 + 0.16 * near, filter: { type: 'lowpass', freq: 500 + 900 * near } })
+        tone(ctx, out, t + i * 0.29, { freq: 90, glideTo: 60, glideTime: 0.05, attack: 0.002, decay: 0.08, peak: 0.05 + 0.15 * near })
+      }
+      return t + 2.6
+    },
+  },
+  beeps: {
+    dur: 1.6,
+    build(ctx, out, t) {
+      // a keypad: four digits, then the safe opens
+      ;[1209, 1336, 1477, 1336].forEach((f, i) => { tone(ctx, out, t + i * 0.22, { freq: f, attack: 0.003, hold: 0.08, decay: 0.03, peak: 0.07 }); tone(ctx, out, t + i * 0.22, { freq: 770, attack: 0.003, hold: 0.08, decay: 0.03, peak: 0.07 }) })
+      tone(ctx, out, t + 1.0, { freq: 1760, attack: 0.003, hold: 0.25, decay: 0.1, peak: 0.08 })
+      return t + 1.5
+    },
+  },
+  screech: {
+    dur: 1.8,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.05, hold: 0.9, decay: 0.5, peak: 0.12, filter: { type: 'bandpass', freq: 2200, to: 1500, time: 1.4, q: 8 } })
+      tone(ctx, out, t, { freq: 70, type: 'sawtooth', attack: 0.1, hold: 1.0, decay: 0.4, peak: 0.08, filter: { freq: 300 } })
+      return t + 1.7
+    },
+  },
+  thunder: {
+    dur: 4.0,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.01, decay: 0.3, peak: 0.25, filter: { type: 'lowpass', freq: 1800 } })
+      noise(ctx, out, t + 0.2, { attack: 0.3, hold: 0.8, decay: 2.6, peak: 0.25, filter: { type: 'lowpass', freq: 220, to: 70, time: 3.5 } })
+      return t + 3.9
+    },
+  },
+  cheer: {
+    dur: 3.0,
+    build(ctx, out, t) {
+      swell(ctx, out, t, 1.2, { peak: 0.2, from: 800, to: 1600 })
+      noise(ctx, out, t + 1.1, { attack: 0.05, hold: 0.8, decay: 1, peak: 0.25, filter: { type: 'bandpass', freq: 1300, q: 0.8 } })
+      for (let i = 0; i < 10; i++) noise(ctx, out, t + 0.9 + i * 0.11 + (i % 3) * 0.03, { attack: 0.002, decay: 0.05, peak: 0.15, filter: { type: 'bandpass', freq: 1800, q: 1 } }) // claps
+      return t + 2.9
+    },
+  },
+  shutter: {
+    dur: 0.5,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.001, decay: 0.03, peak: 0.4, filter: { type: 'bandpass', freq: 3500, q: 2 } })
+      noise(ctx, out, t + 0.09, { attack: 0.001, decay: 0.04, peak: 0.3, filter: { type: 'bandpass', freq: 2500, q: 2 } })
+      return t + 0.45
+    },
+  },
+  flare: {
+    dur: 2.2,
+    build(ctx, out, t) {
+      // the fire flaring up: a roar that swells and settles
+      noise(ctx, out, t, { attack: 0.6, hold: 0.4, decay: 1.1, peak: 0.25, filter: { type: 'lowpass', freq: 250, to: 900, time: 1.0 } })
+      for (let i = 0; i < 14; i++) noise(ctx, out, t + 0.4 + i * 0.09, { attack: 0.001, decay: 0.02, peak: 0.08, filter: { type: 'bandpass', freq: 2000 + (i * 613) % 2500, q: 2 } })
+      return t + 2.1
+    },
+  },
+})
+
+// ---- the title music: a cold open and an end theme for each series ----
+export const THEMES = {
+  ember: {
+    motif: ['D4', 'F4', 'A4', 'G4', 'F4', 'E4', 'D4'], // a horn line
+    beats: [1, 0.5, 1.5, 0.5, 0.5, 0.5, 2.5],
+    chord: ['D2', 'A2', 'D3', 'F3', 'A3'],
+    end: ['D3', 'F#3', 'A3', 'D4'],
+    voice: 'horn',
+  },
+  heist: {
+    motif: ['E3', 'G3', 'B3', 'A#3', 'A3', 'G3', 'E3'], // a spy bass line
+    beats: [0.5, 0.5, 1, 0.5, 0.5, 0.5, 2],
+    chord: ['E2', 'B2', 'E3', 'G3', 'B3'],
+    end: ['E3', 'G#3', 'B3', 'E4'],
+    voice: 'pluck',
+  },
+}
+
+function motifNote(ctx, out, t, voice, freq, len) {
+  if (voice === 'horn') {
+    for (const d of [-6, 6]) tone(ctx, out, t, { freq, type: 'sawtooth', detune: d, attack: 0.08, hold: len * 0.7, decay: len * 0.5, peak: 0.05, filter: { freq: 700, to: 1600, time: 0.25, q: 1 } })
+    tone(ctx, out, t, { freq: freq / 2, type: 'triangle', attack: 0.08, hold: len * 0.7, decay: len * 0.5, peak: 0.05 })
+  } else {
+    pluck(ctx, out, t, freq, { peak: 0.2, decay: Math.min(0.6, len * 0.9), bright: 1400 })
+    noise(ctx, out, t, { attack: 0.001, decay: 0.02, peak: 0.03, filter: { type: 'highpass', freq: 7000 } }) // brushed hat
+  }
+}
+
+/**
+ * The cold open: a swell from nothing, drums, a big hit, then the series
+ * motif. Returns the time the narrator should come in (after the hit).
+ */
+export function scheduleIntro(ctx, out, name, t) {
+  const th = THEMES[name] || THEMES.ember
+  pad(ctx, out, t, th.chord.slice(0, 2).map(note), { peak: 0.05, attack: 4, hold: 3, decay: 3, cutoff: 500, to: 1200 })
+  STINGS.riser.build(ctx, out, t + 1.2)
+  STINGS.taiko.build(ctx, out, t + 4.2)
+  STINGS.braam.build(ctx, out, t + 5.4)
+  let at = t + 6.4
+  const beat = name === 'heist' ? 0.32 : 0.42
+  th.motif.forEach((n, i) => {
+    const len = th.beats[i] * beat
+    motifNote(ctx, out, at, th.voice, note(n), len)
+    at += len
+  })
+  pad(ctx, out, t + 6.4, th.chord.map(note), { peak: 0.03, attack: 1.2, hold: 3, decay: 3, cutoff: 1100 })
+  return t + 5.8
+}
+export const INTRO_S = 12 // how long the cold open runs before it settles
+
+/** The end theme: the motif once more, landing on a lifted chord and a hit. */
+export function scheduleOutro(ctx, out, name, t) {
+  const th = THEMES[name] || THEMES.ember
+  STINGS.timpani.build(ctx, out, t)
+  let at = t + 1.65
+  const beat = name === 'heist' ? 0.32 : 0.42
+  th.motif.forEach((n, i) => {
+    const len = th.beats[i] * beat
+    motifNote(ctx, out, at, th.voice, note(i === th.motif.length - 1 ? th.end[0].replace(/\d/, (d) => String(Number(d) + 1)) : n), len)
+    at += len
+  })
+  pad(ctx, out, at - 0.6, th.end.map(note), { peak: 0.045, attack: 0.4, hold: 2.5, decay: 3.5, cutoff: 1800 })
+  STINGS.impact.build(ctx, out, at - 0.6)
+  return at + 5
+}
+
+/** A soft generated hall, so the big moments ring out. Null without convolver support. */
+export function makeHall(ctx, seconds = 2.4) {
+  if (!ctx.createConvolver || !ctx.createBuffer) return null
+  const len = Math.floor(ctx.sampleRate * seconds)
+  const ir = ctx.createBuffer(2, len, ctx.sampleRate)
+  const r = rng(11)
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch)
+    for (let i = 0; i < len; i++) d[i] = (r() * 2 - 1) * Math.pow(1 - i / len, 3)
+  }
+  const conv = ctx.createConvolver()
+  conv.buffer = ir
+  return conv
+}
+
 export function scheduleSting(ctx, out, name, t) {
   const s = STINGS[name]
   if (!s) return t
@@ -440,6 +663,16 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
   const stingBus = ctx.createGain()
   stingBus.gain.value = 1
   stingBus.connect(out) // effects are never ducked: they come just before a line
+  // a touch of hall on the music and effects, for the big moments
+  const hall = makeHall(ctx)
+  if (hall) {
+    const send = ctx.createGain()
+    send.gain.value = 0.22
+    hall.connect(send)
+    send.connect(out)
+    musicBus.connect(hall)
+    stingBus.connect(hall)
+  }
 
   let scene = null
   let sceneName = null
@@ -450,6 +683,8 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
   let timer = null
   let ducked = false
   let finaleUntil = 0
+  let chaseUpTo = 0
+  let quietUntil = 0 // the score waits while the title music plays
   const LOOK = 1.2 // seconds scheduled ahead (timers are slow when the screen is off)
 
   function tick() {
@@ -460,10 +695,22 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       for (const s of spotTimes(sceneName, from, until, r)) SPOTS[s.name](ctx, sceneBus, s.at, r)
       spotsUpTo = until
     }
+    // in a chase, the sound of the chase: footsteps behind you, or the fire flaring
+    if (intensity === 2 && score && chaseUpTo < until) {
+      for (let at = Math.max(chaseUpTo, now); at < until; at += 0.31) {
+        if (score === 'heist') {
+          const near = 0.5 + 0.5 * Math.sin(at * 0.4) ** 2
+          noise(ctx, sceneBus, at, { attack: 0.002, decay: 0.06, peak: 0.02 + 0.03 * near, filter: { type: 'lowpass', freq: 700 } })
+        } else if (r() < 0.5) {
+          SPOTS.crackle(ctx, sceneBus, at, r)
+        }
+      }
+      chaseUpTo = until
+    }
     if (music && score) {
       if (finaleUntil && now > finaleUntil) { intensity = 0; finaleUntil = 0 }
-      if (nextStepAt < now) nextStepAt = now + 0.05
-      while (nextStepAt < until) {
+      if (nextStepAt < now) nextStepAt = Math.max(now + 0.05, quietUntil)
+      while (nextStepAt < until && nextStepAt >= quietUntil) {
         for (const n of musicStep(score, intensity, step)) playNote(ctx, musicBus, nextStepAt, n)
         nextStepAt += stepSeconds(score, intensity)
         step++
@@ -500,6 +747,24 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       master.gain.cancelScheduledValues(t)
       master.gain.setValueAtTime(master.gain.value, t)
       master.gain.linearRampToValueAtTime(on ? 0.35 : 1, t + (on ? 0.15 : 0.8))
+    },
+    /**
+     * The cold open. Resolves when the narrator should start the title (just
+     * after the big hit); the music carries on underneath.
+     */
+    intro() {
+      const t = ctx.currentTime + 0.05
+      const voiceAt = scheduleIntro(ctx, stingBus, score, t)
+      quietUntil = t + INTRO_S
+      nextStepAt = quietUntil
+      return new Promise((res) => setTimeout(res, (voiceAt - t) * 1000))
+    },
+    /** The end theme, after the finale. Resolves when it has played. */
+    outro() {
+      const t = ctx.currentTime + 0.05
+      const end = scheduleOutro(ctx, stingBus, score, t)
+      quietUntil = end
+      return new Promise((res) => setTimeout(res, (end - t - 3) * 1000))
     },
     /** Play an effect now; resolves when it's done. */
     sting(name) {

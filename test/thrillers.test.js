@@ -10,7 +10,7 @@ import { THRILLERS } from '../src/lib/missions/thrillers.js'
 import { createMission, lineText, surgeCount } from '../src/lib/missions/engine.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
 import { trainingPaces } from '../src/lib/coach/paces.js'
-import { SCENES, STINGS, SCORES, musicStep, stepSeconds, spotTimes, rng, startScene, scheduleSting, createSoundscape, intensityFor } from '../src/lib/audio/soundscape.js'
+import { THEMES, scheduleIntro, scheduleOutro, INTRO_S, SCENES, STINGS, SCORES, musicStep, stepSeconds, spotTimes, rng, startScene, scheduleSting, createSoundscape, intensityFor } from '../src/lib/audio/soundscape.js'
 import { handleTts, STORY_MODEL } from '../worker/tts.js'
 
 const paces = trainingPaces(30 * 60)
@@ -251,4 +251,58 @@ describe('soundscape', () => {
     s.stop(0.01)
     expect(ctx.log.started).toBeGreaterThan(5) // the scene beds and the opening drone
   })
+
+  it('opens each episode with title music and closes it with the end theme', () => {
+    for (const name of Object.keys(THEMES)) {
+      const ctx = fakeCtx()
+      const voiceAt = scheduleIntro(ctx, ctx.destination, name, 5)
+      expect(voiceAt - 5).toBeGreaterThan(4) // the narrator comes in after the big hit
+      expect(voiceAt - 5).toBeLessThan(INTRO_S)
+      const end = scheduleOutro(ctx, ctx.destination, name, 5)
+      expect(end - 5).toBeGreaterThan(5)
+      expect(end - 5).toBeLessThan(15)
+    }
+  })
+
+  it('the score holds off while the title music plays', async () => {
+    const ctx = fakeCtx()
+    const s = createSoundscape(ctx, ctx.destination, { score: 'ember', seed: 3 })
+    s.start()
+    const before = ctx.log.started
+    const p = s.intro()
+    expect(ctx.log.started).toBeGreaterThan(before + 20) // the whole cold open is scheduled at once
+    s.stop(0.01)
+    await Promise.race([p, new Promise((r) => setTimeout(r, 10))])
+  })
 })
+
+describe('episode framing', () => {
+  it('every episode has a number, a "Previously on" from episode two and a "Next time" until the last', () => {
+    for (const id of ['ember', 'heist']) {
+      const eps = MISSIONS.filter((m) => m.saga === id)
+      eps.forEach((m, i) => {
+        expect(m.episode).toBe(i + 1)
+        if (i === 0) expect(m.previously).toBeUndefined()
+        else expect(m.previously).toMatch(new RegExp(`^Previously on ${sagaById(id).title}: `))
+        if (i === eps.length - 1) expect(m.next).toBeUndefined()
+        else expect(m.next).toMatch(new RegExp(`^Next time on ${sagaById(id).title}`))
+        for (const l of [m.previously, m.next].filter(Boolean)) {
+          expect(l.length).toBeLessThanOrEqual(180)
+          expect(l).not.toMatch(/[‒–—―]|--/)
+        }
+      })
+    }
+  })
+
+  it('reads the title card and teasers in the narrator voice, ready before the run', async () => {
+    const { episodeLines, missionLines } = await import('../src/lib/audio/runAudio.js')
+    const ep = missionById('heist-cross')
+    const saga = sagaById('heist')
+    expect(episodeLines(ep, saga).title).toBe('The Night Job. Episode 3. The Double Cross.')
+    const lines = missionLines(ep, saga.narrator, saga)
+    expect(lines.slice(0, 3).map((l) => l.who)).toEqual(['heist-narrator', 'heist-narrator', 'heist-narrator'])
+    expect(lines.some((l) => l.text === ep.next)).toBe(true)
+    expect(episodeLines(missionById('first-steps'), sagaById('trailkeepers')).title).toBe(null)
+  })
+})
+

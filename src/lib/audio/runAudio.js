@@ -30,6 +30,7 @@ let missionSpokeAt = -Infinity
 let scape = null // the thriller soundscape, when one is playing
 let narrator = null // who reads lines with no speaker
 let level = 0 // the score's intensity
+let episode = null // the thriller episode's title and teaser lines
 
 /** What the Record screen's mission strip shows (null with no mission). */
 export const missionLive = ref(null)
@@ -58,6 +59,7 @@ async function talking(fn) {
  * effect plays first, and radio characters get a squelch either side.
  */
 function sayLine(line) {
+  if (!line) return
   if (typeof line === 'string' && !narrator) return say(line)
   const { text, who: w, fx } = typeof line === 'string' ? { text: line } : line
   const who = w || narrator
@@ -72,9 +74,21 @@ function sayLine(line) {
   }, { how: audio.music, duckTo: audio.duckTo }))
 }
 
+/** The title card, "Previously on" and "Next time on" lines for a thriller episode. */
+export function episodeLines(script, saga) {
+  if (!saga?.narrator || !script.episode) return { title: null, previously: null, next: null }
+  return {
+    title: `${saga.title}. Episode ${script.episode}. ${script.title}.`,
+    previously: script.previously || null,
+    next: script.next || null,
+  }
+}
+
 /** Every line a mission can say, with its speaker, to get ready before the run. */
-export function missionLines(script, narratorKey) {
+export function missionLines(script, narratorKey, saga = null) {
   const out = []
+  const ep = episodeLines(script, saga)
+  for (const l of [ep.title, ep.previously, ep.next]) if (l) out.push({ text: l, who: narratorKey })
   const add = (l, who) => {
     if (!l) return
     if (typeof l === 'string') out.push({ text: l, who: who || narratorKey })
@@ -127,9 +141,16 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   const saga = script ? sagaById(script.saga) : null
   narrator = saga?.narrator || null
   level = 0
+  episode = null
   if (narrator) {
-    prepareLines(missionLines(script, narrator), { coachVoice: audio.coachVoice }) // in the background
+    prepareLines(missionLines(script, narrator, saga), { coachVoice: audio.coachVoice }) // in the background
     scape = startScape(saga)
+    episode = episodeLines(script, saga)
+    // the cold open: title music, the episode's title, and what happened last time
+    const s = scape
+    if (s) enqueue(() => s.intro())
+    sayLine(episode.title)
+    sayLine(episode.previously)
   }
   missionSpokeAt = -Infinity
   missionLive.value = mission ? mission.view() : null
@@ -168,6 +189,12 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
             if (MISSION_SFX[e.type] && !(narrator && ['chapter', 'finale'].includes(e.type))) sfx.cue(MISSION_SFX[e.type])
           }
           for (const line of out.lines) sayLine(line)
+          // the end of an episode: the end theme, then a teaser for the next one
+          if (narrator && out.events.some((e) => e.type === 'finale')) {
+            const s = scape
+            if (s) enqueue(() => s.outro())
+            sayLine(episode?.next)
+          }
           if (out.lines.length) missionSpokeAt = rec.elapsedS
         }
         const busy = mission && (mission.view().kind === 'surge' || rec.elapsedS - missionSpokeAt < 20)
