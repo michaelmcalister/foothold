@@ -35,8 +35,11 @@ export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
   map.addSource('ghost', { type: 'geojson', data: empty })
   map.addLayer({ id: 'hex-fill', type: 'fill', source: 'hexes', paint: { 'fill-color': colour, 'fill-opacity': 0.32 } })
   map.addLayer({ id: 'hex-line', type: 'line', source: 'hexes', paint: { 'line-color': colour, 'line-width': 1.2, 'line-opacity': 0.8 } })
-  map.addLayer({ id: 'trail-halo', type: 'line', source: 'trail', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 9 } })
-  map.addLayer({ id: 'trail', type: 'line', source: 'trail', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': colour, 'line-width': 5 } })
+  // The trail: bold, with a white edge over a soft shadow so it reads on any ground
+  const round = { 'line-join': 'round', 'line-cap': 'round' }
+  map.addLayer({ id: 'trail-shadow', type: 'line', source: 'trail', layout: round, paint: { 'line-color': '#000000', 'line-opacity': 0.35, 'line-width': 18, 'line-blur': 4 } })
+  map.addLayer({ id: 'trail-halo', type: 'line', source: 'trail', layout: round, paint: { 'line-color': '#FFFFFF', 'line-width': 13 } })
+  map.addLayer({ id: 'trail', type: 'line', source: 'trail', layout: round, paint: { 'line-color': colour, 'line-width': 8 } })
   map.addLayer({ id: 'ghost', type: 'circle', source: 'ghost', paint: { 'circle-radius': 7, 'circle-color': '#FFFFFF', 'circle-opacity': 0.85, 'circle-stroke-width': 2, 'circle-stroke-color': '#16302A' } })
   map.addLayer({ id: 'runner', type: 'circle', source: 'runner', paint: { 'circle-radius': 7, 'circle-color': colour, 'circle-stroke-width': 3, 'circle-stroke-color': '#FFFFFF' } })
 

@@ -163,11 +163,15 @@ function drawFrame(ctx, W, H, fr, { map, plan, text, colour }) {
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     linePath(ctx, trail, project)
+    ctx.save()
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+    ctx.shadowBlur = 14 * k
     ctx.strokeStyle = '#FFFFFF'
-    ctx.lineWidth = 22 * k
+    ctx.lineWidth = 30 * k
     ctx.stroke()
+    ctx.restore()
     ctx.strokeStyle = colour
-    ctx.lineWidth = 12 * k
+    ctx.lineWidth = 18 * k
     ctx.stroke()
   }
   if (fr.id === 'follow' || fr.id === 'flyin' || (fr.id === 'orbit' && fr.u < 0.3)) {

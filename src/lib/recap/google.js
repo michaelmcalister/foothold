@@ -49,11 +49,19 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
   map.style.height = '100%'
   el.append(map)
 
+  // The trail: a bold line with a white edge, over a soft dark shadow so it
+  // stands out on bright satellite ground as well as dark trees and water
+  const shadow = new Polyline3DElement({
+    strokeColor: 'rgba(0, 0, 0, 0.45)',
+    strokeWidth: 26,
+    altitudeMode: 'CLAMP_TO_GROUND',
+    drawsOccludedSegments: true,
+  })
   const trail = new Polyline3DElement({
     strokeColor: colour,
     outerColor: '#FFFFFF',
-    strokeWidth: 9,
-    outerWidth: 0.35,
+    strokeWidth: 16,
+    outerWidth: 0.4,
     altitudeMode: 'CLAMP_TO_GROUND',
     drawsOccludedSegments: true,
   })
@@ -116,9 +124,12 @@ export async function createGoogleDriver(el, { key, start, colour = '#2E55E6' })
       if (!force && now - lastTrail < 120) return
       lastTrail = now
       // Google refuses an empty path, so take the line off the map until there's something to draw
-      if (points.length < 2) { trail.remove(); return }
-      trail.path = points.map((p) => ({ lat: p.lat, lng: p.lng }))
-      if (!trail.isConnected) map.append(trail)
+      if (points.length < 2) { shadow.remove(); trail.remove(); return }
+      const path = points.map((p) => ({ lat: p.lat, lng: p.lng }))
+      shadow.path = path
+      trail.path = path
+      if (!shadow.isConnected) map.append(shadow)
+      if (!trail.isConnected) map.append(trail) // after the shadow, so it sits on top
     },
     // The ghost you raced, as a marker beside the trail (null hides it)
     setGhost(p) {
