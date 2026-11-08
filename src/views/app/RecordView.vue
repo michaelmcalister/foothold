@@ -30,6 +30,7 @@ import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
 import { offRouteM } from '../../lib/planner.js'
 import { createNavigator } from '../../lib/directions.js'
+import PocketMode from '../../components/PocketMode.vue'
 
 const router = useRouter()
 const here = useRoute()
@@ -58,6 +59,10 @@ function dropRoute() {
   plannedRing.value = null
   setPlanned(null)
 }
+
+// Pocket mode: a black screen that keeps recording (locking the phone stops GPS)
+const pocket = ref(false)
+watch(() => rec.status, (st) => { if (st !== 'recording' && st !== 'paused') pocket.value = false })
 
 // ---- turn by turn directions, when the planned route came with them ----
 const hasDirections = computed(() => !!(plannedRing.value && planned.route?.steps?.length))
@@ -317,6 +322,7 @@ onBeforeUnmount(() => {})
 
 <template>
   <div class="rec">
+    <PocketMode v-if="pocket" :next-turn="nextTurn" @close="pocket = false" />
     <div class="maparea">
       <TerritoryMap :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="plannedRing" :fit="!!plannedRing" :ghost="ghostLive?.pos || null" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
@@ -389,6 +395,10 @@ onBeforeUnmount(() => {})
             <span class="label">{{ rec.mode === 'ride' ? 'km/h' : 'Pace /km' }}</span>
           </div>
         </div>
+        <button v-if="rec.status !== 'acquiring'" class="pocketbtn" type="button" @click="pocket = true">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+          Pocket mode <span class="muted">keeps GPS going, unlike the lock button</span>
+        </button>
         <div class="controls">
           <button v-if="rec.status === 'recording'" class="btn secondary" type="button" @click="pause">Pause</button>
           <button v-else-if="rec.status === 'paused'" class="btn secondary" type="button" @click="resume">Resume</button>
@@ -453,6 +463,11 @@ onBeforeUnmount(() => {})
 .ghoststrip .g { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
 .ghoststrip.ahead { background: #E3F3E6; }
 .ghoststrip.behind { background: #FCEBD9; }
+.pocketbtn {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; border-radius: 12px;
+  background: var(--soft); color: var(--ink); font: inherit; font-weight: 750; cursor: pointer; text-align: left;
+}
+.pocketbtn .muted { font-weight: 500; font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 750; }
 .turnstrip svg { flex: none; transition: transform 0.3s; }
 .turnstrip .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

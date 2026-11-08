@@ -50,7 +50,7 @@ if (typeof document !== 'undefined') document.addEventListener('visibilitychange
   if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return }
   if (active && (!lock || lock.released)) keepAwake()
   if (rec.status === 'recording' && hiddenAt && Date.now() - hiddenAt > GAP_MS) {
-    rec.notice = `GPS stopped for ${gapText(Date.now() - hiddenAt)} while Foothold was off screen. We'll join the gap with a straight line. Keep Foothold open with the screen on for the best line.`
+    rec.notice = `GPS stopped for ${gapText(Date.now() - hiddenAt)} while Foothold was off screen. We'll join the gap with a straight line. Locking the phone stops GPS, so use Pocket mode instead.`
   }
   hiddenAt = null
 })
