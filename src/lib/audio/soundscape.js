@@ -796,7 +796,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
 
   // recorded loops and chase music sit on their own buses, at sensible levels
   const recBus = ctx.createGain()
-  recBus.gain.value = 0.55
+  recBus.gain.value = 0.4 // the recorded loops are mastered around -22 dB; this sits them where the synthesised beds were
   recBus.connect(master)
   const chaseBus = ctx.createGain()
   chaseBus.gain.value = 0.5
