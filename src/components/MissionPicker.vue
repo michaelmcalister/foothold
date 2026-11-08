@@ -100,10 +100,12 @@ onMounted(async () => {
 .gtitle { margin: 0; font-size: 1rem; font-weight: 800; }
 .gtitle.ember { color: #B4441C; }
 .gtitle.heist { color: #34407A; }
+.gtitle.quiz { color: #8A3FA8; }
 .gblurb { margin: 0; }
 .note { margin: 0; padding: 6px 10px; border-radius: 10px; background: #FFF1E6; color: #6B3517; }
 /* Night mode: the same group colours, lifted to read on the dark cards */
 html.night .gtitle.ember { color: #F08A5D; }
 html.night .gtitle.heist { color: #A8B3F2; }
+html.night .gtitle.quiz { color: #D7A6EE; }
 html.night .note { background: var(--notice-bg); color: var(--notice-ink); }
 </style>
