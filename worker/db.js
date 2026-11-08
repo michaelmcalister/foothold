@@ -237,6 +237,7 @@ export const LIMITS = {
   import: { max: 400, sec: 86400 }, // from a watch or a Strava export, which can be years of runs at once
   route: { max: 400, sec: 3600 }, // fresh path lookups per address per hour (drawing makes many)
   elevation: { max: 60, sec: 3600 }, // fresh height lookups per address per hour (repeats come from the cache)
+  audio: { max: 30, sec: 3600 }, // new recorded sounds made per address per hour (each is made once, ever)
   tts: { max: 150, sec: 3600 }, // new voice lines per address per hour (repeats come from the cache)
   feedback: { max: 10, sec: 86400 },
   club: { max: 5, sec: 86400 },

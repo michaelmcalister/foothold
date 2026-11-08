@@ -16,6 +16,7 @@ import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
+import { handleAudio } from './audioLibrary.js'
 import { handleTts, ttsConfig } from './tts.js'
 import { handleElevation } from './elevation.js'
 import { handleRoute } from './routing.js'
@@ -829,6 +830,15 @@ export async function handleApi(req, env, ctx) {
     res = await handleTts(req, env)
     for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
     return res
+  }
+  // Public: recorded ambience and music (made once with ElevenLabs, then served from R2)
+  {
+    const m = /^\/api\/audio\/(ambience|track)\/([a-z0-9-]{1,40})$/.exec(url.pathname)
+    if (m && req.method === 'GET') {
+      res = await handleAudio(req, env, m[1], m[2])
+      for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+      return res
+    }
   }
   // Public, rate limited: heights for the elevation chart (grid corners only, never the route)
   // Public, rate limited: snap a drawn route to paths you can run

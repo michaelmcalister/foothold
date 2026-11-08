@@ -10,6 +10,7 @@
 // and effects stay. Pure parts (the patterns, levels, random event timing)
 // are exported for tests; the voices take any AudioContext-like object.
 import { note, tone, noise, pluck, bell, kick, pad, swell, noiseBuffer, SILENT } from './synth.js'
+import { loopBuffer } from './recorded.js'
 
 // ---- seeded randomness, so tests (and renders) are repeatable ----
 export function rng(seed = 1) {
@@ -667,7 +668,13 @@ export function playNote(ctx, out, t, n) {
  * One soundscape for one run. ctx: the AudioContext, out: where it plays.
  * Nothing starts until start(). All methods are safe to call at any time.
  */
-export function createSoundscape(ctx, out, { score = null, seed = 7, music = true } = {}) {
+/**
+ * recorded (optional): { ambience(name), track(id) } returning Promise<AudioBuffer | null>,
+ * for the recorded scene loops and chase music (recorded.js). chase: the
+ * track that plays during a surge. Until a recording arrives, or without
+ * one, the synthesised sound plays.
+ */
+export function createSoundscape(ctx, out, { score = null, seed = 7, music = true, recorded = null, chase = null } = {}) {
   const r = rng(seed)
   const master = ctx.createGain()
   master.gain.value = 1
@@ -692,6 +699,18 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
     stingBus.connect(hall)
   }
 
+  // recorded loops and chase music sit on their own buses, at sensible levels
+  const recBus = ctx.createGain()
+  recBus.gain.value = 0.55
+  recBus.connect(master)
+  const chaseBus = ctx.createGain()
+  chaseBus.gain.value = 0.5
+  chaseBus.connect(master)
+  let recLoop = null // the recorded loop for this scene
+  let recScene = null // which scene it belongs to
+  let chaseBuf = null
+  let chaseLoop = null
+
   let scene = null
   let sceneName = null
   let intensity = 0
@@ -708,7 +727,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
   function tick() {
     const now = ctx.currentTime
     const until = now + LOOK
-    if (sceneName && spotsUpTo < until) {
+    if (sceneName && spotsUpTo < until && recScene !== sceneName) {
       const from = Math.max(spotsUpTo, now)
       for (const s of spotTimes(sceneName, from, until, r)) SPOTS[s.name](ctx, sceneBus, s.at, r)
       spotsUpTo = until
@@ -728,7 +747,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
     if (music && score) {
       if (finaleUntil && now > finaleUntil) { intensity = 0; finaleUntil = 0 }
       if (nextStepAt < now) nextStepAt = Math.max(now + 0.05, quietUntil)
-      while (nextStepAt < until && nextStepAt >= quietUntil) {
+      while (nextStepAt < until && nextStepAt >= quietUntil && !chaseLoop) {
         for (const n of musicStep(score, intensity, step)) playNote(ctx, musicBus, nextStepAt, n)
         nextStepAt += stepSeconds(score, intensity)
         step++
@@ -743,18 +762,34 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       spotsUpTo = ctx.currentTime
       tick()
       timer = setInterval(tick, 250)
+      if (recorded && chase) recorded.track(chase).then((b) => { chaseBuf = b }).catch(() => {})
     },
     setScene(name) {
       if (!SCENES[name] || name === sceneName) return
       const t = ctx.currentTime
       scene?.stop(t, 3)
+      recLoop?.stop(3)
+      recLoop = null
+      recScene = null
       scene = startScene(ctx, sceneBus, name, t + 0.05)
       sceneName = name
       spotsUpTo = t + 1 // let the new scene fade in before its spots
+      // swap to the recording once it arrives (if this is still the scene)
+      recorded?.ambience(name).then((buf) => {
+        if (!buf || sceneName !== name || !timer) return
+        recLoop = loopBuffer(ctx, recBus, buf, { level: 1, fadeIn: 4 })
+        recScene = name
+        scene?.stop(ctx.currentTime, 4)
+        scene = null
+      }).catch(() => {})
     },
     setIntensity(n) {
+      const was = intensity
       intensity = Math.max(0, Math.min(3, n | 0))
       if (intensity === 3) finaleUntil = ctx.currentTime + 14
+      // the chase music comes in for a surge and goes when it ends
+      if (intensity === 2 && was !== 2 && chaseBuf && !chaseLoop) chaseLoop = loopBuffer(ctx, chaseBus, chaseBuf, { level: 1, fadeIn: 1.5, from: 0 })
+      if (intensity !== 2 && chaseLoop) { chaseLoop.stop(3); chaseLoop = null; nextStepAt = ctx.currentTime + 3 }
     },
     get state() { return { scene: sceneName, intensity, ducked } },
     /** Lower everything but the effects while someone talks. */
@@ -798,7 +833,11 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       timer = null
       const t = ctx.currentTime
       scene?.stop(t, fade)
+      recLoop?.stop(fade)
+      chaseLoop?.stop(fade)
       scene = null
+      recLoop = null
+      chaseLoop = null
       sceneName = null
       master.gain.cancelScheduledValues(t)
       master.gain.setValueAtTime(master.gain.value, t)

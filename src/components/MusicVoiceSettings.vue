@@ -209,6 +209,10 @@ function testVoice() {
           <input v-model="audio.storySound" type="checkbox" />
           <span>Scene sounds and music in Ember Run and The Night Job (the music sits out when Spotify is playing)</span>
         </label>
+        <label class="check">
+          <input v-model="audio.runMusic" type="checkbox" />
+          <span>Foothold's own running music when Spotify isn't playing (original tracks: rock, synthwave, surf and big beat)</span>
+        </label>
         <label v-if="audio.sfx" class="check">
           <input v-model="audio.tapSound" type="checkbox" />
           <span>A soft tick when I tap a button</span>

@@ -21,6 +21,8 @@ import { createMission, missionById, recordTry, sagaById } from '../missions/ind
 import { CAST } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
 import { listenFor, stopListening as stopMic, canListen, primeMicrophone, optionsPrompt } from './listen.js'
+import { loadBuffer, createRunMusic } from './recorded.js'
+import { CHASE_TRACK, AMBIENCE } from './library.js'
 
 let stopWatch = null
 let announcer = null
@@ -32,6 +34,7 @@ let scape = null // the thriller soundscape, when one is playing
 let narrator = null // who reads lines with no speaker
 let level = 0 // the score's intensity
 let episode = null // the thriller episode's title and teaser lines
+let runMusic = null // Foothold's own music, when Spotify isn't playing
 
 /** What the Record screen's mission strip shows (null with no mission). */
 export const missionLive = ref(null)
@@ -51,8 +54,23 @@ function say(text) {
 // The soundscape dips while anyone talks
 async function talking(fn) {
   const s = scape
+  const m = runMusic
   s?.duck(true)
-  try { await fn() } finally { s?.duck(false) }
+  m?.duck(true)
+  try { await fn() } finally { s?.duck(false); m?.duck(false) }
+}
+
+const spotifyOn = () => audio.spotifyAutoplay && spotify.isLinked()
+
+/** Foothold's own tracks for a run without Spotify (and without a thriller score). */
+function startRunMusic() {
+  if (!audio.runMusic || spotifyOn()) return null
+  const ctx = sfx.context()
+  const out = sfx.musicOut()
+  if (!ctx || !out) return null
+  const m = createRunMusic(ctx, out)
+  m.start()
+  return m
 }
 
 /**
@@ -158,8 +176,9 @@ function startScape(saga) {
   const out = sfx.musicOut()
   if (!ctx || !out) return null
   // your own Spotify music takes the place of the score
-  const music = !(audio.spotifyAutoplay && spotify.isLinked())
-  const s = createSoundscape(ctx, out, { score: saga.score, music, seed: Date.now() % 9973 })
+  const music = !spotifyOn()
+  const recorded = { ambience: (n) => loadBuffer(ctx, 'ambience', n), track: (id) => loadBuffer(ctx, 'track', id) }
+  const s = createSoundscape(ctx, out, { score: saga.score, music, seed: Date.now() % 9973, recorded, chase: music ? CHASE_TRACK[saga.id] : null })
   s.start()
   return s
 }
@@ -196,6 +215,9 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   if (narrator) {
     prepareLines(missionLines(script, narrator, saga), { coachVoice: audio.coachVoice }) // in the background
     scape = startScape(saga)
+    // get the episode's recorded scenes ready while the title music plays
+    const ctx = sfx.context()
+    if (scape && ctx) for (const n of new Set(script.beats.map((b) => b.scene).filter((x) => x && AMBIENCE[x]))) loadBuffer(ctx, 'ambience', n)
     episode = episodeLines(script, saga)
     // the cold open: title music, the episode's title, and what happened last time
     const s = scape
@@ -203,6 +225,8 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
     sayLine(episode.title)
     sayLine(episode.previously)
   }
+  // no thriller score: Foothold's own tracks, unless Spotify is playing yours
+  if (!scape) runMusic = startRunMusic()
   missionSpokeAt = -Infinity
   missionLive.value = mission ? mission.view() : null
   // the mission is the encouragement, so the coach's cheers step aside
@@ -279,6 +303,9 @@ export function finishRun({ elapsedS, distanceM }) {
   const s = scape
   if (s) enqueue(() => s.stop(5)) // fades out after the last word
   scape = null
+  const m = runMusic
+  if (m) enqueue(() => m.stop(6))
+  runMusic = null
   stopListening()
   return summary
 }
@@ -295,6 +322,8 @@ function stopListening() {
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
   stopMic()
+  runMusic?.stop(0.6)
+  runMusic = null
   scape?.stop(0.6)
   scape = null
   forgetLines()
