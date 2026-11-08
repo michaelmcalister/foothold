@@ -4,9 +4,11 @@
 // year's full footprint. The hexes draw on a canvas lined up with the map, so
 // they still show when the street tiles can't load. The parent drives time
 // (`t`, in ms), so pausing the story pauses the film. `still` shows the
-// final footprint straight away (reduced motion).
+// final footprint straight away (reduced motion). In night mode it uses the
+// dark street map, chosen when the film starts.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { hexRings, fitView, drawRings } from '../../lib/wrappedCard.js'
+import { currentLook, mapStyleUrl, mapColours } from '../../lib/theme.js'
 
 const props = defineProps({
   frames: { type: Array, required: true }, // from filmFrames in src/lib/wrapped.js
@@ -25,8 +27,8 @@ let polys = [] // per frame: projected rings of the hexes new that week
 let size = { w: 0, h: 0, dpr: 1 }
 let drawn = -2
 
-const STYLE = 'https://tiles.openfreemap.org/styles/positron'
-const FALLBACK = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#ECEFE4' } }] }
+const look = currentLook()
+const night = look === 'night'
 
 const frameAt = computed(() => {
   if (props.still || !props.frames.length) return props.frames.length - 1
@@ -74,10 +76,10 @@ function draw() {
 
 async function loadStyle() {
   try {
-    const r = await fetch(STYLE, { signal: AbortSignal.timeout(5000) })
+    const r = await fetch(mapStyleUrl(look), { signal: AbortSignal.timeout(5000) })
     if (r.ok) return await r.json()
   } catch { /* offline or blocked: plain paper */ }
-  return FALLBACK
+  return { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': mapColours(look).paper } }] }
 }
 
 async function startMap(cam) {
@@ -106,7 +108,7 @@ onBeforeUnmount(() => { map?.remove(); map = null })
 </script>
 
 <template>
-  <div ref="box" class="film" role="img" :aria-label="`A map of the ${ticker.total} hexes you took in ${year}, appearing week by week.`">
+  <div ref="box" class="film" :class="{ night }" role="img" :aria-label="`A map of the ${ticker.total} hexes you took in ${year}, appearing week by week.`">
     <div ref="mapEl" class="map"></div>
     <canvas ref="canvas" class="hexes"></canvas>
     <div class="ticker" aria-hidden="true">
@@ -118,6 +120,7 @@ onBeforeUnmount(() => { map?.remove(); map = null })
 
 <style scoped>
 .film { position: absolute; inset: 0; background: #ECEFE4; overflow: hidden; }
+.film.night { background: #121C19; }
 .map, .hexes { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hexes { pointer-events: none; }
 .ticker { position: absolute; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; border-radius: 14px; background: rgba(22, 48, 42, 0.88); color: #F3F5EF; font-variant-numeric: tabular-nums; }

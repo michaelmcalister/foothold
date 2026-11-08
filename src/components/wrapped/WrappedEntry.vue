@@ -39,7 +39,7 @@ function later() {
 
 <style scoped>
 .hex { width: 30px; height: 34px; background: var(--you); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); flex: none; }
-.entry { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; text-decoration: none; color: inherit; background: #fff; border-radius: var(--radius); padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.entry { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; text-decoration: none; color: inherit; background: var(--card); border-radius: var(--radius); padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .entry .words { display: grid; gap: 2px; }
 .ready { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; padding: 16px; border-radius: var(--radius); background: #16302A; color: #F3F5EF; }
 .ready h2, .ready p { margin: 0; }

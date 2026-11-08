@@ -426,23 +426,23 @@ onBeforeUnmount(() => {})
 .maparea > :first-child { position: absolute; inset: 0; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
-  width: 44px; height: 44px; border-radius: 50%; background: #fff; color: var(--ink);
+  width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);
   display: grid; place-items: center; box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .loophint {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 64px; right: 12px; z-index: 2;
-  background: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 650; font-size: 0.95rem;
+  background: var(--card); border-radius: 12px; padding: 10px 14px; font-weight: 650; font-size: 0.95rem;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .loophint.ready { background: var(--you); color: #fff; }
 .routeline {
   position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
   display: flex; align-items: center; gap: 10px;
-  background: #fff; border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.95rem; min-height: 44px;
+  background: var(--card); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.95rem; min-height: 44px;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .routeline span { flex: 1; min-width: 0; }
-.routeline.off { background: #FFF4DE; color: #5A3B00; }
+.routeline.off { background: var(--notice-bg); color: var(--notice-ink); }
 .routeline .drop { border: 0; background: var(--soft); width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--ink); flex: none; }
 .panel-bottom {
   background: var(--paper); padding: 18px var(--pad) calc(18px + env(safe-area-inset-bottom));
@@ -470,14 +470,14 @@ onBeforeUnmount(() => {})
 .notice.gap { font-size: 0.9rem; }
 .ghoststrip { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--soft); font-weight: 750; }
 .ghoststrip .g { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
-.ghoststrip.ahead { background: #E3F3E6; }
-.ghoststrip.behind { background: #FCEBD9; }
+.ghoststrip.ahead { background: var(--good-bg); }
+.ghoststrip.behind { background: var(--behind-bg); }
 .pocketbtn {
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; border-radius: 12px;
   background: var(--soft); color: var(--ink); font: inherit; font-weight: 750; cursor: pointer; text-align: left;
 }
 .pocketbtn .muted { font-weight: 500; font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 750; }
+.turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--on-ink); font-weight: 750; }
 .turnstrip svg { flex: none; transition: transform 0.3s; }
 .turnstrip .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turnstrip .when { flex: none; font-variant-numeric: tabular-nums; }

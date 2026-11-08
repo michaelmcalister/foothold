@@ -342,7 +342,7 @@ function closeFinder() {
 .topstack > * { pointer-events: auto; }
 .strip { display: flex; gap: 8px; flex-wrap: wrap; }
 .strip .stat {
-  background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 8px 12px;
+  background: var(--card-glass); border-radius: 12px; padding: 8px 12px;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.35); display: grid; gap: 0;
 }
 .strip .n { font-weight: 850; font-stretch: 112%; font-size: 1.15rem; line-height: 1.1; }
@@ -353,25 +353,25 @@ function closeFinder() {
 .tok i { width: 9px; height: 8px; background: var(--you); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
 .locate {
   position: absolute; right: 12px; bottom: 150px; z-index: 2;
-  width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: var(--you);
+  width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); color: var(--you-ink);
   display: grid; place-items: center; box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45); cursor: pointer;
 }
 .sheet {
   position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 2;
-  background: #fff; border-radius: 16px; padding: 14px; display: grid; gap: 12px;
+  background: var(--card); border-radius: 16px; padding: 14px; display: grid; gap: 12px;
   box-shadow: 0 10px 30px -14px rgba(22, 48, 42, 0.55);
   max-width: 520px; margin: 0 auto;
 }
 .sheet.tall { max-height: 62%; overflow-y: auto; overscroll-behavior: contain; }
 .shtop { display: flex; justify-content: space-between; align-items: center; }
-.shtop a { color: var(--you); font-weight: 650; }
+.shtop a { color: var(--you-ink); font-weight: 650; }
 .nudge { display: grid; gap: 2px; }
 .planlink { justify-self: center; color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; padding: 10px; margin: -8px 0 -6px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .pick .hexdot { width: 20px; height: 18px; margin-top: 3px; }
 .quests, .explored {
-  background: rgba(255, 255, 255, 0.97); border-radius: 12px; max-width: 360px; width: 100%;
+  background: var(--card-glass); border-radius: 12px; max-width: 360px; width: 100%;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.35);
 }
 .quests:not(.open) { width: auto; }
@@ -382,11 +382,11 @@ function closeFinder() {
 .qhead svg { flex: none; transition: transform 0.2s ease; }
 .open .qhead svg { transform: rotate(180deg); }
 .qbody { padding: 2px 12px 12px; display: grid; gap: 10px; }
-.more { color: var(--you); font-weight: 650; justify-self: start; }
+.more { color: var(--you-ink); font-weight: 650; justify-self: start; }
 .explored { padding: 9px 12px; display: grid; gap: 2px; }
 .fogbtn {
   position: absolute; right: 12px; bottom: 204px; z-index: 2;
-  height: 40px; padding: 0 14px; border-radius: 20px; border: 0; background: #fff; color: var(--ink);
+  height: 40px; padding: 0 14px; border-radius: 20px; border: 0; background: var(--card); color: var(--ink);
   font: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
@@ -395,11 +395,11 @@ function closeFinder() {
 .hot-toggle {
   position: absolute; left: 12px; bottom: 150px; z-index: 2;
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px;
-  border: 0; border-radius: 999px; background: #fff; color: var(--ink); font: inherit; font-weight: 700; font-size: 0.9rem;
+  border: 0; border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; font-size: 0.9rem;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45); cursor: pointer;
 }
 .hot-toggle svg { color: #E5604D; }
-.hot-toggle[aria-pressed='true'] { background: var(--ink); color: #fff; }
+.hot-toggle[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
 .hot-toggle[aria-pressed='true'] svg { color: #F2B33D; }
 .hot-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .hot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }

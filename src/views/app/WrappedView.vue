@@ -329,6 +329,10 @@ onBeforeUnmount(() => {
 .film-slide { padding: 0; }
 .film-head { position: absolute; z-index: 2; top: calc(64px + env(safe-area-inset-top)); left: 16px; right: 16px; }
 .film-head .slide-h { color: #16302A; font-size: 1.7rem; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+/* Night mode: the film's street map is dark, so its title and story bars go light */
+html.night .film-head .slide-h { color: #F3F5EF; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+html.night .on-map .bar { background: rgba(243, 245, 239, 0.3); }
+html.night .on-map .bar > span { background: #fff; }
 
 .numbers .grid { list-style: none; margin: 8px 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
 .numbers .grid li { display: grid; gap: 2px; animation: rise 0.6s both; animation-delay: calc(var(--i) * 0.18s + 0.2s); }

@@ -114,7 +114,7 @@ function nudge(r) {
 .who { display: grid; gap: 2px; min-width: 0; }
 .who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swap { display: grid; justify-items: end; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.up { color: var(--you); }
+.up { color: var(--you-ink); }
 .down { color: var(--ink-60); }
 .card { display: grid; gap: 12px; }
 .h2h { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }

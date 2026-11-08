@@ -158,7 +158,7 @@ const bigText = computed(() => {
 .maparea > :first-child { position: absolute; inset: 0; }
 .block { display: grid; gap: 12px; }
 .block h2, .block p { margin: 0; }
-.big-num.you { color: var(--you); }
+.big-num.you { color: var(--you-ink); }
 .plain { list-style: none; margin: 0; padding: 0; }
 .moment { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; color: inherit; }
 .moment .hexdot { width: 18px; height: 16px; margin-top: 3px; background: var(--you); }

@@ -32,7 +32,7 @@ const right = computed(() => {
 .row { display: flex; align-items: baseline; gap: 10px; }
 .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .right { flex: none; font-weight: 750; font-variant-numeric: tabular-nums; }
-.bar { height: 5px; border-radius: 3px; background: rgba(22, 48, 42, 0.12); overflow: hidden; }
+.bar { height: 5px; border-radius: 3px; background: var(--line, rgba(22, 48, 42, 0.12)); overflow: hidden; }
 .bar span { display: block; height: 100%; background: var(--ink-60); border-radius: 3px; transition: width 0.9s linear; }
 .mstrip.surge { background: var(--you); color: #fff; }
 .mstrip.surge .bar { background: rgba(255, 255, 255, 0.3); }

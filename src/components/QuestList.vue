@@ -60,14 +60,14 @@ li { position: relative; display: grid; grid-template-columns: 30px 1fr; gap: 12
 .compact li { grid-template-columns: 24px 1fr; gap: 10px; }
 .glyph { width: 30px; height: 30px; overflow: visible; }
 .compact .glyph { width: 24px; height: 24px; }
-.shell { fill: var(--soft, #E7EBE1); stroke: rgba(22, 48, 42, 0.18); stroke-width: 1; }
-.fill { fill: #AFC0F7; transition: all 0.4s ease; }
+.shell { fill: var(--soft, #E7EBE1); stroke: var(--ink-15); stroke-width: 1; }
+.fill { fill: var(--you-soft); transition: all 0.4s ease; }
 .done .fill { fill: var(--you, #2E55E6); }
 .tick { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .text { display: grid; gap: 1px; min-width: 0; }
 .text strong { font-weight: 750; line-height: 1.25; }
 .compact .text strong { font-size: 0.95rem; }
-.done .text strong { color: var(--you, #2E55E6); }
+.done .text strong { color: var(--you-ink); }
 .detail { margin-top: 2px; }
 .pop .glyph { animation: pop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
 .burst { position: absolute; left: 15px; top: 15px; width: 0; height: 0; pointer-events: none; }

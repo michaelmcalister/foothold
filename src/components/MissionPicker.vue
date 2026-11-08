@@ -77,7 +77,7 @@ onMounted(async () => {
 
 <style scoped>
 .mpick { display: grid; gap: 8px; }
-.suggest { display: flex; align-items: center; gap: 10px; background: #E8EDFC; border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }
+.suggest { display: flex; align-items: center; gap: 10px; background: var(--tint); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }
 .suggest span { flex: 1; min-width: 0; }
 .suggest .btn { flex: none; }
 .current {
@@ -86,12 +86,12 @@ onMounted(async () => {
 }
 .current .lbl { color: var(--ink-60); font-size: 0.9rem; }
 .current .val { flex: 1; min-width: 0; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.current .chg { color: var(--you); font-weight: 650; font-size: 0.9rem; }
+.current .chg { color: var(--you-ink); font-weight: 650; font-size: 0.9rem; }
 .blurb { margin: 0; }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .opt {
   display: grid; gap: 2px; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
-  background: #fff; border: 0; border-radius: 12px; padding: 10px 14px; box-shadow: inset 0 0 0 1.5px var(--line); min-height: 48px;
+  background: var(--card); border: 0; border-radius: 12px; padding: 10px 14px; box-shadow: inset 0 0 0 1.5px var(--line); min-height: 48px;
 }
 .opt[aria-pressed='true'] { box-shadow: inset 0 0 0 2.5px var(--you); }
 .opt:disabled { opacity: 0.6; cursor: default; background: var(--soft); }
@@ -102,4 +102,8 @@ onMounted(async () => {
 .gtitle.heist { color: #34407A; }
 .gblurb { margin: 0; }
 .note { margin: 0; padding: 6px 10px; border-radius: 10px; background: #FFF1E6; color: #6B3517; }
+/* Night mode: the same group colours, lifted to read on the dark cards */
+html.night .gtitle.ember { color: #F08A5D; }
+html.night .gtitle.heist { color: #A8B3F2; }
+html.night .note { background: var(--notice-bg); color: var(--notice-ink); }
 </style>

@@ -89,9 +89,9 @@ const nextName = computed(() => data.value?.division?.tier?.next?.name || null)
 .head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
 .head p { margin: 2px 0 0; }
 .left { display: grid; justify-items: center; text-align: center; }
-.big { font-weight: 850; font-stretch: 112%; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--you); }
+.big { font-weight: 850; font-stretch: 112%; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--you-ink); }
 .board li[data-row] { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px; padding: 10px 0; }
-.board li.me { background: rgba(46, 85, 230, 0.08); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.board li.me { background: var(--you-wash); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
 .rank { font-weight: 800; color: var(--ink-60); font-variant-numeric: tabular-nums; }
 .who { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; min-width: 0; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

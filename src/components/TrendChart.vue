@@ -169,15 +169,15 @@ svg:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; border-r
 .grid { stroke: var(--ink-15); stroke-width: 1; }
 .line { fill: none; stroke: var(--you); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .dot { fill: var(--you); }
-.end { fill: var(--you); stroke: #fff; stroke-width: 2; }
-.bar { fill: #AFC0F7; }
+.end { fill: var(--you); stroke: var(--card); stroke-width: 2; }
+.bar { fill: var(--you-soft); }
 .bar.now { fill: var(--you); }
-.bar.on { fill: #7F97EE; }
-.bar.now.on { fill: #2347CC; }
+.bar.on { fill: var(--you-mid); }
+.bar.now.on { fill: var(--you-deep); }
 .cross { stroke: var(--ink-40); stroke-width: 1; }
 .tip { position: absolute; top: -6px; transform: translate(-50%, -100%); background: var(--ink); color: var(--on-ink); border-radius: 8px; padding: 5px 9px; font-size: 0.8rem; white-space: nowrap; pointer-events: none; display: grid; gap: 1px; text-align: center; z-index: 2; }
 .tip .tl { color: var(--on-ink-muted); font-size: 0.75rem; }
-.tbl summary { font-size: 0.85rem; color: var(--you); font-weight: 650; cursor: pointer; width: fit-content; }
+.tbl summary { font-size: 0.85rem; color: var(--you-ink); font-weight: 650; cursor: pointer; width: fit-content; }
 .tbl table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; margin-top: 6px; }
 .tbl th { text-align: left; font-size: 0.8rem; color: var(--ink-60); font-weight: 600; padding: 4px 0; }
 .tbl td { padding: 5px 0; border-top: 1px solid var(--line); }

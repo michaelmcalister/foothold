@@ -254,16 +254,16 @@ async function sendAppeal() {
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 .appeal { display: grid; gap: 10px; justify-items: start; }
 .prs ul { list-style: none; padding: 0; }
-.notice.fw { background: #E8EDFC; color: var(--ink); display: grid; gap: 8px; justify-items: start; }
+.notice.fw { background: var(--tint); color: var(--ink); display: grid; gap: 8px; justify-items: start; }
 .notice.fw p { margin: 0; }
-.mission { background: #E8EDFC; color: var(--ink); display: grid; gap: 4px; }
+.mission { background: var(--tint); color: var(--ink); display: grid; gap: 4px; }
 .mission p { margin: 0; }
-.shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: #E8EDFC; color: var(--ink); }
-.shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
+.shnote { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-decoration: none; background: var(--tint); color: var(--ink); }
+.shnote .crownbadge { width: 30px; height: 30px; border-radius: 50%; background: var(--card); color: var(--ink); display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); }
 .shnote.held .crownbadge { background: var(--you); color: #fff; box-shadow: none; }
-.shnote .see { display: block; margin-top: 4px; color: var(--you); font-weight: 650; font-size: 0.9rem; }
+.shnote .see { display: block; margin-top: 4px; color: var(--you-ink); font-weight: 650; font-size: 0.9rem; }
 .ghostres { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--soft); font-weight: 700; }
-.ghostres.won { background: #E3F3E6; }
+.ghostres.won { background: var(--good-bg); }
 .ghostres p { margin: 0; }
 .ghostres .g { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
 </style>

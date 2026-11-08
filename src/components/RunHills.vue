@@ -55,9 +55,9 @@ ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; text-decoration: none; color: inherit; min-height: 44px; }
 .txt { display: grid; gap: 2px; min-width: 0; }
 .txt strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.badge { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; box-sizing: border-box; color: var(--ink); background: #fff; }
+.badge { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; box-sizing: border-box; color: var(--ink); background: var(--card); }
 .badge.mine { background: var(--you); border-color: var(--you); color: #fff; }
-.cheer { margin: 2px 0 0 38px; font-weight: 700; color: var(--you); }
+.cheer { margin: 2px 0 0 38px; font-weight: 700; color: var(--you-ink); }
 .muted.small { margin: 2px 0 0; }
 li > p.muted { margin-left: 38px; }
 </style>

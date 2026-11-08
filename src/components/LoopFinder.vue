@@ -168,7 +168,7 @@ onMounted(async () => {
   min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; cursor: pointer;
   background: var(--soft); color: var(--ink);
 }
-.chip[aria-pressed='true'] { background: var(--ink); color: #fff; }
+.chip[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper .btn { min-width: 48px; font-size: 1.3rem; }
 .stepper .km { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
@@ -180,7 +180,7 @@ onMounted(async () => {
 .actions { display: flex; gap: 10px; }
 .actions .btn { flex: 1; }
 .actions.minor { flex-wrap: wrap; gap: 4px 16px; }
-.link { border: 0; background: none; padding: 6px 0; font: inherit; color: var(--you); font-weight: 650; cursor: pointer; min-height: 36px; }
+.link { border: 0; background: none; padding: 6px 0; font: inherit; color: var(--you-ink); font-weight: 650; cursor: pointer; min-height: 36px; }
 .dirs { margin: 0; padding: 0 0 0 4px; list-style: none; display: grid; gap: 6px; max-height: 32vh; overflow: auto; }
 .dirs li { display: grid; grid-template-columns: 64px 1fr; gap: 10px; }
 .dist { color: var(--ink-60); font-variant-numeric: tabular-nums; }

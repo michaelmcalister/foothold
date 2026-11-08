@@ -7,6 +7,8 @@
 // Strongholds show as crown badges in the holder's colour; tap one to pick it.
 // Hills (King of the hill) draw as a line with a small crown at the top, and
 // the hexes around them glow the holder's colour as a soft outline.
+// In night mode it uses OpenFreeMap's dark style, and swaps style live when
+// the look changes (parents that add their own layers listen for `restyled`).
 import { ref, watch, onMounted, onBeforeUnmount, shallowRef } from 'vue'
 import { Map as MLMap, LngLatBounds, Marker, setWorkerUrl } from 'maplibre-gl'
 // MapLibre 6 runs its tile work in a module worker; let Vite bundle it.
@@ -16,6 +18,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { cellToBoundary, cellToLatLng } from 'h3-js'
 import { fogMask } from '../lib/engine/explore.js'
 import { hillGlow } from '../lib/engine/hills.js'
+import { theme, mapStyleUrl, mapColours } from '../lib/theme.js'
 
 const props = defineProps({
   centre: { type: Object, required: true },
@@ -37,13 +40,14 @@ const props = defineProps({
   strongholdRoute: { type: Array, default: null }, // [{lat,lng}] of the picked stronghold
   hills: { type: Array, default: () => [] }, // [{ id, name, line: [[lng,lat]], top: {lat,lng}, holder: { colour, me, name } | null }]
 })
-const emit = defineEmits(['cell', 'moved', 'ready', 'stronghold', 'hill'])
+const emit = defineEmits(['cell', 'moved', 'ready', 'restyled', 'stronghold', 'hill'])
 
 const el = ref(null)
 const map = shallowRef(null)
 const loaded = ref(false)
 
-const STYLE = 'https://tiles.openfreemap.org/styles/positron'
+// The colours drawn on top of the streets, for the current look (day or night)
+const colours = () => mapColours(theme.look)
 const empty = { type: 'FeatureCollection', features: [] }
 
 function cellFeatures(cells, hi) {
@@ -54,7 +58,7 @@ function cellFeatures(cells, hi) {
       type: 'Feature',
       properties: {
         h3: c.h3,
-        colour: c.mine ? '#2E55E6' : c.ownerColour || '#E8A817',
+        colour: c.mine ? colours().you : c.ownerColour || '#E8A817',
         mine: c.mine ? 1 : 0,
         strength: c.strength,
         hi: hiSet.has(c.h3) ? 1 : 0,
@@ -80,15 +84,15 @@ function circle({ lat, lng, radiusM }) {
   return pts
 }
 
-// Paint for the two looks: owners (the default) and hot spots
-const OWNER_PAINT = {
+// Paint for the two views: owners (the default) and hot spots
+const ownerPaint = (c) => ({
   'cells-fill': {
     'fill-color': ['get', 'colour'],
     // Yours stands out; rivals' ground is lighter. Stronger ground is more solid.
-    'fill-opacity': ['+', ['case', ['==', ['get', 'mine'], 1], 0.28, 0.1], ['*', 0.003, ['get', 'strength']], ['*', 0.25, ['get', 'hi']]],
+    'fill-opacity': ['+', ['case', ['==', ['get', 'mine'], 1], c.mineOpacity, c.rivalOpacity], ['*', 0.003, ['get', 'strength']], ['*', 0.25, ['get', 'hi']]],
   },
   'cells-line': { 'line-color': ['get', 'colour'], 'line-opacity': 0.7 },
-}
+})
 const HEAT_COLOUR = ['interpolate', ['linear'], ['get', 'heat'], 0, '#B9C2B3', 1, '#F2B33D', 3, '#E5604D', 6, '#9E1F1A']
 const HEAT_PAINT = {
   'cells-fill': {
@@ -100,7 +104,7 @@ const HEAT_PAINT = {
 function applyPaint() {
   const m = map.value
   if (!loaded.value || !m) return
-  for (const [layer, paint] of Object.entries(props.heat ? HEAT_PAINT : OWNER_PAINT)) {
+  for (const [layer, paint] of Object.entries(props.heat ? HEAT_PAINT : ownerPaint(colours()))) {
     for (const [k, v] of Object.entries(paint)) m.setPaintProperty(layer, k, v)
   }
 }
@@ -196,23 +200,65 @@ function fitTo() {
 
 // Plain map paper, used when the street style can't load (offline, blocked).
 // Hexes and routes still draw on it.
-const FALLBACK = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#ECEFE4' } }] }
-let styleCache = null
-async function loadStyle() {
-  if (styleCache) return styleCache
+const fallback = (look) => ({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': mapColours(look).paper } }] })
+const styleCache = new Map() // style URL to style
+async function loadStyle(look) {
+  const url = mapStyleUrl(look)
+  if (styleCache.has(url)) return styleCache.get(url)
   try {
-    const r = await fetch(STYLE, { signal: AbortSignal.timeout(6000) })
+    const r = await fetch(url, { signal: AbortSignal.timeout(6000) })
     if (!r.ok) throw new Error('style')
-    styleCache = await r.json()
+    styleCache.set(url, await r.json())
   } catch {
-    return FALLBACK
+    return fallback(look)
   }
-  return styleCache
+  return styleCache.get(url)
+}
+
+// Our own sources and layers on top of the street style. Run on load, and
+// again after the style changes (setStyle clears them).
+function addOwnLayers(m) {
+  const c = colours()
+  m.addSource('cells', { type: 'geojson', data: empty })
+  m.addSource('track', { type: 'geojson', data: empty })
+  m.addSource('loops', { type: 'geojson', data: empty })
+  m.addSource('suggest', { type: 'geojson', data: empty })
+  m.addSource('zones', { type: 'geojson', data: empty })
+  m.addSource('me', { type: 'geojson', data: empty })
+  m.addSource('ghost', { type: 'geojson', data: empty })
+  m.addSource('fog', { type: 'geojson', data: empty })
+  m.addLayer({ id: 'fog', type: 'fill', source: 'fog', paint: { 'fill-color': c.fog, 'fill-opacity': c.fogOpacity } })
+  m.addSource('shroute', { type: 'geojson', data: empty })
+  m.addSource('hills', { type: 'geojson', data: empty })
+  m.addSource('hillglow', { type: 'geojson', data: empty })
+  m.addLayer({
+    id: 'cells-fill', type: 'fill', source: 'cells',
+    paint: { ...ownerPaint(c)['cells-fill'] },
+  })
+  m.addLayer({
+    id: 'cells-line', type: 'line', source: 'cells',
+    paint: { ...ownerPaint(c)['cells-line'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 16, 1.2] },
+  })
+  // The glow round a hill: a soft outline in the holder's colour, never a fill like ground
+  m.addLayer({ id: 'hillglow', type: 'line', source: 'hillglow', paint: { 'line-color': ['get', 'colour'], 'line-width': 3, 'line-blur': 2.5, 'line-opacity': 0.55 } })
+  m.addLayer({ id: 'hills-case', type: 'line', source: 'hills', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': c.casing, 'line-width': 7, 'line-opacity': 0.9 } })
+  m.addLayer({ id: 'hills', type: 'line', source: 'hills', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': ['get', 'colour'], 'line-width': 4 } })
+  m.addLayer({ id: 'zones', type: 'line', source: 'zones', paint: { 'line-color': c.ink, 'line-width': 2, 'line-dasharray': [2, 2] } })
+  m.addLayer({ id: 'suggest', type: 'line', source: 'suggest', paint: { 'line-color': c.ink, 'line-width': 3, 'line-dasharray': [1.5, 1.2] } })
+  m.addLayer({ id: 'shroute', type: 'line', source: 'shroute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': c.ink, 'line-width': 4, 'line-dasharray': [1, 1.4], 'line-opacity': 0.85 } })
+  m.addLayer({ id: 'loops', type: 'line', source: 'loops', paint: { 'line-color': c.you, 'line-width': 3 } })
+  m.addLayer({ id: 'track-case', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': c.casing, 'line-width': 8 } })
+  m.addLayer({ id: 'track', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': c.ink, 'line-width': 4.5 } })
+  m.addLayer({ id: 'ghost', type: 'circle', source: 'ghost', paint: { 'circle-radius': 8, 'circle-color': '#FFFFFF', 'circle-opacity': 0.85, 'circle-stroke-color': '#16302A', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6 } })
+  m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 14, 'circle-color': c.you, 'circle-opacity': 0.18 } })
+  m.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': c.you, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
 }
 
 onMounted(async () => {
-  const style = await loadStyle()
+  const look = theme.look
+  const style = await loadStyle(look)
   if (!el.value) return
+  shownLook = look
   const m = new MLMap({
     container: el.value,
     style,
@@ -225,40 +271,9 @@ onMounted(async () => {
   })
   map.value = m
   m.on('load', () => {
-    m.addSource('cells', { type: 'geojson', data: empty })
-    m.addSource('track', { type: 'geojson', data: empty })
-    m.addSource('loops', { type: 'geojson', data: empty })
-    m.addSource('suggest', { type: 'geojson', data: empty })
-    m.addSource('zones', { type: 'geojson', data: empty })
-    m.addSource('me', { type: 'geojson', data: empty })
-    m.addSource('ghost', { type: 'geojson', data: empty })
-    m.addSource('fog', { type: 'geojson', data: empty })
-    m.addLayer({ id: 'fog', type: 'fill', source: 'fog', paint: { 'fill-color': '#16302A', 'fill-opacity': 0.42 } })
-    m.addSource('shroute', { type: 'geojson', data: empty })
-    m.addSource('hills', { type: 'geojson', data: empty })
-    m.addSource('hillglow', { type: 'geojson', data: empty })
-    m.addLayer({
-      id: 'cells-fill', type: 'fill', source: 'cells',
-      paint: { ...OWNER_PAINT['cells-fill'] },
-    })
-    m.addLayer({
-      id: 'cells-line', type: 'line', source: 'cells',
-      paint: { ...OWNER_PAINT['cells-line'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 16, 1.2] },
-    })
-    // The glow round a hill: a soft outline in the holder's colour, never a fill like ground
-    m.addLayer({ id: 'hillglow', type: 'line', source: 'hillglow', paint: { 'line-color': ['get', 'colour'], 'line-width': 3, 'line-blur': 2.5, 'line-opacity': 0.55 } })
-    m.addLayer({ id: 'hills-case', type: 'line', source: 'hills', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 7, 'line-opacity': 0.9 } })
-    m.addLayer({ id: 'hills', type: 'line', source: 'hills', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': ['get', 'colour'], 'line-width': 4 } })
+    addOwnLayers(m)
+    // Layer events belong to the map, so they keep working after a style change
     m.on('click', 'hills-case', (e) => { const id = e.features?.[0]?.properties?.id; if (id) emit('hill', id) })
-    m.addLayer({ id: 'zones', type: 'line', source: 'zones', paint: { 'line-color': '#16302A', 'line-width': 2, 'line-dasharray': [2, 2] } })
-    m.addLayer({ id: 'suggest', type: 'line', source: 'suggest', paint: { 'line-color': '#16302A', 'line-width': 3, 'line-dasharray': [1.5, 1.2] } })
-    m.addLayer({ id: 'shroute', type: 'line', source: 'shroute', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4, 'line-dasharray': [1, 1.4], 'line-opacity': 0.85 } })
-    m.addLayer({ id: 'loops', type: 'line', source: 'loops', paint: { 'line-color': '#2E55E6', 'line-width': 3 } })
-    m.addLayer({ id: 'track-case', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 8 } })
-    m.addLayer({ id: 'track', type: 'line', source: 'track', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#16302A', 'line-width': 4.5 } })
-    m.addLayer({ id: 'ghost', type: 'circle', source: 'ghost', paint: { 'circle-radius': 8, 'circle-color': '#FFFFFF', 'circle-opacity': 0.85, 'circle-stroke-color': '#16302A', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6 } })
-    m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 14, 'circle-color': '#2E55E6', 'circle-opacity': 0.18 } })
-    m.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 7, 'circle-color': '#2E55E6', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
     m.on('click', 'cells-fill', (e) => {
       const f = e.features?.[0]
       if (f) emit('cell', { ...f.properties, lngLat: e.lngLat })
@@ -276,8 +291,30 @@ onMounted(async () => {
     emit('ready', m)
     const b = m.getBounds()
     emit('moved', { bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], centre: m.getCenter() })
+    restyle() // the look changed while the map was loading
   })
 })
+
+// Night mode switched: swap the street style, then put our layers back on top
+let shownLook = null
+async function restyle() {
+  const look = theme.look
+  if (!map.value || !loaded.value || look === shownLook) return
+  const style = await loadStyle(look)
+  const m = map.value
+  if (!m || !loaded.value || look !== theme.look || look === shownLook) return
+  shownLook = look
+  loaded.value = false
+  m.once('style.load', () => {
+    addOwnLayers(m)
+    loaded.value = true
+    syncAll()
+    applyPaint()
+    emit('restyled', m)
+  })
+  m.setStyle(style, { diff: false })
+}
+watch(() => theme.look, restyle)
 
 onBeforeUnmount(() => { for (const mk of [...markers, ...hillMarkers]) mk.remove(); map.value?.remove() })
 
@@ -314,7 +351,7 @@ watch(() => props.ghost, (g) => setData('ghost', g ? { type: 'Feature', properti
 </template>
 
 <style scoped>
-.tmap { width: 100%; height: 100%; min-height: 200px; background: #ECEFE4; }
+.tmap { width: 100%; height: 100%; min-height: 200px; background: var(--map-paper); }
 .tmap :deep(.maplibregl-ctrl-attrib) { font-size: 10px; }
 .tmap :deep(.crown) {
   width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--holder); background: #fff; color: var(--holder);
