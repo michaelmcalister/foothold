@@ -8,7 +8,7 @@
 // In night mode it uses the dark street map, chosen when the reel starts.
 import { planReel, reelFrame, reelText, counterText, pickMimeType, fileTypeFor, reelFileName, reelSize, projectPoint } from './reelPlan.js'
 import { zoomForRange } from './plan.js'
-import { createScore } from '../audio/score.js'
+import { createScore, styleFor } from '../audio/score.js'
 import { context as audioContext, resume as resumeAudio } from '../audio/sfx.js'
 import { currentLook, mapStyleUrl, mapColours } from '../theme.js'
 
@@ -382,7 +382,7 @@ export async function makeReel(ground, opts = {}) {
       const track = dest.stream.getAudioTracks()[0]
       if (track) {
         stream.addTrack(track)
-        score = createScore({ getContext: () => ac, getOut: () => bus })
+        score = createScore({ getContext: () => ac, getOut: () => bus, style: styleFor(activity?.id || 'demo') })
       }
     }
     const chunks = []

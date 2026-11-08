@@ -252,3 +252,48 @@ describe('recap score player', () => {
     expect(() => { score.setSection('orbit'); score.setIntensity(2); score.stop() }).not.toThrow()
   })
 })
+
+describe('flyover music styles', async () => {
+  const { STYLES, STYLE_ORDER, pickStyle, nextStyle, stepEvents: ev, createScore: make } = await import('../src/lib/audio/score.js')
+  const { noteToMidi } = await import('../src/lib/audio/synth.js')
+
+  it('has five styles with their own tempo, chords and tune', () => {
+    expect(STYLE_ORDER).toHaveLength(5)
+    const bpms = new Set(STYLE_ORDER.map((id) => STYLES[id].bpm))
+    expect(bpms.size).toBe(5)
+    for (const id of STYLE_ORDER) {
+      const st = STYLES[id]
+      expect(st.progression).toHaveLength(4)
+      expect(st.melody).toHaveLength(16)
+      for (const c of st.progression) for (const n of [...c.pad, c.bass, ...c.arp]) expect(() => noteToMidi(n)).not.toThrow()
+      for (const n of [...st.melody.filter(Boolean), ...st.tonic, ...st.lift]) expect(() => noteToMidi(n)).not.toThrow()
+      // the full band plays in every style, and loops every four bars
+      const voices = new Set()
+      for (let s = 0; s < 64; s++) for (const e of ev('orbit', s, 1, st)) voices.add(e.voice)
+      for (const v of ['pad', 'arp', 'kick', 'clap', 'bass', 'bell']) expect(voices.has(v), `${id} ${v}`).toBe(true)
+      expect(ev('orbit', 3, 1, st)).toEqual(ev('orbit', 3 + 64, 1, st))
+    }
+  })
+
+  it('a run always gets the same style, runs get a spread, and the button walks through them all', () => {
+    expect(pickStyle('abc')).toBe(pickStyle('abc'))
+    const seen = new Set(Array.from({ length: 60 }, (_, i) => pickStyle(`run-${i}`).id))
+    expect(seen.size).toBe(5)
+    let s = STYLES.sunny
+    const walk = []
+    for (let i = 0; i < 5; i++) { s = nextStyle(s.id); walk.push(s.id) }
+    expect(new Set(walk).size).toBe(5)
+  })
+
+  it('switches style mid flyover without stopping the music', () => {
+    const ctx = fakeCtx({ currentTime: 1 })
+    const out = ctx.createGain()
+    const sc = make({ getContext: () => ctx, getOut: () => out, style: STYLES.chill, timers: { set: () => 0, clear: () => {}, auto: false } })
+    sc.start('follow')
+    sc.scheduleUntil(3)
+    sc.setStyle(STYLES.surf)
+    expect(sc.playing).toBe(true)
+    expect(sc.style.id).toBe('surf')
+    expect(sc.section).toBe('follow')
+  })
+})

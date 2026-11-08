@@ -3,7 +3,8 @@
 // trail as it draws, reveals the hexes taken and orbits them, then shows an
 // overview and the numbers. Uses Google's photorealistic 3D map when a Maps
 // key is set up, otherwise the MapLibre street map with the same moves.
-// A generative score (lib/audio/score.js) follows the shots; the speaker
+// A generative score (lib/audio/score.js) follows the shots, in a style of
+// its own for each run (the music chip skips to the next style); the speaker
 // button mutes it, and a "Tap for sound" chip shows if the phone hasn't
 // allowed sound yet.
 // The "try it now" demo (#/try/flyover) plays the demo run here too, and
@@ -27,7 +28,7 @@ import ReelMaker from '../../components/ReelMaker.vue'
 import { demoRun } from '../../lib/recap/demo.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
-import { createScore } from '../../lib/audio/score.js'
+import { createScore, styleFor, keepStyle, nextStyle } from '../../lib/audio/score.js'
 
 const props = defineProps({
   id: { type: String, default: '' }, // set by the demo route; otherwise from the URL
@@ -49,7 +50,16 @@ let driver = null
 let director = null
 let plan = null
 let gone = false
-const music = createScore()
+const music = createScore({ style: styleFor(rid.value) })
+// The music button: skip to the next style, and remember it for this run (its reel too)
+const styleName = ref(music.style.name)
+function nextTune() {
+  const s = nextStyle(music.style.id)
+  music.setStyle(s)
+  keepStyle(rid.value, s.id)
+  styleName.value = s.name
+  if (!audio.recapMusic) toggleMusic()
+}
 const hasAudio = typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext)
 let musicWanted = false // the map is up, so music should play once sound is allowed
 
@@ -217,6 +227,11 @@ onBeforeUnmount(() => {
         </svg>
       </button>
     </header>
+    <button v-if="hasAudio && audio.recapMusic && !needsTap && state === 'playing'" class="tunechip" type="button" :aria-label="`Music: ${styleName}. Tap for a different style.`" @click="nextTune">
+      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><circle cx="6.5" cy="17.5" r="2.5" fill="currentColor" /><circle cx="16.5" cy="15.5" r="2.5" fill="currentColor" /></svg>
+      {{ styleName }}
+      <span class="skip" aria-hidden="true">Next</span>
+    </button>
     <button v-if="needsTap" class="soundchip" type="button" @click="tapForSound">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" /></svg>
       Tap for sound
@@ -314,6 +329,14 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 .soundchip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.tunechip {
+  position: absolute; z-index: 3; right: 12px; top: calc(env(safe-area-inset-top) + 64px);
+  display: inline-flex; align-items: center; gap: 7px; font: inherit; font-weight: 700; font-size: 0.82rem; color: #fff;
+  background: rgba(10, 20, 17, 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 999px; padding: 6px 8px 6px 12px; min-height: 36px; cursor: pointer;
+}
+.tunechip .skip { background: rgba(255, 255, 255, 0.16); border-radius: 999px; padding: 2px 8px; font-size: 0.75rem; }
+.tunechip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .close:focus-visible, .shots button:focus-visible, .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .when { display: grid; line-height: 1.2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
 .when strong { font-weight: 800; font-stretch: 108%; }
