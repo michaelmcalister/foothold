@@ -81,7 +81,7 @@ function onMap() {
         <TerritoryMap :centre="centre" :hills="[h]" fit :interactive="false" />
       </div>
 
-      <section class="panel crown" :class="{ me: h.holder?.me }" :style="{ '--holder': h.holder?.me ? '#2E55E6' : h.holder?.colour || '#16302A' }">
+      <section class="panel crown" :class="{ me: h.holder?.me }" :style="{ '--holder': h.holder?.me ? '#2E55E6' : h.holder?.colour || 'var(--ink)' }">
         <span class="badge" :class="{ open: !h.holder }" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 17h16l-1.3-8.5-3.9 3.4L12 6l-2.8 5.9-3.9-3.4z" fill="currentColor" /></svg>
         </span>
@@ -135,7 +135,7 @@ function onMap() {
 .crown { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
 .crown p { margin: 0; font-weight: 600; }
 .badge {
-  width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: #fff;
+  width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: var(--card);
   display: grid; place-items: center; box-sizing: border-box;
 }
 .crown.me .badge { background: var(--you); color: #fff; border-color: var(--you); }
@@ -144,7 +144,7 @@ function onMap() {
 .board { list-style: none; margin: 0 0 8px; padding: 0; display: grid; }
 .board li { display: grid; grid-template-columns: 22px auto 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .board li:last-child { border-bottom: 0; }
-.board li.me .who, .board li.me .val { color: var(--you); font-weight: 750; }
+.board li.me .who, .board li.me .val { color: var(--you-ink); font-weight: 750; }
 .board .pos { color: var(--ink-60); font-size: 0.85rem; }
 .board .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board .val { font-weight: 650; }

@@ -127,9 +127,9 @@ async function leave() {
 .table th:first-child { width: 30px; }
 .table th.num { width: 78px; }
 .table td { padding: 10px 4px; border-top: 1px solid var(--line); }
-.table tr.me td { background: rgba(46, 85, 230, 0.08); }
+.table tr.me td { background: var(--you-wash); }
 .num { text-align: right; }
-.strong { font-weight: 800; color: var(--you); }
+.strong { font-weight: 800; color: var(--you-ink); }
 .rank { font-weight: 800; color: var(--ink-60); }
 .who { display: flex; align-items: center; gap: 8px; font-weight: 650; min-width: 0; }
 .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

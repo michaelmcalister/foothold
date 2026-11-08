@@ -491,7 +491,7 @@ const dayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { w
 .weeks li { display: grid; grid-template-columns: 64px 1fr 56px; align-items: center; gap: 10px; font-size: 0.9rem; }
 .wbar { height: 12px; background: var(--soft); border-radius: 6px; overflow: hidden; }
 .wbar span { display: block; height: 100%; background: var(--you); }
-.wbar span.deload { background: #AFC0F7; }
+.wbar span.deload { background: var(--you-soft); }
 .wkm { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .plain { list-style: none; margin: 0; padding: 0; }
 .sess { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center; }
@@ -506,14 +506,14 @@ legend { font-weight: 650; margin-bottom: 6px; }
 .choice { display: grid; gap: 4px; text-align: left; width: 100%; border: 0; cursor: pointer; font: inherit; color: inherit; }
 .choice strong { font-size: 1.1rem; }
 .choice:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
-.ai-tag { display: inline-block; width: fit-content; font-size: 0.75rem; font-weight: 750; letter-spacing: 0.02em; color: var(--you); background: var(--soft); border-radius: 999px; padding: 3px 10px; margin: 0; }
+.ai-tag { display: inline-block; width: fit-content; font-size: 0.75rem; font-weight: 750; letter-spacing: 0.02em; color: var(--you-ink); background: var(--soft); border-radius: 999px; padding: 3px 10px; margin: 0; }
 h2.sub { font-size: 1.05rem; }
 .phases { display: grid; gap: 8px; }
 .phases li { display: grid; gap: 2px; }
 .tips { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .why summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; }
 .why summary::-webkit-details-marker { display: none; }
-.why summary::after { content: 'Show'; font-size: 0.85rem; font-weight: 700; color: var(--you); }
+.why summary::after { content: 'Show'; font-size: 0.85rem; font-weight: 700; color: var(--you-ink); }
 .why[open] summary::after { content: 'Hide'; }
 .why[open] summary { margin-bottom: 12px; }
 .why h3 { margin: 0; font-size: 1.1rem; }

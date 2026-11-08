@@ -161,7 +161,7 @@ h3 { font-size: 0.95rem; font-weight: 750; margin: 0; }
 .splits td:first-child { width: 44px; }
 .splits td.pace { width: 64px; font-weight: 700; }
 .splits .num { text-align: right; width: 58px; padding-left: 8px; }
-.bar { display: block; height: 10px; border-radius: 0 5px 5px 0; background: #AFC0F7; }
+.bar { display: block; height: 10px; border-radius: 0 5px 5px 0; background: var(--you-soft); }
 .bar.best { background: var(--you); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>

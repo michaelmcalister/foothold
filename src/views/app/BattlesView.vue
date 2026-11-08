@@ -207,11 +207,11 @@ async function kudos(item) {
 .board-picks { display: flex; flex-wrap: wrap; gap: 8px; }
 .season-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
 .season-card .left { display: grid; justify-items: center; text-align: center; }
-.season-card .big { font-weight: 850; font-stretch: 112%; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--you); }
+.season-card .big { font-weight: 850; font-stretch: 112%; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--you-ink); }
 .won { color: var(--good); font-weight: 700; }
 .lost { color: var(--ink-60); font-weight: 600; }
 .board li { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px; }
-.board li.me { background: rgba(46, 85, 230, 0.08); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.board li.me { background: var(--you-wash); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
 .rank { font-weight: 800; color: var(--ink-60); font-variant-numeric: tabular-nums; }
 .who { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; flex-wrap: wrap; }
 .n { font-weight: 800; font-variant-numeric: tabular-nums; }

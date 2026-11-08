@@ -1,26 +1,26 @@
 // Recap driver on the MapLibre street map, used when there's no Google key or
 // Google's 3D map can't load. Same moves as the Google driver: tilted camera,
-// follow the trail, orbit, overview.
+// follow the trail, orbit, overview. In night mode it uses the dark street
+// map, chosen when the recap starts.
 import { Map as MLMap, setWorkerUrl } from 'maplibre-gl'
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { zoomForRange } from './plan.js'
+import { currentLook, mapStyleUrl, mapColours } from '../theme.js'
 setWorkerUrl(mapWorkerUrl)
 
-const STYLE = 'https://tiles.openfreemap.org/styles/positron'
-const FALLBACK = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#ECEFE4' } }] }
 const empty = { type: 'FeatureCollection', features: [] }
 
-async function loadStyle() {
+async function loadStyle(look) {
   try {
-    const r = await fetch(STYLE, { signal: AbortSignal.timeout(6000) })
+    const r = await fetch(mapStyleUrl(look), { signal: AbortSignal.timeout(6000) })
     if (r.ok) return await r.json()
   } catch { /* offline or blocked: plain paper */ }
-  return FALLBACK
+  return { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': mapColours(look).paper } }] }
 }
 
 export async function createMapLibreDriver(el, { start, colour = '#2E55E6' }) {
-  const style = await loadStyle()
+  const style = await loadStyle(currentLook())
   const view = (c) => ({
     center: [c.lng, c.lat],
     zoom: Math.min(19, zoomForRange(c.range, c.lat, el.clientHeight) - 1), // zoomForRange counts 256 px tiles; MapLibre draws 512 px ones

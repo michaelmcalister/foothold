@@ -49,9 +49,9 @@ const stripLabel = computed(() => props.streak.weeks.map((w) => `Week of ${day(w
 .tokens i.on { background: var(--you); }
 .line { font-weight: 650; }
 .strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; }
-.strip li { aspect-ratio: 1.15; background: rgba(22, 48, 42, 0.06); }
+.strip li { aspect-ratio: 1.15; background: var(--wash); }
 .strip li.out { background: var(--you); }
-.strip li.rested { background: #AFC0F7; }
+.strip li.rested { background: var(--you-soft); }
 .strip li.missed { background: var(--soft); }
 .strip li.now { background: rgba(46, 85, 230, 0.22); }
 .strip li.now.out { background: var(--you); }
@@ -59,7 +59,7 @@ const stripLabel = computed(() => props.streak.weeks.map((w) => `Week of ${day(w
 .skey li { display: inline-flex; align-items: center; gap: 6px; }
 .skey i { width: 14px; height: 12px; display: inline-block; }
 .skey i.out { background: var(--you); }
-.skey i.rested { background: #AFC0F7; }
+.skey i.rested { background: var(--you-soft); }
 .skey i.missed { background: var(--soft); }
 .skey i.now { background: rgba(46, 85, 230, 0.22); }
 </style>

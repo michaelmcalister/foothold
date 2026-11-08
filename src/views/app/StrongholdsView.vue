@@ -67,7 +67,7 @@ function crownText(s) {
     <ul v-else class="rows plain">
       <li v-for="s in list" :id="`sh-${s.id}`" :key="s.id">
         <button class="row" type="button" :aria-expanded="open === s.id" @click="toggle(s.id)">
-          <span class="crownbadge" :class="{ mine: s.holder?.me, open: !s.holder }" :style="{ '--holder': s.holder?.colour || '#16302A' }" aria-hidden="true">
+          <span class="crownbadge" :class="{ mine: s.holder?.me, open: !s.holder }" :style="{ '--holder': s.holder?.colour || 'var(--ink)' }" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z" fill="currentColor" /></svg>
           </span>
           <span class="txt">
@@ -96,7 +96,7 @@ function crownText(s) {
 .txt { display: grid; gap: 2px; min-width: 0; }
 .txt strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .crownbadge {
-  width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: #fff;
+  width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: var(--card);
   display: grid; place-items: center; box-sizing: border-box;
 }
 .crownbadge.mine { background: var(--you); color: #fff; border-color: var(--you); }

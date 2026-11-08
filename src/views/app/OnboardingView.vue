@@ -113,5 +113,5 @@ legend { font-weight: 650; margin-bottom: 6px; }
 .dots li { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
 .dots li.on { background: var(--you); width: 22px; border-radius: 4px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--you); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--you-ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 </style>

@@ -78,10 +78,10 @@ function pick(v) {
 .chosen { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
 .chosen p { margin: 0; font-size: 0.9rem; }
 .g { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid rgba(22, 48, 42, 0.6); }
-.linkish { background: none; border: 0; color: var(--you); font: inherit; font-weight: 650; cursor: pointer; padding: 6px; }
+.linkish { background: none; border: 0; color: var(--you-ink); font: inherit; font-weight: 650; cursor: pointer; padding: 6px; }
 .list { display: grid; gap: 8px; }
-.opt { display: grid; gap: 2px; text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font: inherit; color: inherit; cursor: pointer; }
+.opt { display: grid; gap: 2px; text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font: inherit; color: inherit; cursor: pointer; }
 .opt.pace { cursor: default; }
 .row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-.row select { font: inherit; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.row select { font: inherit; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 </style>

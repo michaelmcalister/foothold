@@ -75,20 +75,20 @@ const verb = computed(() => ({ run: 'run', walk: 'walk', ride: 'ride' })[store.m
 
 <style scoped>
 .fw { display: grid; gap: 10px; min-width: 0; }
-.fw:not(.compact) { background: #fff; border-radius: var(--radius, 14px); padding: 16px; box-shadow: inset 0 0 0 1px var(--line); }
+.fw:not(.compact) { background: var(--card); border-radius: var(--radius, 14px); padding: 16px; box-shadow: inset 0 0 0 1px var(--line); }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 h2 { margin: 0; font-size: 1.05rem; font-weight: 800; display: grid; gap: 0; }
-.kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--you, #2E55E6); }
+.kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--you-ink); }
 .hexes { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; flex: none; }
 .hexes svg { width: 28px; height: 28px; display: block; }
-.shell { fill: var(--soft, #E7EBE1); stroke: rgba(22, 48, 42, 0.18); stroke-width: 1; }
-.current .shell { fill: #fff; stroke: var(--you, #2E55E6); stroke-width: 1.6; }
+.shell { fill: var(--soft, #E7EBE1); stroke: var(--ink-15); stroke-width: 1; }
+.current .shell { fill: var(--card); stroke: var(--you, #2E55E6); stroke-width: 1.6; }
 .done .shell { fill: var(--you, #2E55E6); stroke: none; }
 .tick { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 text { font: 700 10px Archivo, system-ui, sans-serif; fill: var(--ink, #16302A); }
 .upcoming text { fill: var(--ink-60, rgba(22, 48, 42, 0.6)); }
 .pop svg { animation: pop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
-.cheer { margin: 0; padding: 8px 12px; border-radius: 10px; background: #E8EDFC; color: var(--ink, #16302A); font-weight: 700; }
+.cheer { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--tint); color: var(--ink, #16302A); font-weight: 700; }
 .step { display: grid; gap: 2px; }
 .step p { margin: 0; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -96,7 +96,7 @@ text { font: 700 10px Archivo, system-ui, sans-serif; fill: var(--ink, #16302A);
 .actions .btn { padding-left: 12px; padding-right: 12px; }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
 .list li { display: grid; gap: 1px; }
-.list li.done strong { color: var(--you, #2E55E6); }
+.list li.done strong { color: var(--you-ink); }
 .list li.upcoming strong { color: var(--ink-60); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @keyframes pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }

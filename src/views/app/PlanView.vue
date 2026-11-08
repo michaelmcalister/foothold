@@ -28,6 +28,7 @@ import { addRouteToCalendar } from '../../lib/routeShare.js'
 import { cellToLatLng } from 'h3-js'
 import { toGpx } from '../../lib/tracks.js'
 import { setPlanned, planned } from '../../lib/plannedRoute.js'
+import { theme, mapColours } from '../../lib/theme.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,8 +154,10 @@ function setPreview() {
   map.value?.getSource('plan-hex')?.setData({ type: 'FeatureCollection', features })
 }
 
-function onReady(m) {
-  map.value = m
+// The planner's own layers. Added when the map is ready, and again after
+// night mode swaps the street style (which clears them).
+function addPlanLayers(m) {
+  const c = mapColours(theme.look)
   m.addSource('plan-hex', { type: 'geojson', data: empty })
   m.addSource('plan-line', { type: 'geojson', data: empty })
   m.addLayer({
@@ -167,7 +170,7 @@ function onReady(m) {
   m.addLayer({
     id: 'plan-hex-line', type: 'line', source: 'plan-hex',
     paint: {
-      'line-color': ['case', ['==', ['get', 'kind'], 'take'], '#2E55E6', ['get', 'colour']],
+      'line-color': ['case', ['==', ['get', 'kind'], 'take'], c.you, ['get', 'colour']],
       'line-width': ['case', ['==', ['get', 'kind'], 'take'], 2, 0.8],
       'line-opacity': 0.85,
     },
@@ -175,8 +178,17 @@ function onReady(m) {
   m.addLayer({
     id: 'plan-line', type: 'line', source: 'plan-line',
     layout: { 'line-join': 'round', 'line-cap': 'round' },
-    paint: { 'line-color': ['case', ['==', ['get', 'ok'], 1], '#2E55E6', '#16302A'], 'line-width': 4 },
+    paint: { 'line-color': ['case', ['==', ['get', 'ok'], 1], c.you, c.ink], 'line-width': 4 },
   })
+}
+function onRestyled(m) {
+  addPlanLayers(m)
+  setLine()
+  setPreview()
+}
+function onReady(m) {
+  map.value = m
+  addPlanLayers(m)
   m.on('click', onMapClick)
   drawMarkers()
   setLine()
@@ -433,7 +445,7 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
 <template>
   <div class="plan">
     <div class="maparea">
-      <TerritoryMap :centre="store.centre" :zoom="15" :cells="cellList" :me="store.located ? store.centre : null" @moved="onMoved" @ready="onReady" />
+      <TerritoryMap :centre="store.centre" :zoom="15" :cells="cellList" :me="store.located ? store.centre : null" @moved="onMoved" @ready="onReady" @restyled="onRestyled" />
       <RouterLink class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
@@ -548,17 +560,17 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
 .maparea > :first-child { position: absolute; inset: 0; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
-  width: 44px; height: 44px; border-radius: 50%; background: #fff; color: var(--ink);
+  width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);
   display: grid; place-items: center; box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .maphint {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 64px; right: 12px; z-index: 2;
-  background: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 650; font-size: 0.95rem;
+  background: var(--card); border-radius: 12px; padding: 10px 14px; font-weight: 650; font-size: 0.95rem;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  background: #fff; border-radius: 18px 18px 0 0; padding: 6px var(--pad) calc(14px + env(safe-area-inset-bottom));
+  background: var(--card); border-radius: 18px 18px 0 0; padding: 6px var(--pad) calc(14px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -10px 30px -14px rgba(22, 48, 42, 0.55);
   max-width: 560px; margin: 0 auto; max-height: 78dvh;
 }
@@ -570,9 +582,9 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
 .grab .bar { grid-column: 1 / -1; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--ink-15); }
 .nums { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.95rem; color: var(--ink-60); }
 .nums strong { font-weight: 850; font-stretch: 112%; font-size: 1.3rem; color: var(--ink); font-variant-numeric: tabular-nums; }
-.more { color: var(--you); font-weight: 700; }
-.status { margin: 0; padding: 8px 12px; border-radius: 10px; background: #E3F2E7; color: #1D4D30; }
-.status.warn { background: #FFF4DE; color: #5A3B00; }
+.more { color: var(--you-ink); font-weight: 700; }
+.status { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--good-bg); color: var(--good-ink); }
+.status.warn { background: var(--notice-bg); color: var(--notice-ink); }
 .details { flex: 1 1 auto; overflow-y: auto; display: grid; gap: 12px; align-content: start; min-height: 0; overscroll-behavior: contain; }
 .capture { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .capture li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: 0.95rem; }
@@ -590,7 +602,7 @@ onBeforeUnmount(() => { clearTimeout(moveTimer); clearTimeout(elevTimer); for (c
 .savedhead h3 { margin: 0; }
 .climbf { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
 .rowbtns { display: inline-flex; gap: 6px; }
-.climbf select { font: inherit; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.climbf select { font: inherit; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 0.95rem; min-height: 44px; cursor: pointer; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--you); }
 .go { min-height: 56px; font-size: 1.1rem; }

@@ -57,7 +57,7 @@ function later() {
 </template>
 
 <style scoped>
-.carry { margin: 12px var(--pad, 16px) 0; padding: 16px; border-radius: var(--radius, 14px); background: #E8EDFC; display: grid; gap: 8px; }
+.carry { margin: 12px var(--pad, 16px) 0; padding: 16px; border-radius: var(--radius, 14px); background: var(--tint); display: grid; gap: 8px; }
 .carry h2 { margin: 0; font-size: 1.1rem; }
 .carry p { margin: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }

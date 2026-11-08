@@ -75,15 +75,15 @@ function signUp() {
 .report { min-height: 100dvh; }
 .maparea { height: 40vh; min-height: 240px; position: relative; }
 .maparea > :first-child { position: absolute; inset: 0; }
-.close { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(22, 48, 42, 0.18); }
+.close { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--ink); box-shadow: 0 2px 8px rgba(22, 48, 42, 0.18); }
 .screen { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-.chip { display: inline-block; margin: 0 0 6px; padding: 4px 10px; border-radius: 999px; background: #E8EDFC; color: var(--ink); font-size: 0.8rem; font-weight: 650; }
+.chip { display: inline-block; margin: 0 0 6px; padding: 4px 10px; border-radius: 999px; background: var(--tint); color: var(--ink); font-size: 0.8rem; font-weight: 650; }
 .ask { display: grid; gap: 10px; padding: 20px; border-radius: var(--radius, 14px); background: #16302A; color: #fff; }
 .ask h2 { margin: 0; font-stretch: 112%; }
 .ask p { margin: 0 0 4px; opacity: 0.85; }
 .ask .btn.secondary { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; }
 .again { color: #fff; justify-self: center; font-weight: 650; text-underline-offset: 3px; padding: 6px; }
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px var(--pad, 16px) calc(10px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--line); backdrop-filter: blur(8px); }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px var(--pad, 16px) calc(10px + env(safe-area-inset-bottom)); background: var(--card-glass); border-top: 1px solid var(--line); backdrop-filter: blur(8px); }
 .dock span { font-weight: 650; font-size: 0.9rem; line-height: 1.25; }
 .dock .btn { flex: none; }
 </style>

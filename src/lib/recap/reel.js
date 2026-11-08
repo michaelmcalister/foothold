@@ -5,13 +5,14 @@
 // the recap score are recorded with MediaRecorder. It plays in real time
 // (requestAnimationFrame), so the page must stay open. Nothing is uploaded.
 // Google's 3D map isn't used: its canvas can't be captured reliably.
+// In night mode it uses the dark street map, chosen when the reel starts.
 import { planReel, reelFrame, reelText, counterText, pickMimeType, fileTypeFor, reelFileName, reelSize, projectPoint } from './reelPlan.js'
 import { zoomForRange } from './plan.js'
 import { createScore } from '../audio/score.js'
 import { context as audioContext, resume as resumeAudio } from '../audio/sfx.js'
+import { currentLook, mapStyleUrl, mapColours } from '../theme.js'
 
-const STYLE = 'https://tiles.openfreemap.org/styles/positron' // the same street map as the recap
-const PAPER = '#ECEFE4'
+// The street map is the same as the recap's (src/lib/theme.js picks day or night)
 const INK = '#16302A'
 const ON_INK = '#F3F5EF'
 const FONT = "Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -30,16 +31,16 @@ export function reelSupport() {
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const abortError = () => Object.assign(new Error('Cancelled'), { name: 'AbortError' })
 
-async function loadStyle() {
+async function loadStyle(look) {
   try {
-    const r = await fetch(STYLE, { signal: AbortSignal.timeout(5000) })
+    const r = await fetch(mapStyleUrl(look), { signal: AbortSignal.timeout(5000) })
     if (r.ok) return await r.json()
   } catch { /* offline or blocked: plain paper */ }
-  return { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': PAPER } }] }
+  return { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': mapColours(look).paper } }] }
 }
 
 // The hidden street map. Returns null if it can't start (no WebGL, say).
-async function makeMap(size, start) {
+async function makeMap(size, start, look) {
   const css = { width: size.width / 2, height: size.height / 2 } // drawn at 2x, so labels read like on a phone
   const host = document.createElement('div')
   host.setAttribute('aria-hidden', 'true')
@@ -52,7 +53,7 @@ async function makeMap(size, start) {
     const [{ Map: MLMap, setWorkerUrl }, { default: workerUrl }, style] = await Promise.all([
       import('maplibre-gl'),
       import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
-      loadStyle(),
+      loadStyle(look),
     ])
     setWorkerUrl(workerUrl)
     const map = new MLMap({
@@ -123,12 +124,12 @@ function font(ctx, weight, px, stretch = 'normal') {
   if ('fontStretch' in ctx) ctx.fontStretch = stretch
 }
 
-function drawFrame(ctx, W, H, fr, { map, plan, text, colour }) {
+function drawFrame(ctx, W, H, fr, { map, plan, text, colour, look }) {
   const k = W / 1080 // everything is laid out for 1080 wide
   const project = map ? (p) => map.project(p) : (p) => projectPoint(fr.cam, p, W, H)
   // The street map, or plain map paper if it couldn't load
   ctx.globalAlpha = 1
-  ctx.fillStyle = PAPER
+  ctx.fillStyle = mapColours(look).paper
   ctx.fillRect(0, 0, W, H)
   if (map) { try { ctx.drawImage(map.canvas, 0, 0, W, H) } catch { /* paper */ } }
 
@@ -152,7 +153,7 @@ function drawFrame(ctx, W, H, fr, { map, plan, text, colour }) {
     ctx.lineCap = 'round'
     linePath(ctx, plan.path, project)
     ctx.globalAlpha = 0.28
-    ctx.strokeStyle = INK
+    ctx.strokeStyle = look === 'night' ? ON_INK : INK // reads on either street map
     ctx.lineWidth = 5 * k
     ctx.stroke()
     ctx.globalAlpha = 1
@@ -320,6 +321,7 @@ export async function makeReel(ground, opts = {}) {
   const size = opts.size || reelSize({ deviceMemory: navigator.deviceMemory, cores: navigator.hardwareConcurrency })
   const text = reelText({ activity, hexCount: ground.hexCount, name, showName, origin })
   const live = () => { if (signal?.aborted) throw abortError() }
+  const look = opts.look || currentLook()
 
   // Wake sound now, while we still have the tap
   const ac = music ? audioContext() : null
@@ -330,12 +332,12 @@ export async function makeReel(ground, opts = {}) {
   out.height = size.height
   const ctx = out.getContext('2d')
   let map = null
-  const draw = (fr) => drawFrame(ctx, size.width, size.height, fr, { map, plan: ground.plan, text, colour })
+  const draw = (fr) => drawFrame(ctx, size.width, size.height, fr, { map, plan: ground.plan, text, colour, look })
   onCanvas(out)
 
   onStage('map')
   try { await document.fonts?.load?.(`850 64px Archivo`) } catch { /* system font */ }
-  map = await makeMap(size, reel.cams.wide)
+  map = await makeMap(size, reel.cams.wide, look)
   live()
   let wake = null
   let rec = null

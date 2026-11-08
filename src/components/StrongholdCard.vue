@@ -69,7 +69,7 @@ async function practise() {
   <div class="shcard">
     <template v-if="sh">
       <div class="head">
-        <span class="crownbadge" :class="{ mine: sh.holder?.me, open: !sh.holder }" :style="{ '--holder': sh.holder?.colour || '#16302A' }" aria-hidden="true">
+        <span class="crownbadge" :class="{ mine: sh.holder?.me, open: !sh.holder }" :style="{ '--holder': sh.holder?.colour || 'var(--ink)' }" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z" fill="currentColor" /></svg>
         </span>
         <div>
@@ -114,19 +114,19 @@ async function practise() {
 .head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
 .head > div { min-width: 0; }
 .crownbadge {
-  width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: #fff;
+  width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--holder); color: var(--holder); background: var(--card);
   display: grid; place-items: center; box-sizing: border-box;
 }
 .crownbadge.mine { background: var(--you); color: #fff; border-color: var(--you); }
 .crownbadge.open { border-style: dashed; }
 .mine { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mine .n { font-weight: 850; font-stretch: 112%; font-size: 1.35rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.tocrown { font-weight: 650; color: var(--you); }
+.tocrown { font-weight: 650; color: var(--you-ink); }
 .board { list-style: none; margin: 10px 0 0; padding: 0; display: grid; }
 .board li { display: grid; grid-template-columns: 18px auto 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .board li:has(.when) { grid-template-columns: 18px auto 1fr auto auto; }
 .board li:last-child { border-bottom: 0; }
-.board li.me .who, .board li.me .val { color: var(--you); font-weight: 750; }
+.board li.me .who, .board li.me .val { color: var(--you-ink); font-weight: 750; }
 .board .pos { color: var(--ink-60); font-size: 0.85rem; }
 .board .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board .val { font-weight: 650; }

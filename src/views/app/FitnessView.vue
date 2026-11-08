@@ -124,7 +124,7 @@ const summaryOf = (name, rows, fmt) => {
 </template>
 
 <style scoped>
-.back { color: var(--you); font-weight: 650; text-decoration: none; width: fit-content; }
+.back { color: var(--you-ink); font-weight: 650; text-decoration: none; width: fit-content; }
 .lead { font-size: 1.15rem; font-weight: 700; line-height: 1.3; margin: 0; }
 .screen-head p { margin: 0; }
 .fithero { display: flex; align-items: end; justify-content: space-between; gap: 12px; }

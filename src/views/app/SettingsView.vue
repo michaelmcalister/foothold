@@ -1,6 +1,6 @@
 <script setup>
-// Settings: name, colour and crest, privacy zones, FormTrack, feedback,
-// and your data (export, start again).
+// Settings: name, colour and crest, day or night look, privacy zones,
+// FormTrack, feedback, and your data (export, start again).
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, isLocal } from '../../lib/api/index.js'
@@ -10,6 +10,7 @@ import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
 import { auth, login, logout } from '../../lib/auth.js'
 import { recordReadiness, clearReadiness } from '../../lib/readiness.js'
+import { theme, setTheme } from '../../lib/theme.js'
 
 const router = useRouter()
 const name = ref(store.user.name)
@@ -24,6 +25,12 @@ const ftSummary = ref(null)
 const ftTokenValue = computed(() => ftToken.value.match(/ftk_[A-Za-z0-9_-]{8,}/)?.[0] || null)
 const fbKind = ref('idea')
 const fbText = ref('')
+
+const LOOKS = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'day', label: 'Day' },
+  { id: 'night', label: 'Night' },
+]
 
 const COLOURS = ['#2E55E6', '#1A9E8F', '#8A5CD8', '#D6418E', '#E5604D', '#16302A']
 
@@ -161,6 +168,14 @@ async function startAgain() {
       <button class="btn" type="button" @click="saveProfile">Save</button>
     </section>
 
+    <section class="panel stack" aria-labelledby="s-look">
+      <h2 id="s-look">Day and night</h2>
+      <div class="seg looks" role="group" aria-labelledby="s-look">
+        <button v-for="l in LOOKS" :key="l.id" type="button" :aria-pressed="theme.choice === l.id" @click="setTheme(l.id)">{{ l.label }}</button>
+      </div>
+      <p class="hint">{{ theme.choice === 'auto' ? `Auto follows your phone's light or dark setting. It's ${theme.look} now.` : theme.choice === 'night' ? 'Night uses darker screens and a dark street map, easier on the eyes after sunset.' : 'Day keeps the light screens and street map.' }} Saved on this phone.</p>
+    </section>
+
     <section class="panel stack" aria-labelledby="s-priv">
       <h2 id="s-priv">Privacy zones</h2>
       <p class="small muted">Ground inside a zone is never shown as yours to anyone else, and the start and end of your routes inside a zone are trimmed. Claims show to others after a delay, never live.</p>
@@ -236,17 +251,20 @@ async function startAgain() {
 
 <style scoped>
 .stack { display: grid; gap: 12px; }
-.back { justify-self: start; border: 0; background: none; font: inherit; color: var(--you); font-weight: 700; padding: 4px 0; cursor: pointer; }
+.back { justify-self: start; border: 0; background: none; font: inherit; color: var(--you-ink); font-weight: 700; padding: 4px 0; cursor: pointer; }
 fieldset { border: 0; padding: 0; margin: 0; }
 legend { font-weight: 650; margin-bottom: 6px; }
 .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
-.sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+.sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
 .sw[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--ink); }
+html.night .sw:not([aria-pressed='true']) { box-shadow: 0 0 0 1px var(--ink-40); } /* so the darkest colour still shows */
 .crests { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; max-width: 360px; }
 .cr { display: grid; place-items: center; aspect-ratio: 1; min-height: 44px; border: 0; border-radius: 12px; background: var(--soft); cursor: pointer; padding: 0; }
-.cr[aria-pressed='true'] { background: #fff; box-shadow: 0 0 0 3px var(--ink); }
+.cr[aria-pressed='true'] { background: var(--raised); box-shadow: 0 0 0 3px var(--ink); }
 .plain { list-style: none; margin: 0; padding: 0; }
 .zone { display: flex; gap: 12px; align-items: end; }
 .grow { flex: 1; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
+.looks { justify-self: start; }
+.looks button { min-width: 72px; min-height: 40px; }
 </style>

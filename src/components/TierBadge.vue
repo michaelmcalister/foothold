@@ -15,8 +15,8 @@ const bars = computed(() => Array.from({ length: t.value.index + 1 }, (_, i) => 
 
 <template>
   <svg class="tier" viewBox="0 0 24 24" :width="size" :height="size" role="img" :aria-label="`${t.name} tier`">
-    <polygon points="12,1 21.5,6.5 21.5,17.5 12,23 2.5,17.5 2.5,6.5" :fill="dim ? '#E7EBE1' : COLOURS[t.index]" />
-    <rect v-for="(x, i) in bars" :key="i" :x="x - 0.8" y="8" width="1.6" height="8" rx="0.8" :fill="dim ? '#B9C2B4' : '#fff'" />
+    <polygon points="12,1 21.5,6.5 21.5,17.5 12,23 2.5,17.5 2.5,6.5" :style="{ fill: dim ? 'var(--soft, #E7EBE1)' : COLOURS[t.index] }" />
+    <rect v-for="(x, i) in bars" :key="i" :x="x - 0.8" y="8" width="1.6" height="8" rx="0.8" :style="{ fill: dim ? 'var(--tier-dim, #B9C2B4)' : '#fff' }" />
   </svg>
 </template>
 

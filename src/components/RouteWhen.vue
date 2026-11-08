@@ -77,7 +77,7 @@ const past = computed(() => model.value != null && model.value < Date.now())
 .rwhen { display: grid; gap: 10px; min-width: 0; }
 .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .head strong { flex: 1; min-width: 0; }
-.linkish { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 650; font-size: 0.9rem; color: var(--you); cursor: pointer; min-height: 40px; }
+.linkish { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 650; font-size: 0.9rem; color: var(--you-ink); cursor: pointer; min-height: 40px; }
 .days { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
 .day {
   flex: none; scroll-snap-align: start; font: inherit; font-weight: 650; font-size: 0.9rem; white-space: nowrap;

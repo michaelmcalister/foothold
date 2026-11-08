@@ -91,7 +91,7 @@ async function send(person) {
 <style scoped>
 .srs-back { position: fixed; inset: 0; z-index: 30; background: rgba(22, 48, 42, 0.42); display: flex; align-items: flex-end; justify-content: center; }
 .srs {
-  width: 100%; max-width: 560px; max-height: 86dvh; background: #fff; color: var(--ink);
+  width: 100%; max-width: 560px; max-height: 86dvh; background: var(--card); color: var(--ink);
   border-radius: 18px 18px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -10px 30px -14px rgba(22, 48, 42, 0.55); box-sizing: border-box;
 }

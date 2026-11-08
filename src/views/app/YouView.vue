@@ -106,8 +106,8 @@ const ladderPct = computed(() => {
       <h2 id="badges">Badges</h2>
       <div class="badge">
         <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
-          <polygon points="12,1.5 21.5,7 21.5,17 12,22.5 2.5,17 2.5,7" fill="#16302A" />
-          <path d="M9 17V7.5M9 8h6.5l-1.6 2.2 1.6 2.2H9" fill="none" stroke="#F3F5EF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <polygon points="12,1.5 21.5,7 21.5,17 12,22.5 2.5,17 2.5,7" style="fill: var(--ink)" />
+          <path d="M9 17V7.5M9 8h6.5l-1.6 2.2 1.6 2.2H9" fill="none" style="stroke: var(--paper)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         <div>
           <strong>{{ badge.name }}</strong>
@@ -214,35 +214,35 @@ const ladderPct = computed(() => {
 .ladder li { display: grid; gap: 4px; justify-items: start; }
 .ladder .hexdot { width: 24px; height: 21px; background: var(--soft); }
 .ladder li.got .hexdot { background: var(--you); }
-.ladder li.now .name { color: var(--you); }
+.ladder li.now .name { color: var(--you-ink); }
 .ladder .name { font-weight: 750; }
 .meter { height: 10px; border-radius: 5px; background: var(--soft); overflow: hidden; }
 .meter span { display: block; height: 100%; background: var(--you); }
 .bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 110px; align-items: end; margin-top: 12px; }
 .bar { height: 100%; display: flex; align-items: flex-end; }
-.bar span { display: block; width: 100%; background: #AFC0F7; border-radius: 4px 4px 0 0; min-height: 3px; }
+.bar span { display: block; width: 100%; background: var(--you-soft); border-radius: 4px 4px 0 0; min-height: 3px; }
 .bar.now span { background: var(--you); }
 .plain { list-style: none; margin: 0; padding: 0; }
 .badges { display: grid; gap: 10px; }
 .badges h2, .badge p { margin: 0; }
-.badge { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; background: #fff; border-radius: var(--radius); padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.badge { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; background: var(--card); border-radius: var(--radius); padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .questsec { display: grid; gap: 12px; }
 .divsec { display: grid; gap: 10px; }
 .divsec h2, .divsec p { margin: 0; }
 .tiers { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
 .tiers li { display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
 .tiers li span { font-weight: 650; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-size: 0.66rem; letter-spacing: -0.01em; }
-.tiers li.now span { color: var(--you); font-weight: 800; }
+.tiers li.now span { color: var(--you-ink); font-weight: 800; }
 .questsec h2, .questsec p { margin: 0; }
 .weeklinks { display: flex; gap: 10px; flex-wrap: wrap; }
 .act { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
 .best { font-weight: 800; font-stretch: 108%; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-.shlink { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; text-decoration: none; color: inherit; background: #fff; border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.shlink { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; text-decoration: none; color: inherit; background: var(--card); border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .shlink > span:last-child { display: grid; gap: 2px; }
-.shlink .crownbadge { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; }
-.chip.claimed { background: rgba(46, 85, 230, 0.12); color: var(--you); }
-.fitcard { display: grid; gap: 8px; text-decoration: none; color: inherit; background: #fff; border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.shlink .crownbadge { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; }
+.chip.claimed { background: var(--you-wash); color: var(--you-ink); }
+.fitcard { display: grid; gap: 8px; text-decoration: none; color: inherit; background: var(--card); border-radius: var(--radius); padding: 14px; box-shadow: inset 0 0 0 1px var(--line); }
 .fitcard p { margin: 0; }
 .fittop { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: end; }
-.fitcard .see { color: var(--you); font-weight: 650; }
+.fitcard .see { color: var(--you-ink); font-weight: 650; }
 </style>

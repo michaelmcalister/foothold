@@ -144,7 +144,7 @@ const thanks = computed(() => {
   background: var(--soft); border: 0; border-radius: 12px; padding: 10px 1px; min-height: 76px; cursor: pointer;
   display: grid; justify-items: center; align-content: center; gap: 6px; text-align: center; hyphens: manual; min-width: 0;
 }
-.opt:hover { background: #DCE2D4; }
+.opt:hover { background: var(--soft-hover); }
 .opt:focus-visible, .pick:focus-visible, .close:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
 .opt rect { fill: var(--ink-15); }
 .opt rect.on { fill: var(--you); }
@@ -159,5 +159,5 @@ legend { font-weight: 650; margin-bottom: 6px; }
 .seg button { flex: 1; padding: 7px 6px; }
 .acts { display: flex; flex-wrap: wrap; gap: 10px; }
 .changes { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
-.link { color: var(--you); font-weight: 650; }
+.link { color: var(--you-ink); font-weight: 650; }
 </style>

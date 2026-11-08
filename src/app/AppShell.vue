@@ -106,7 +106,7 @@ const tabs = [
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   height: var(--top-h); padding: 0 var(--pad);
   padding-top: env(safe-area-inset-top);
-  background: rgba(243, 245, 239, 0.94);
+  background: var(--paper-glass);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
@@ -126,13 +126,13 @@ const tabs = [
   height: calc(var(--bar-h) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
-  background: #fff; border-top: 1px solid var(--line);
+  background: var(--card); border-top: 1px solid var(--line);
 }
 .tab {
   display: grid; justify-items: center; gap: 2px; padding: 6px 0;
   color: var(--ink-60); text-decoration: none; font-size: 0.72rem; font-weight: 650;
 }
-.tab.on { color: var(--you); }
+.tab.on { color: var(--you-ink); }
 .rec-btn { justify-self: center; margin-top: -26px; filter: drop-shadow(0 6px 10px rgba(46, 85, 230, 0.35)); border-radius: 50%; }
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--bar-h) + 18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
