@@ -28,6 +28,7 @@
 // shamed for a slow surge, and every episode lands somewhere safe.
 
 import { SIGNAL, SIGNAL_SAGA, SIGNAL_CHAIN } from './signal.js'
+import { SERIES } from './series/index.js'
 
 const line = (who, text) => ({ who, text })
 
@@ -54,6 +55,7 @@ const job = (at, seconds, who, say, recover, extra = {}) =>
   ({ at, kind: 'surge', seconds, who, say, success: who === 'pixel' ? H_WIN_PIX : H_WIN, okay: who === 'pixel' ? H_OKAY_PIX : H_OKAY, recover, ...extra })
 
 export const SAGAS = [
+  ...SERIES.map((s) => s.SAGA),
   SIGNAL_SAGA,
   {
     id: 'ember',
@@ -469,10 +471,12 @@ export const THRILLERS = [
     ],
   },
   ...SIGNAL,
+  ...SERIES.flatMap((s) => s.EPISODES),
 ]
 
 export const THRILLER_CHAINS = {
   signal: SIGNAL_CHAIN,
+  ...Object.fromEntries(SERIES.map((s) => [s.SAGA.id, s.CHAIN])),
   ember: ['ember-smoke', 'ember-wind', 'ember-tower', 'ember-dawn'],
   heist: ['heist-recruit', 'heist-gala', 'heist-cross', 'heist-ferry'],
 }

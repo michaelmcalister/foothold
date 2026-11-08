@@ -11,7 +11,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession } from './voice.js'
+import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
@@ -99,14 +99,18 @@ function sayLine(line) {
   const { text, who: w, fx } = typeof line === 'string' ? { text: line } : line
   const who = w || narrator
   const s = scape
-  if (fx && s && STINGS[fx]) enqueue(() => s.sting(fx))
+  // Alongside Spotify the run's sound mode follows the silent switch, so a
+  // line's effect plays inside the voice's announcement, which doesn't
+  if (fx && s && STINGS[fx]) enqueue(() => (runSessionKind() === 'ambient' ? asAnnouncement(() => s.sting(fx)) : s.sting(fx)))
   if (!text || !audio.voice) return
   const radio = CAST[who]?.radio && s
-  enqueue(() => spotify.aroundSpeech(async () => {
+  const play = async () => {
     if (radio) { await s.sting('squelch'); s.radio(stripTags(text).length / 13) } // static and crackle under the line
     await talking(() => speakAs(text, who, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }))
     if (radio) await s.sting('squelch')
-  }, { how: audio.music, duckTo: audio.duckTo }))
+  }
+  // alongside Spotify, the radio sounds share the voice's announcement (see above)
+  enqueue(() => spotify.aroundSpeech(() => (radio && runSessionKind() === 'ambient' ? asAnnouncement(play) : play()), { how: audio.music, duckTo: audio.duckTo }))
 }
 
 /** The title card, "Previously on" and "Next time on" lines for a thriller episode. */

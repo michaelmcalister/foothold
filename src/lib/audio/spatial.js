@@ -5,6 +5,7 @@
 // plain left/right pan where that isn't there. Each sound can be a recorded
 // one-shot (library.js SFX) or, until that's made, a synthesised stand-in.
 import { note, tone, noise, bell } from './synth.js'
+import { KITS } from './kits/index.js'
 
 /**
  * A spot in space to play a sound from. Positions are metres: x is right,
@@ -119,6 +120,9 @@ export const SPATIAL = {
   drones: { dur: 6, from: { x: -40, y: 12, z: -20 }, to: { x: 50, y: 10, z: 12 }, recorded: 'drone-swarm', synth: 'drones' },
   meteor: { dur: 4, from: { x: -90, y: 70, z: -60 }, to: { x: 80, y: 30, z: -40 }, recorded: 'meteor', synth: 'meteor' },
 }
+
+// the newer series' sound kits add their own (audio/kits)
+for (const k of KITS) { Object.assign(SPATIAL, k.spatial); Object.assign(SYNTH, k.synth) }
 
 /** A random place for a sound with no path: up in the trees, across the park, over a fence. */
 export function placeFor(kind, r) {

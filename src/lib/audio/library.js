@@ -5,6 +5,8 @@
 // served to everyone. The prompts describe a feel, never a real song or
 // artist: everything here is original. Shared by the app and the worker.
 
+import { SERIES } from '../missions/series/index.js'
+
 export const AMBIENCE = {
   bush: 'Australian bush on a scorching summer afternoon: loud pulsing cicada chorus, hot dry wind through gum trees, leaves rustling, a distant crow and magpie, no music, no voices',
   smoke: 'Australian bushland on a smoky fire day: strong gusty hot wind, dry leaves skittering, a low distant rumble of a bushfire over the hills, faint cicadas, no music, no voices',
@@ -79,6 +81,14 @@ export const RUN_PLAYLIST = ['arena-anthem', 'synth-sprint', 'surf-rock-run', 'b
 
 /** The chase music each series brings in when a surge starts. */
 export const CHASE_TRACK = { ember: 'ember-rising', heist: 'spy-chase', quiz: 'big-beat-push', signal: 'signal-pursuit' }
+
+// The newer series bring their own recordings (missions/series)
+for (const s of SERIES) {
+  Object.assign(AMBIENCE, s.LIBRARY.ambience)
+  Object.assign(SFX, s.LIBRARY.sfx)
+  Object.assign(TRACKS, s.LIBRARY.tracks)
+  if (s.LIBRARY.chase) { CHASE_TRACK[s.SAGA.id] = s.LIBRARY.chase; RUN_PLAYLIST.push(s.LIBRARY.chase) }
+}
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)
 export const isTrack = (id) => Object.prototype.hasOwnProperty.call(TRACKS, id)

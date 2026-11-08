@@ -30,6 +30,7 @@ import { plannedRun } from '../../lib/recap/planned.js'
 import { planned as plannedRoute } from '../../lib/plannedRoute.js'
 import { audio } from '../../lib/audio/settings.js'
 import { sound, resume as wakeSound } from '../../lib/audio/sfx.js'
+import { setRunSession } from '../../lib/audio/voice.js'
 import { createScore, styleFor, keepStyle, nextStyle } from '../../lib/audio/score.js'
 
 const props = defineProps({
@@ -102,6 +103,7 @@ const needsTap = computed(() => hasAudio && audio.recapMusic && mapShown.value &
 
 function startMusic() {
   musicWanted = true
+  setRunSession('playback') // the flyover's music plays even with the silent switch on
   if (!audio.recapMusic || !hasAudio || state.value !== 'playing') return
   wakeSound()
   if (sound.state === 'running') music.start(shot.value) // otherwise it starts when sound is allowed
@@ -113,7 +115,7 @@ function toggleMusic() {
   if (audio.recapMusic) startMusic()
   else music.stop({ fade: 0.3 })
 }
-function tapForSound() { wakeSound() }
+function tapForSound() { setRunSession('playback'); wakeSound() }
 
 // A ghost you raced on this run: its dot moves beside yours as the trail draws
 let raceGhost = null
@@ -204,6 +206,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   gone = true
+  setRunSession(null)
   music.stop({ fade: 0.3 })
   director?.stop()
   driver?.destroy()

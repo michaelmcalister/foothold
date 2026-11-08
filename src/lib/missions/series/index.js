@@ -1,0 +1,9 @@
+// The newer mission series, each in its own file: its episodes, cast, cover
+// look and recorded sound prompts (pure data, so the app and the worker can
+// both use it). thrillers.js, cast.js and audio/library.js take them from
+// here. A series with no episodes yet is left out.
+import * as deepcover from './deepcover.js'
+import * as timerunners from './timerunners.js'
+import * as velocity from './velocity.js'
+
+export const SERIES = [deepcover, timerunners, velocity].filter((s) => s.EPISODES.length)

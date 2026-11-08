@@ -6,6 +6,8 @@
 // `radio` characters talk over a radio or earpiece, so their lines get a
 // squelch before and after. Shared by the app and the worker.
 
+import { SERIES } from './series/index.js'
+
 export const CAST = {
   // Ember Run
   'ember-narrator': { name: 'Narrator', voiceId: 'dh3YdvdCYZdqFjtSFNTx', pitch: 0.9, rate: 0.98 }, // William
@@ -35,6 +37,9 @@ export const CAST = {
   milly: { name: 'Milly', voiceId: 'BB9S0ZoOunfdUYSciL2X', pitch: 1.2, rate: 1.1 }, // Milly
   announcer: { name: 'Announcer', voiceId: 'IKne3meq5aSn9XLyUdCD', pitch: 0.95, rate: 1.05 }, // Charlie
 }
+
+// the newer series bring their own cast (missions/series)
+for (const s of SERIES) Object.assign(CAST, s.CAST)
 
 export const isCast = (key) => Object.prototype.hasOwnProperty.call(CAST, key)
 

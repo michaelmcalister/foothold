@@ -82,20 +82,38 @@ export function unlock() {
 // it has the speaker to itself (ignores the silent switch, so the effects and
 // music play too), or 'ambient' alongside Spotify. Switching modes line by
 // line can pause the effects on iPhone, so only the Spotify case switches.
+// A looping silent clip also holds the 'playback' mode on iPhones without the
+// audioSession setting (before iOS 17), so the effects ignore the silent switch there too.
 let runSession = null
+let holder = null
+const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+function holdSpeaker(on) {
+  if (typeof Audio === 'undefined') return
+  if (on) {
+    if (!holder) { holder = new Audio(SILENCE); holder.loop = true; holder.setAttribute('playsinline', '') }
+    holder.play().catch(() => { /* needs a tap: the next one will do */ })
+  } else holder?.pause()
+}
 export function setRunSession(kind) {
   runSession = kind
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
-  if (!s || !('type' in s)) return
-  try { s.type = kind || 'auto' } catch { /* not allowed here */ }
+  if (s && 'type' in s) { try { s.type = kind || 'auto' } catch { /* not allowed here */ } }
+  if (!s || !('type' in s)) holdSpeaker(kind === 'playback')
 }
+/** The sound mode set for this run or flyover (null when none). */
+export const runSessionKind = () => runSession
 
+let announcing = 0 // nested announcements share one switch
 export async function asAnnouncement(fn) {
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
-  if (!s || !('type' in s) || runSession === 'playback') return fn()
+  if (!s || !('type' in s) || runSession === 'playback' || announcing) return fn()
   const was = s.type
+  announcing++
   try { s.type = 'transient' } catch { /* not allowed: carry on */ }
-  try { return await fn() } finally { try { s.type = was === 'transient' ? 'auto' : was } catch { /* fine */ } }
+  try { return await fn() } finally {
+    announcing--
+    try { s.type = was === 'transient' ? 'auto' : was } catch { /* fine */ }
+  }
 }
 
 function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {

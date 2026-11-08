@@ -117,7 +117,7 @@ function testVoice() {
           <button class="btn quiet" type="button" :disabled="busy" @click="testMusic">Test music and voice</button>
           <button class="btn quiet" type="button" @click="disconnect">Disconnect</button>
         </div>
-        <p v-if="iphone" class="hint">On iPhone, start your music in the Spotify app first, then come back. iPhone won't let Spotify start playing from the background. Once it's going, Foothold keeps it going and lowers it while the coach talks.</p>
+        <p v-if="iphone" class="hint">On iPhone, start your music in the Spotify app first, then come back. iPhone won't let Spotify start playing from the background. Once it's going, Foothold keeps it going and lowers it while the coach talks. With Spotify on, the mission's background sounds follow your silent switch, so turn silent mode off to hear them under your music.</p>
         <p v-else class="hint">Open Spotify on this phone first so Foothold can find it.</p>
       </template>
       <p v-if="error" class="notice bad">{{ error }}</p>

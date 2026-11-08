@@ -12,6 +12,7 @@
 import { note, tone, noise, pluck, bell, kick, pad, swell, noiseBuffer, SILENT } from './synth.js'
 import { loopBuffer } from './recorded.js'
 import { playSpatial, radioStatic, SPATIAL } from './spatial.js'
+import { KITS } from './kits/index.js'
 
 // ---- seeded randomness, so tests (and renders) are repeatable ----
 export function rng(seed = 1) {
@@ -819,6 +820,16 @@ export const SCORES = {
     run: ['E4', 'G4', 'B4', 'D5', 'E5', 'D5', 'B4', 'G4'],
     bass: ['E2', 'E2', 'G2', 'E2', 'D2', 'D2', 'B1', 'D2'],
   },
+}
+
+// The newer series' sound kits (audio/kits) add their stings, scenes, theme and score
+for (const k of KITS) {
+  Object.assign(STINGS, k.stings)
+  Object.assign(SCENES, k.scenes)
+  Object.assign(AROUND, k.around)
+  Object.assign(SPOTS, k.spots)
+  if (k.theme) THEMES[k.id] = k.theme
+  if (k.score) SCORES[k.id] = k.score
 }
 
 /**
