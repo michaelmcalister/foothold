@@ -1,30 +1,111 @@
-name: Deploy to GitHub Pages
+# Ship to Cloudflare: checks, then staging, then production.
+#
+#   checks      the same tests, build and bundle check as pull requests
+#   staging     migrate + deploy + smoke test (only once STAGING_URL is set)
+#   production  migrate + deploy + smoke test; a failed smoke test rolls the
+#               code back to the version that was live before
+#
+# Runs on every push to main once the repository variable
+# DEPLOY_FROM_ACTIONS is "true" (turn off Cloudflare's own Git deploy at the
+# same time, or every push deploys twice). Until then it runs only by hand
+# (Actions tab, Deploy, Run workflow). Setup steps: docs/SERVER.md, Deploy pipeline.
+#
+# Repository secrets: CLOUDFLARE_API_TOKEN (Workers Scripts edit, D1 edit,
+# Workers R2 Storage read), CLOUDFLARE_ACCOUNT_ID.
+# Repository variables: DEPLOY_FROM_ACTIONS, PROD_URL, STAGING_URL (optional).
+# A required reviewer on the "production" environment turns the last step
+# into a one-tap approval.
+name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+# One deploy at a time; a newer push waits rather than racing a migration
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 permissions:
-  contents: write
+  contents: read
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  D1_NAME: foothold
+  D1_STAGING_NAME: foothold-staging
 
 jobs:
-  deploy:
+  checks:
+    if: github.event_name == 'workflow_dispatch' || vars.DEPLOY_FROM_ACTIONS == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  staging:
+    needs: checks
+    if: vars.STAGING_URL != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --no-audit --no-fund
       - run: npm run build
         env:
-          BASE_PATH: /foothold/
-          VITE_GOOGLE_MAPS_KEY: ${{ vars.GOOGLE_MAPS_KEY }}
-          VITE_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
-      - name: Publish dist to the gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+          VITE_API_URL: self
+      - name: Apply migrations to staging
+        run: npx wrangler d1 migrations apply "$D1_STAGING_NAME" --remote --env staging
+      - name: Deploy to staging
+        run: npx wrangler deploy --env staging
+      - name: Smoke test staging
+        run: node scripts/smoke-retry.mjs "${{ vars.STAGING_URL }}"
+
+  production:
+    needs: [checks, staging]
+    # Staging is skipped until it exists; production still needs green checks
+    if: >-
+      always() && needs.checks.result == 'success' &&
+      (needs.staging.result == 'success' || needs.staging.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.PROD_URL || 'https://foothold.com.au' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+        env:
+          VITE_API_URL: self
+      - name: Note the live version (for rollback)
+        id: before
+        run: echo "version=$(node scripts/live-version.mjs)" >> "$GITHUB_OUTPUT"
+      # Migrations go first: new code expects the new columns, and migrations
+      # only ever add (scripts/check-migrations.mjs), so old code still works.
+      - name: Apply migrations
+        run: npx wrangler d1 migrations apply "$D1_NAME" --remote
+      - name: Deploy
+        run: npx wrangler deploy --message "Deploy ${GITHUB_SHA::7} from GitHub Actions"
+      - name: Smoke test
+        id: smoke
+        run: node scripts/smoke-retry.mjs "${{ vars.PROD_URL || 'https://foothold.com.au' }}"
+      - name: Roll back after a failed smoke test
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: |
+          echo "::error::Smoke test failed. Rolling the code back to ${{ steps.before.outputs.version || 'the previous version' }}."
+          npx wrangler rollback ${{ steps.before.outputs.version }} --message "Smoke test failed on ${GITHUB_SHA::7}" --yes
+          {
+            echo "### Rolled back"
+            echo "The smoke test failed, so the code went back to the version that was live before."
+            echo "Migrations stay applied (they only add, so the old code is fine with them)."
+          } >> "$GITHUB_STEP_SUMMARY"

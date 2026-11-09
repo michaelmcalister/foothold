@@ -65,7 +65,47 @@ map with runs saved on each phone.
 Every push to `main` then builds and deploys. The hourly cron in
 `wrangler.toml` ends finished battles, sends the daily "fading soon"
 reminders and runs each season's soft reset (docs/ENGINE.md), with no extra
-setup.
+setup. That Git deploy does NOT apply migrations: run `npm run db:migrate`
+before you push.
+
+## Deploy pipeline
+
+The better path for production, once switched on:
+
+1. **Pull request** (`ci.yml`): migration safety check
+   (`scripts/check-migrations.mjs`), tests, build, Worker bundle check.
+   AI review comments from `claude-review.yml` (and CodeRabbit, if
+   installed). Nothing touches Cloudflare.
+2. **Merge to `main`** (`deploy.yml`): the same checks, then staging (once
+   `STAGING_URL` is set), then production: note the live version, apply
+   migrations, deploy, smoke test (`scripts/smoke.mjs`, three tries). A
+   failed smoke test rolls the code back on its own.
+3. **Something wrong later?** Actions tab, Rollback, Run workflow (works
+   from the GitHub phone app). Then revert the bad commit on `main`.
+
+Migrations only ever add tables and columns. The check fails a pull request
+that drops or renames, so a code rollback never needs a database rollback.
+D1 Time Travel covers the rest (`npx wrangler d1 time-travel info foothold`).
+
+**Switching it on (once):**
+
+1. Cloudflare, My Profile, API Tokens: create a token with Workers Scripts
+   edit, D1 edit and Workers R2 Storage read.
+2. GitHub, Settings, Secrets and variables, Actions: secrets
+   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, variable `PROD_URL`
+   (for example `https://foothold.com.au`).
+3. Actions tab, Deploy, Run workflow. Check it goes green end to end.
+4. Cloudflare, Workers, foothold, Settings, Build: disconnect the Git
+   repository, so pushes stop deploying twice.
+5. Add the variable `DEPLOY_FROM_ACTIONS` = `true`.
+6. Settings, Environments, production: add yourself as a required reviewer
+   for a one-tap approval before each production deploy (optional).
+7. Protect `main`: require a pull request and the `checks` status check.
+
+**Staging:** the `[env.staging]` block in `wrangler.toml` needs its own D1
+database first (instructions in the file). Add the staging address to the
+Foothold application's callback and web origin lists in Auth0, then set the
+`STAGING_URL` variable. Staging has no crons.
 
 ## Run recaps in 3D (Google Maps)
 

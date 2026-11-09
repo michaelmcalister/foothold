@@ -12,8 +12,8 @@ npm run dev
 
 ## Deploy
 
-- **GitHub Pages:** every push to `main` builds the site and publishes `dist` to the
-  `gh-pages` branch (see `.github/workflows/deploy.yml`). Live at
+- **GitHub Pages:** every push to `main` runs the tests, builds the site and publishes
+  `dist` to the `gh-pages` branch (see `.github/workflows/pages.yml`). Live at
   https://michaelmcalister.github.io/foothold/
 - **Cloudflare (optional):** the Worker in `worker/` (configured in `wrangler.toml`)
   serves the app and the API with a D1 database. Setup steps are in `docs/SERVER.md`.

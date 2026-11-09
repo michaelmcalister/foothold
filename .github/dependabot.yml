@@ -1,0 +1,28 @@
+# Weekly dependency updates as pull requests. Each one runs CI like any
+# other change, so a broken update never reaches main on its own.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Australia/Sydney
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps arrive together in one pull request
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Native shell and store SDKs move with the iPhone app releases, by hand
+      - dependency-name: '@capacitor/*'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@capacitor-community/*'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@capgo/*'
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

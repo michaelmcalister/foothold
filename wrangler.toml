@@ -53,3 +53,35 @@ ALLOWED_ORIGINS = "capacitor://localhost"
 [triggers]
 # Hourly: end finished battles and send "fading soon" reminders
 crons = ["0 * * * *"]
+
+# ---- Staging --------------------------------------------------------------
+# Deploy with `npx wrangler deploy --env staging`. Bindings and vars are not
+# inherited from the top level, so they are repeated here.
+# Before first use, create the staging database and put its id below:
+#   npx wrangler d1 create foothold-staging
+#   npx wrangler d1 migrations apply foothold-staging --remote --env staging
+# Then set the repository variable STAGING_URL and every deploy goes
+# through staging first (.github/workflows/deploy.yml).
+[env.staging]
+name = "foothold-staging"
+# No crons on staging, so it never ends real battles or sends reminders
+triggers = { crons = [] }
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "foothold-staging"
+database_id = "00000000-0000-0000-0000-000000000000" # TODO: id from `wrangler d1 create foothold-staging`
+migrations_dir = "migrations"
+
+# Recorded audio is the same for every environment, so staging reads the live bucket
+[[env.staging.r2_buckets]]
+binding = "AUDIO"
+bucket_name = "foothold-audio"
+
+[env.staging.vars]
+FORMTRACK_URL = "https://formtrack.com.au"
+APP_URL = "https://staging.foothold.com.au" # TODO: the staging URL
+AUTH0_DOMAIN = "dev-dprob3bsr0oj2dsz.us.auth0.com"
+AUTH0_CLIENT_ID = "tgi72m6fOy0uAODE9vkjjlCy5TOGkpWx"
+AUTH0_AUDIENCE = "https://api.formtrk.com"
+ALLOWED_ORIGINS = "capacitor://localhost"

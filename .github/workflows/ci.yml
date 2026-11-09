@@ -1,0 +1,55 @@
+# Pull requests: every check runs here before anything can merge.
+# Nothing touches Cloudflare or the live database.
+# Branch protection should require the "checks" job.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+# A newer push to the same pull request cancels the older run
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: New migrations are safe
+        if: github.event_name == 'pull_request'
+        run: |
+          added=$(git diff --name-only --diff-filter=A "origin/${{ github.base_ref }}...HEAD" -- migrations/)
+          node scripts/check-migrations.mjs $added
+          if [ -n "$added" ]; then
+            {
+              echo "### This pull request adds migrations"
+              echo "The deploy applies them to the live database before the new code goes out."
+              echo "$added" | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: self
+      - name: Worker bundles and config is valid
+        run: npx wrangler deploy --dry-run --outdir .wrangler/dry-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7

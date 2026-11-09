@@ -1,0 +1,53 @@
+# CodeRabbit AI review on pull requests (optional; Claude review in
+# .github/workflows/claude-review.yml covers the same ground).
+# Free plan: a summary on each pull request. Line-by-line review needs a paid
+# plan (Essentials and up); new accounts get a 14 day trial of everything.
+# Install: https://github.com/apps/coderabbitai (pick this repo only).
+language: en-AU
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    # Dependabot bumps are covered by CI; don't spend reviews on them
+    ignore_usernames: ['dependabot[bot]']
+  path_filters:
+    - '!dist/**'
+    - '!package-lock.json'
+    - '!public/**/*.png'
+    - '!ios/**'
+  path_instructions:
+    - path: 'migrations/**'
+      instructions: >-
+        D1 (SQLite) migrations run against the live database before the new
+        code deploys, and a code rollback leaves them applied. Flag anything
+        that drops, renames or rewrites existing data. Only additive changes
+        are allowed.
+    - path: 'worker/**'
+      instructions: >-
+        Cloudflare Worker API (docs/API.md). Older iPhone app versions keep
+        calling it, so flag renamed or removed response fields. Check auth on
+        every new route and that GPS tracks and personal data never reach logs.
+    - path: 'src/lib/engine/**'
+      instructions: >-
+        The territory engine (docs/ENGINE.md). It must stay deterministic and
+        unit tested; flag changes to capture rules without tests.
+    - path: 'src/**'
+      instructions: >-
+        Vue 3 app, phones first. User-facing text is Australian English, short
+        and friendly, with no em dashes, en dashes or double hyphens.
+    - path: '.github/workflows/**'
+      instructions: >-
+        Flag secrets printed to logs, untrusted input used in run: blocks,
+        and permissions wider than the job needs.
+chat:
+  auto_reply: true
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns: ['README.md', 'docs/ENGINE.md']

@@ -1,0 +1,50 @@
+# One tap rollback from the Actions tab (works from the GitHub phone app).
+# Leave the version blank to go back one deploy, or paste a version id from
+# `npx wrangler deployments list`. Code only: migrations stay applied, which
+# is safe because they only ever add tables and columns.
+# Afterwards, revert the bad commit on main so the next push doesn't bring it back.
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version id to go back to (blank = the previous deploy)
+        required: false
+      reason:
+        description: Why
+        required: true
+        default: Rolled back from GitHub Actions
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VERSION: ${{ inputs.version }}
+      REASON: ${{ inputs.reason }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Roll back
+        run: |
+          if [ -n "$VERSION" ] && ! [[ "$VERSION" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "::error::That doesn't look like a version id."; exit 1
+          fi
+          npx wrangler rollback $VERSION --message "$REASON" --yes
+      - name: Smoke test
+        run: node scripts/smoke-retry.mjs "${{ vars.PROD_URL || 'https://foothold.com.au' }}"
