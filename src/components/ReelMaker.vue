@@ -5,6 +5,7 @@
 // and shared with the share sheet, or saved. The trail leaves out the ends inside
 // privacy zones, and the person's name is only on it if they turn it on.
 // Browsers that can't record video get the still share card instead.
+import { webOrigin } from '../lib/native.js'
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import { store } from '../lib/store.js'
 import { audio } from '../lib/audio/settings.js'
@@ -70,7 +71,7 @@ async function make() {
       name: name.value,
       showName: showName.value,
       music: music.value,
-      origin: location.origin,
+      origin: webOrigin(),
       signal: abort.signal,
       onStage: (s) => { stage.value = s },
       onProgress: (p) => { progress.value = p },

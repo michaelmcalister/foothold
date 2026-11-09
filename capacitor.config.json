@@ -1,0 +1,10 @@
+{
+  "appId": "au.net.mcalister.foothold",
+  "appName": "Foothold",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#16302A",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

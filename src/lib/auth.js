@@ -2,12 +2,15 @@
 // Loads the Auth0 settings from /api/config (same pattern as FormTrack, and
 // the same Auth0 tenant, so one account signs in to both apps), finishes the
 // redirect back from Auth0, and hands access tokens to the API client.
+// In the iPhone app, Auth0 opens in a secure sheet and comes back through the
+// app's own link (Google won't sign people in inside an app's web view).
 // Signed in, the app plays on the shared server; signed out, it opens the
 // practice map in the browser. Builds with no server skip all of this.
 
 import { reactive } from 'vue'
 import { setTokenGetter } from './api/remote.js'
 import { useServer } from './api/index.js'
+import { isNativeApp, APP_ID, onAppLink, openSheet, closeSheet } from './native.js'
 
 export const auth = reactive({ ready: false, enabled: false, loggedIn: false, user: null, error: '' })
 let client = null
@@ -15,6 +18,9 @@ let client = null
 const RAW = import.meta.env.VITE_API_URL || ''
 const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
 const home = () => location.origin + import.meta.env.BASE_URL
+// Where Auth0 sends the app back to (also listed in the Auth0 dashboard)
+const nativeCallback = (domain) => `${APP_ID}://${domain}/capacitor/${APP_ID}/callback`
+let callbackUrl = null
 
 export async function initAuth() {
   if (!RAW) { auth.ready = true; return } // practice map: no sign-in
@@ -25,13 +31,16 @@ export async function initAuth() {
     if (!cfg) { useServer(!!conf.devices); return }
     auth.enabled = true
     const { createAuth0Client } = await import('@auth0/auth0-spa-js')
+    const native = isNativeApp()
+    if (native) callbackUrl = nativeCallback(cfg.domain)
     client = await createAuth0Client({
       domain: cfg.domain,
       clientId: cfg.clientId,
       cacheLocation: 'localstorage', // Safari blocks Auth0's cookies; this keeps people signed in
       useRefreshTokens: true,
-      authorizationParams: { redirect_uri: home(), audience: cfg.audience, scope: 'openid profile email offline_access' },
+      authorizationParams: { redirect_uri: native ? callbackUrl : home(), audience: cfg.audience, scope: 'openid profile email offline_access' },
     })
+    if (native) onAppLink(finishInApp)
     const q = new URLSearchParams(location.search)
     if (q.has('error') && q.has('state')) {
       // Auth0 sent the visitor back with a refusal instead of a sign-in
@@ -56,6 +65,29 @@ export async function initAuth() {
   }
 }
 
+// The app was opened by its Auth0 link: finish signing in (or out), then
+// reload so the whole app starts again on the right footing
+async function finishInApp(url) {
+  if (!callbackUrl || !url.startsWith(callbackUrl)) return
+  await closeSheet()
+  const q = new URLSearchParams(url.split('?')[1] || '')
+  let returnTo = '#/app'
+  if (q.has('code') && q.has('state')) {
+    try {
+      const { appState } = await client.handleRedirectCallback(url)
+      returnTo = appState?.returnTo || returnTo
+    } catch (e) {
+      auth.error = signInTrouble(e.error_description || e.message)
+      return
+    }
+  } else if (q.has('error')) {
+    auth.error = signInTrouble(q.get('error_description') || q.get('error'))
+    return
+  }
+  history.replaceState(null, '', home() + returnTo)
+  location.reload()
+}
+
 // What to tell someone whose sign-in didn't work, in plain words
 function signInTrouble(detail = '') {
   if (/not authorized to access resource server/i.test(detail)) return "Sign-in isn't switched on yet, so you're on the practice map. Your runs save on this phone for now."
@@ -66,9 +98,11 @@ export function login({ signup = false, returnTo } = {}) {
   return client?.loginWithRedirect({
     appState: { returnTo: returnTo || (location.hash || '#/app').replace(/[?&]signin=1/, '') },
     authorizationParams: signup ? { screen_hint: 'signup' } : {},
+    ...(callbackUrl ? { openUrl: (url) => openSheet(url) } : {}),
   })
 }
 
 export function logout() {
+  if (callbackUrl) return client?.logout({ logoutParams: { returnTo: callbackUrl }, openUrl: (url) => openSheet(url) })
   return client?.logout({ logoutParams: { returnTo: home() } })
 }

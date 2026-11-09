@@ -3,6 +3,8 @@
 // lower or pause it while the voice coach talks, pause at the finish.
 // Needs Spotify Premium. Tokens stay on this device.
 
+import { isNativeApp, onAppLink, appLink, openSheet, closeSheet } from '../native.js'
+
 const KEY = 'fh-spotify'
 const API = 'https://api.spotify.com/v1'
 const SCOPES = 'user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative'
@@ -24,7 +26,21 @@ export function clientId() {
   return clientIdPromise
 }
 
-const redirectUri = () => location.origin + import.meta.env.BASE_URL + 'spotify/callback/'
+// In the iPhone app, Spotify sends people back to the website's return page,
+// which hands them on to the app's own link (public/spotify/callback), so the
+// Spotify dashboard needs no app-specific address
+const WEB = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+const redirectUri = () => (isNativeApp() && /^https:/.test(WEB) ? WEB + '/' : location.origin + import.meta.env.BASE_URL) + 'spotify/callback/'
+if (isNativeApp()) {
+  onAppLink(async (url) => {
+    if (!url.startsWith(appLink('spotify-callback'))) return
+    await closeSheet()
+    const q = new URLSearchParams(url.split('?')[1] || '')
+    try { sessionStorage.setItem('fh-spotify-return', JSON.stringify({ code: q.get('code'), state: (q.get('state') || '').replace(/^app\./, ''), error: q.get('error') })) } catch { /* private mode */ }
+    location.hash = '#/app/settings'
+    location.reload()
+  })
+}
 
 function read() { try { return JSON.parse(localStorage.getItem(KEY) || 'null') } catch { return null } }
 function write(v) { try { v ? localStorage.setItem(KEY, JSON.stringify(v)) : localStorage.removeItem(KEY) } catch { /* private mode */ } }
@@ -40,7 +56,9 @@ export async function connect() {
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)))
   const state = b64url(crypto.getRandomValues(new Uint8Array(12)))
   sessionStorage.setItem('fh-spotify-pkce', JSON.stringify({ verifier, state }))
-  const q = new URLSearchParams({ client_id: id, response_type: 'code', redirect_uri: redirectUri(), code_challenge_method: 'S256', code_challenge: challenge, scope: SCOPES, state })
+  const native = isNativeApp()
+  const q = new URLSearchParams({ client_id: id, response_type: 'code', redirect_uri: redirectUri(), code_challenge_method: 'S256', code_challenge: challenge, scope: SCOPES, state: native ? 'app.' + state : state })
+  if (native) return openSheet('https://accounts.spotify.com/authorize?' + q)
   location.assign('https://accounts.spotify.com/authorize?' + q)
 }
 

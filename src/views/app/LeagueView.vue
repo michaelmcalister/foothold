@@ -1,5 +1,6 @@
 <script setup>
 // One private league: the table (ground gained this week, then held), the members, the invite to share, and leaving.
+import { webOrigin, isNativeApp } from '../../lib/native.js'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, isLocal } from '../../lib/api/index.js'
@@ -23,7 +24,7 @@ async function load() {
 onMounted(load)
 watch(() => store.mode, load)
 
-const link = computed(() => data.value && inviteLink(location.origin + location.pathname, data.value.league.code))
+const link = computed(() => data.value && inviteLink(webOrigin() + (isNativeApp() ? '/' : location.pathname), data.value.league.code))
 const onlyMe = computed(() => data.value && data.value.members.length < 2)
 
 async function share() {

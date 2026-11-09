@@ -6,9 +6,12 @@
 // front, so the recording is saved on the device as it goes (a closed page
 // can be finished later), gaps are noticed and explained, and a gap is
 // joined with a straight line when the run is saved.
+// In the iPhone app, GPS comes from the background location plugin instead,
+// so locking the phone no longer stops a run (native.js, docs/IOS.md).
 
 import { reactive } from 'vue'
 import { distance, summarise } from './engine/geo.js'
+import { isNativeApp, keepScreenOn } from './native.js'
 
 export const rec = reactive({
   status: 'idle', // idle | acquiring | recording | paused | error
@@ -31,12 +34,14 @@ const GAP_MS = 15000 // quiet for this long counts as a gap worth mentioning
 let hiddenAt = null
 
 let watchId = null
+let nativeWatcher = null // the background location watcher's id, in the app
 let timer = null
 let lock = null
 let pausedAt = null
 let pausedTotal = 0
 
 async function keepAwake() {
+  if (isNativeApp()) { rec.wakeLock = await keepScreenOn(true); return }
   try {
     if ('wakeLock' in navigator) {
       lock = await navigator.wakeLock.request('screen')
@@ -47,6 +52,7 @@ async function keepAwake() {
 }
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
   const active = rec.status === 'recording' || rec.status === 'paused'
+  if (isNativeApp()) return // the app keeps GPS going in the background
   if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return }
   if (active && (!lock || lock.released)) keepAwake()
   if (rec.status === 'recording' && hiddenAt && Date.now() - hiddenAt > GAP_MS) {
@@ -140,12 +146,53 @@ function onPosition(pos) {
 
 function onError(err) {
   rec.error = err.code === 1
-    ? 'Foothold needs your location to record. Allow location for this site in your browser settings, then try again.'
+    ? (isNativeApp()
+      ? 'Foothold needs your location to record. Open Settings, then Foothold, then Location, and choose While Using the App or Always.'
+      : 'Foothold needs your location to record. Allow location for this site in your browser settings, then try again.')
     : "We can't get a GPS fix. Head outside with a clear view of the sky and try again."
   if (rec.status === 'acquiring' && err.code === 1) rec.status = 'error'
 }
 
+// In the app: GPS from the background location plugin, shaped like the
+// browser's positions so onPosition handles both
+async function startNative() {
+  const { registerPlugin } = await import('@capacitor/core')
+  const BackgroundGeolocation = registerPlugin('BackgroundGeolocation')
+  nativeWatcher = await BackgroundGeolocation.addWatcher({
+    backgroundTitle: 'Foothold is recording',
+    backgroundMessage: 'Recording your route. Finish the activity to stop.',
+    requestPermissions: true,
+    stale: false,
+    distanceFilter: 0,
+  }, (loc, err) => {
+    if (err) return onError({ code: err.code === 'NOT_AUTHORIZED' ? 1 : 2 })
+    if (!loc) return
+    onPosition({ coords: { latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, altitude: loc.altitude }, timestamp: loc.time || Date.now() })
+  })
+}
+
+async function stopNative() {
+  const id = nativeWatcher
+  nativeWatcher = null
+  if (id == null) return
+  try {
+    const { registerPlugin } = await import('@capacitor/core')
+    await registerPlugin('BackgroundGeolocation').removeWatcher({ id })
+  } catch { /* already stopped */ }
+}
+
 export function start(mode = 'run') {
+  if (isNativeApp()) {
+    Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null })
+    forget()
+    pausedTotal = 0
+    startNative().catch(() => { rec.status = 'error'; rec.error = "Foothold couldn't start GPS. Check Location is allowed for Foothold in Settings." })
+    timer = setInterval(() => {
+      if (rec.status === 'recording' && rec.startedAt) rec.elapsedS = Math.round((Date.now() - rec.startedAt - pausedTotal) / 1000)
+    }, 1000)
+    keepAwake()
+    return
+  }
   if (!('geolocation' in navigator)) {
     rec.status = 'error'
     rec.error = "This browser can't share your location, so it can't record."
@@ -175,6 +222,8 @@ export function resume() {
 
 export function stop() {
   if (watchId != null) navigator.geolocation.clearWatch(watchId)
+  stopNative()
+  if (isNativeApp()) keepScreenOn(false)
   clearInterval(timer)
   watchId = null
   try { lock?.release() } catch { /* already released */ }

@@ -41,7 +41,8 @@ AUTH0_AUDIENCE = "https://api.formtrk.com"
 # Local development only: ALLOW_DEVICE_IDS = "1" accepts an X-Device-Id header
 # instead of a sign-in. Never set it in production.
 # Extra origins allowed to call the API from a browser (comma separated),
-# e.g. the GitHub Pages build: ALLOWED_ORIGINS = "https://michaelmcalister.github.io"
+# e.g. the GitHub Pages build. capacitor://localhost is the iPhone app.
+ALLOWED_ORIGINS = "capacitor://localhost"
 
 # Secrets (set with `npx wrangler secret put NAME`):
 #   TOKEN_KEY  any long random string; encrypts linked FormTrack tokens (AES-GCM)

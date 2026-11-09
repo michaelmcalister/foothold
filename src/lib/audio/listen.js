@@ -4,8 +4,11 @@
 // "option B"), the order ("the first one"), or words from the option itself
 // ("the fire trail", "1932"). Tapping still works, and if nothing is heard
 // the story carries on by itself. matchAnswer is pure and unit tested.
+// In the iPhone app the browser's speech recognition isn't available, so it
+// uses the phone's own through a native plugin (native.js).
 
 import { ref } from 'vue'
+import { isNativeApp } from '../native.js'
 
 /** True while the microphone is open for an answer (the screen shows it). */
 export const listening = ref(false)
@@ -20,7 +23,9 @@ const PROBLEMS = {
 }
 
 const Recognition = () => (typeof window === 'undefined' ? null : window.SpeechRecognition || window.webkitSpeechRecognition || null)
-export const canListen = () => !!Recognition()
+export const canListen = () => isNativeApp() || !!Recognition()
+
+const nativeSpeech = () => import('@capgo/capacitor-speech-recognition').then((m) => m.SpeechRecognition)
 
 // How speech recognition tends to hear single letters
 const LETTER_SOUNDS = {
@@ -68,12 +73,57 @@ export function matchAnswer(transcript, options) {
 }
 
 let current = null
+let nativeStop = null
 
 /** Stop listening (an answer was tapped, or the run ended). */
 export function stopListening() {
   try { current?.abort() } catch { /* already stopped */ }
   current = null
+  nativeStop?.()
+  nativeStop = null
   listening.value = false
+}
+
+// In the app: the phone's own speech recognition, with partial results
+function listenNative(options, { timeoutMs, lang }) {
+  return new Promise((resolve) => {
+    let done = false
+    let handle = null
+    let speech = null
+    const finish = (key) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      listening.value = false
+      nativeStop = null
+      handle?.remove?.()
+      speech?.stop().catch(() => {})
+      resolve(key)
+    }
+    const timer = setTimeout(() => finish(null), timeoutMs)
+    nativeStop = () => finish(null)
+    nativeSpeech().then(async (s) => {
+      speech = s
+      if (done) return
+      const perm = await s.checkPermissions().catch(() => null)
+      if (perm?.speechRecognition !== 'granted') {
+        const asked = await s.requestPermissions().catch(() => null)
+        if (asked?.speechRecognition !== 'granted') {
+          listenProblem.value = 'The microphone or speech recognition isn\u2019t allowed for Foothold. Open Settings, then Foothold, and switch them on.'
+          return finish(null)
+        }
+      }
+      handle = await s.addListener('partialResults', (e) => {
+        for (const t of e.matches || [e.accumulatedText || '']) {
+          const key = matchAnswer(t, options)
+          if (key) { listenProblem.value = null; return finish(key) }
+        }
+      })
+      if (done) return handle.remove()
+      listening.value = true
+      await s.start({ language: lang, maxResults: 3, partialResults: true, popup: false })
+    }).catch(() => finish(null))
+  })
 }
 
 /**
@@ -81,6 +131,7 @@ export function stopListening() {
  * clear was heard in time (or listening isn't possible here).
  */
 export function listenFor(options, { timeoutMs = 12000, lang = 'en-AU' } = {}) {
+  if (isNativeApp()) { stopListening(); return listenNative(options, { timeoutMs, lang }) }
   const R = Recognition()
   if (!R) return Promise.resolve(null)
   stopListening()
@@ -134,6 +185,10 @@ export function listenFor(options, { timeoutMs = 12000, lang = 'en-AU' } = {}) {
  * middle of a question. Some phones only allow listening that began from a tap.
  */
 export function primeListening() {
+  if (isNativeApp()) {
+    nativeSpeech().then((s) => s.requestPermissions()).catch(() => {})
+    return
+  }
   const R = Recognition()
   if (!R) return
   try {
@@ -147,6 +202,7 @@ export function primeListening() {
 
 /** Ask for the microphone once, from a tap (the Start button), so a question mid-run doesn't stop to ask. */
 export async function primeMicrophone() {
+  if (isNativeApp()) return nativeSpeech().then((s) => s.requestPermissions()).then((p) => p.speechRecognition === 'granted').catch(() => false)
   if (!canListen() || !navigator.mediaDevices?.getUserMedia) return false
   try {
     const s = await navigator.mediaDevices.getUserMedia({ audio: true })

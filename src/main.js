@@ -4,6 +4,10 @@ import App from './App.vue'
 import { router } from './router.js'
 import { initAuth } from './lib/auth.js'
 import { startTheme, markInApp } from './lib/theme.js'
+import { isNativeApp, routeApiToServer } from './lib/native.js'
+
+// In the iPhone app the screens are bundled: send /api calls to the server
+routeApiToServer()
 
 // Night mode: index.html already set the look before first paint; this keeps
 // it in step with the setting and the phone. Night colours only show in the app.
@@ -19,6 +23,7 @@ initAuth().finally(async () => {
 })
 
 // Offline support and home-screen install (production builds only)
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// (not in the iPhone app, which has its screens built in)
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isNativeApp()) {
   window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}))
 }

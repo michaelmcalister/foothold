@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Spotify sends people back here after they connect. Hand the result to the
-     app (Settings finishes the sign-in) and go back to it. -->
+     app (Settings finishes the sign-in) and go back to it. A sign-in started
+     from the iPhone app (state starting app.) goes on to the app's own link. -->
 <html lang="en-AU">
 <head>
 <meta charset="utf-8" />
@@ -12,11 +13,18 @@
 <p>Connecting Spotify…</p>
 <script>
   var q = new URLSearchParams(location.search)
+  // Started from the iPhone app: hand the result to the app's own link
+  if ((q.get('state') || '').indexOf('app.') === 0) {
+    var link = 'au.net.mcalister.foothold://spotify-callback' + location.search
+    document.body.innerHTML = '<p><a href="' + link.replace(/"/g, '&quot;') + '" style="display:inline-block;padding:14px 22px;border-radius:12px;background:#2E55E6;color:#fff;text-decoration:none">Back to Foothold</a></p>'
+    location.replace(link)
+  } else {
   try {
     sessionStorage.setItem('fh-spotify-return', JSON.stringify({ code: q.get('code'), state: q.get('state'), error: q.get('error') }))
   } catch (e) {}
   var base = location.pathname.replace(/spotify\/callback\/?(index\.html)?$/, '')
   location.replace(base + '#/app/settings')
+  }
 </script>
 </body>
 </html>
