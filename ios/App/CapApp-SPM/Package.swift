@@ -1,0 +1,35 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+// DO NOT MODIFY THIS FILE - managed by Capacitor CLI commands
+let package = Package(
+    name: "CapApp-SPM",
+    platforms: [.iOS(.v15)],
+    products: [
+        .library(
+            name: "CapApp-SPM",
+            targets: ["CapApp-SPM"])
+    ],
+    dependencies: [
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.6.0"),
+        .package(name: "CapacitorCommunityBackgroundGeolocation", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor-community/background-geolocation"),
+        .package(name: "CapacitorCommunityKeepAwake", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor-community/keep-awake"),
+        .package(name: "CapacitorApp", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor/app"),
+        .package(name: "CapacitorBrowser", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor/browser"),
+        .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../../../../../../../home/claude/foothold/node_modules/@capgo/capacitor-speech-recognition")
+    ],
+    targets: [
+        .target(
+            name: "CapApp-SPM",
+            dependencies: [
+                .product(name: "Capacitor", package: "capacitor-swift-pm"),
+                .product(name: "Cordova", package: "capacitor-swift-pm"),
+                .product(name: "CapacitorCommunityBackgroundGeolocation", package: "CapacitorCommunityBackgroundGeolocation"),
+                .product(name: "CapacitorCommunityKeepAwake", package: "CapacitorCommunityKeepAwake"),
+                .product(name: "CapacitorApp", package: "CapacitorApp"),
+                .product(name: "CapacitorBrowser", package: "CapacitorBrowser"),
+                .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition")
+            ]
+        )
+    ]
+)
