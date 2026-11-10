@@ -37,6 +37,12 @@ describe('iPhone app setup', () => {
     globalThis.location ??= { origin: 'https://foothold.example' }
     expect(webOrigin()).toBe(globalThis.location.origin)
   })
+
+  it('make room for the clock and camera instead of squashing the top bar', () => {
+    const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8')
+    expect(read('src/app/AppShell.vue')).toContain('height: calc(var(--top-h) + env(safe-area-inset-top))')
+    expect(read('src/views/app/MapView.vue')).toMatch(/\.mapview \{[^}]*var\(--top-h\) - env\(safe-area-inset-top\)/)
+  })
 })
 
 describe('top bars in the app', () => {

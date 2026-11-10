@@ -359,7 +359,7 @@ function closeFinder() {
 </template>
 
 <style scoped>
-.mapview { position: relative; height: calc(100dvh - var(--top-h) - var(--bar-h) - env(safe-area-inset-bottom)); }
+.mapview { position: relative; height: calc(100dvh - var(--top-h) - env(safe-area-inset-top) - var(--bar-h) - env(safe-area-inset-bottom)); }
 .map { position: absolute; inset: 0; }
 .topstack {
   position: absolute; top: 10px; left: 10px; right: 10px; z-index: 2;

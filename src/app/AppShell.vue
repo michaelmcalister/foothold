@@ -104,7 +104,8 @@ const tabs = [
 .top {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  height: var(--top-h); padding: 0 var(--pad);
+  /* the bar's own height sits below the iPhone's clock and camera */
+  height: calc(var(--top-h) + env(safe-area-inset-top)); padding: 0 var(--pad);
   padding-top: env(safe-area-inset-top);
   background: var(--paper-glass);
   backdrop-filter: blur(8px);
@@ -117,7 +118,7 @@ const tabs = [
   border-radius: 9px; background: var(--you); color: #fff; font-size: 11px; font-weight: 800;
   display: grid; place-items: center;
 }
-.body { min-height: calc(100dvh - var(--top-h)); }
+.body { min-height: calc(100dvh - var(--top-h) - env(safe-area-inset-top)); }
 .body.full { min-height: 100dvh; }
 .loading { padding: 40px; text-align: center; color: var(--ink-60); }
 
