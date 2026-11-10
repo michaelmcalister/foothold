@@ -420,7 +420,7 @@ onBeforeUnmount(() => {})
         </div>
         <button v-if="rec.status !== 'acquiring'" class="pocketbtn" type="button" @click="pocket = true">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
-          Pocket mode <span class="muted">keeps GPS going, unlike the lock button</span>
+          <span class="pk">Pocket mode</span> <span class="muted">keeps GPS going, unlike the lock button</span>
         </button>
         <div class="controls">
           <button v-if="rec.status === 'recording'" class="btn secondary" type="button" @click="pause">Pause</button>
@@ -435,7 +435,7 @@ onBeforeUnmount(() => {})
 </template>
 
 <style scoped>
-.rec { display: grid; grid-template-rows: minmax(36dvh, 1fr) auto; height: 100dvh; overflow: hidden; }
+.rec { display: grid; grid-template-rows: minmax(36dvh, 1fr) auto; grid-template-columns: minmax(0, 1fr); height: 100dvh; overflow: hidden; }
 .maparea { position: relative; min-height: 0; }
 .maparea > :first-child { position: absolute; inset: 0; }
 .back {
@@ -461,9 +461,15 @@ onBeforeUnmount(() => {})
 .panel-bottom {
   background: var(--paper); padding: 18px var(--pad) calc(18px + env(safe-area-inset-bottom));
   display: grid; gap: 14px; border-top: 1px solid var(--line);
+  /* One column that can't grow past the screen. An auto column takes the
+     widest child's one-line width (the Pocket mode hint) and the panel then
+     scrolls sideways. */
+  grid-template-columns: minmax(0, 1fr);
   /* Lots of options before a run: scroll them rather than squash the map */
-  max-height: 64dvh; overflow-y: auto; overscroll-behavior: contain;
+  max-height: 64dvh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  touch-action: pan-y;
 }
+.panel-bottom > * { min-width: 0; }
 .go { min-height: 58px; font-size: 1.15rem; }
 .alt { display: flex; gap: 10px; flex-wrap: wrap; }
 .live { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
@@ -490,6 +496,7 @@ onBeforeUnmount(() => {})
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; border-radius: 12px;
   background: var(--soft); color: var(--ink); font: inherit; font-weight: 750; cursor: pointer; text-align: left;
 }
+.pocketbtn svg, .pocketbtn .pk { flex: none; white-space: nowrap; }
 .pocketbtn .muted { font-weight: 500; font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--on-ink); font-weight: 750; }
 .turnstrip svg { flex: none; transition: transform 0.3s; }
