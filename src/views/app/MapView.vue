@@ -50,6 +50,14 @@ function toggleQuests() {
   questsOpen.value = !questsOpen.value
   try { localStorage.setItem('fh-quests-open', questsOpen.value ? '1' : '0') } catch { /* fine */ }
 }
+// The start card can fold down to just its buttons, to see more of the map.
+// Remembered on this device, like the quests.
+const sheetMini = ref(false)
+try { sheetMini.value = localStorage.getItem('fh-sheet-mini') === '1' } catch { /* fine */ }
+function toggleSheet() {
+  sheetMini.value = !sheetMini.value
+  try { localStorage.setItem('fh-sheet-mini', sheetMini.value ? '1' : '0') } catch { /* fine */ }
+}
 const questsDone = computed(() => quests.value.filter((q) => q.done).length)
 async function loadQuests() {
   try {
@@ -317,7 +325,17 @@ function closeFinder() {
       <template v-else-if="finder">
         <LoopFinder :key="finder.key" :centre="store.centre" :mode="store.mode" :start-km="finder.startKm" :auto="finder.auto" @show="showLoop" @close="closeFinder" @compact="compactLoop" />
       </template>
+      <template v-else-if="sheetMini">
+        <button class="grab" type="button" aria-label="Show more" :aria-expanded="false" @click="toggleSheet"><span aria-hidden="true"></span></button>
+        <p v-if="showJourney && journey.current" class="mini-line small"><strong>Step {{ journey.current.n }} of 3:</strong> {{ journey.current.title }}</p>
+        <div class="actions">
+          <RouterLink class="btn" :to="{ name: 'record' }">Start a {{ store.mode }}</RouterLink>
+          <button v-if="showJourney && journey.current?.n === 1" class="btn quiet" type="button" :disabled="suggesting" @click="seeFirstLoop">{{ suggesting ? 'Finding a loop' : 'See the loop' }}</button>
+          <button v-else class="btn quiet" type="button" :disabled="suggesting" @click="suggest">{{ suggesting ? 'Finding a loop' : 'Suggest a loop' }}</button>
+        </div>
+      </template>
       <template v-else-if="showJourney">
+        <button class="grab" type="button" aria-label="Show less, to see more of the map" :aria-expanded="true" @click="toggleSheet"><span aria-hidden="true"></span></button>
         <FirstWeekCard :journey="journey" compact :finding="suggesting" @see-loop="seeFirstLoop" />
         <div v-if="journey.current && journey.current.n > 1" class="actions">
           <RouterLink class="btn" :to="{ name: 'record' }">Start a {{ store.mode }}</RouterLink>
@@ -325,6 +343,7 @@ function closeFinder() {
         </div>
       </template>
       <template v-else>
+        <button class="grab" type="button" aria-label="Show less, to see more of the map" :aria-expanded="true" @click="toggleSheet"><span aria-hidden="true"></span></button>
         <div v-if="nudge" class="nudge">
           <strong>{{ nudge.title }}</strong>
           <p class="small muted">{{ nudge.body }}</p>
@@ -374,6 +393,11 @@ function closeFinder() {
   backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
 }
 .sheet.tall { max-height: 62%; overflow-y: auto; overscroll-behavior: contain; }
+/* Tap the handle to fold the start card down to its buttons, or open it again */
+.grab { justify-self: center; margin: -10px 0 -6px; width: 64px; height: 24px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.grab span { width: 40px; height: 5px; border-radius: 3px; background: var(--ink-15, rgba(22, 48, 42, 0.15)); }
+.grab:hover span, .grab:focus-visible span { background: var(--ink-60, rgba(22, 48, 42, 0.6)); }
+.mini-line { margin: -4px 0 0; }
 .shtop { display: flex; justify-content: space-between; align-items: center; }
 .shtop a { color: var(--you-ink); font-weight: 650; }
 .nudge { display: grid; gap: 2px; }
