@@ -240,7 +240,7 @@ function closeFinder() {
         </div>
       </div>
 
-      <div v-if="quests.length" class="quests" :class="{ open: questsOpen }">
+      <div v-if="quests.length" class="questcard" :class="{ open: questsOpen }">
         <button class="qhead" type="button" :aria-expanded="questsOpen" aria-controls="map-quests" @click="toggleQuests">
           <span><strong>This week’s quests</strong> <span class="muted">{{ questsDone }} of {{ quests.length }} done</span></span>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -409,11 +409,11 @@ function closeFinder() {
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .pick .hexdot { width: 20px; height: 18px; margin-top: 3px; }
-.quests, .explored {
+.questcard, .explored {
   background: var(--card-glass); border-radius: 12px; max-width: 360px; width: 100%;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.35);
 }
-.quests:not(.open) { width: auto; }
+.questcard:not(.open) { width: auto; }
 .qhead {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
   border: 0; background: none; padding: 9px 12px; font: inherit; font-size: 0.9rem; color: var(--ink); cursor: pointer; text-align: left;
