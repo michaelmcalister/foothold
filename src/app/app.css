@@ -79,6 +79,11 @@ html.night .app {
 .field > *, .panel > *, .screen > * { min-width: 0; }
 .field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
 .field select { text-overflow: ellipsis; }
+/* iPhone draws date and time inputs at their own fixed width, wider than a
+   phone card, unless the native look is switched off. Keep the value left
+   aligned like the other fields. */
+.field input[type=date], .field input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; text-align: left; }
+.field input[type=date]::-webkit-date-and-time-value, .field input[type=time]::-webkit-date-and-time-value { text-align: left; }
 /* A ticked option inside a field reads like body text, not a field label */
 .field label.check { font-weight: inherit; }
 .field input:focus, .field select:focus, .field textarea:focus { outline: 3px solid var(--you); outline-offset: 1px; border-color: var(--you); }
