@@ -66,7 +66,7 @@ async function testMusic() {
   unlock() // straight away, inside the tap, or iPhone won't let the voice play
   try {
     const r = await spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle })
-    await spotify.aroundSpeech(() => speak(r.ios ? 'This is how updates will sound over your music.' : `Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }), { how: audio.music, duckTo: audio.duckTo })
+    await spotify.aroundSpeech(() => speak(r.ios ? 'This is how updates will sound over your music.' : `Music's playing on ${r.device}. This is how updates will sound.`, { coachVoice: audio.coachVoice, voiceName: audio.voiceName, keep: !!r.ios }), { how: audio.music, duckTo: audio.duckTo })
     if (!r.ios && !r.canVolume && audio.music === 'duck') toast("This phone won't let other apps change Spotify's volume, so the music will pause briefly instead.")
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }

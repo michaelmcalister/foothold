@@ -134,11 +134,12 @@ function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {
 const made = new Map()
 const madeKey = (voiceKey, text) => voiceKey + '|' + text
 
-async function fetchVoice(text, voiceKey, timeoutMs = 6000) {
+// keep: false asks the server not to store the line for good (it names something personal)
+async function fetchVoice(text, voiceKey, timeoutMs = 6000, keep = true) {
   const r = await fetch(import.meta.env.BASE_URL + 'api/tts', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text, voice: voiceKey }),
+    body: JSON.stringify(keep ? { text, voice: voiceKey } : { text, voice: voiceKey, keep: false }),
     signal: AbortSignal.timeout(timeoutMs),
   })
   if (!r.ok) {
@@ -191,8 +192,8 @@ async function playVoice(blob, text) {
   return playBlob(blob, text)
 }
 
-async function speakServer(text, voiceKey) {
-  await playVoice(await fetchVoice(text, voiceKey), text)
+async function speakServer(text, voiceKey, keep) {
+  await playVoice(await fetchVoice(text, voiceKey, 6000, keep), text)
 }
 
 /**
@@ -245,13 +246,14 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
 
 /**
  * Say a line. coachVoice is a server voice key ('charlie', 'brenna') or
- * 'phone'; voiceName picks among the phone's voices.
+ * 'phone'; voiceName picks among the phone's voices. keep: false for a line
+ * that names something personal (a device), so the server doesn't store it.
  */
-export async function speak(text, { coachVoice = 'charlie', voiceName = '' } = {}) {
+export async function speak(text, { coachVoice = 'charlie', voiceName = '', keep = true } = {}) {
   if (!text) return
   if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
     try {
-      await speakServer(text, coachVoice)
+      await speakServer(text, coachVoice, keep)
       return
     } catch { /* fall back to the phone voice below */ }
   }

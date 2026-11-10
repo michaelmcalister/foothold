@@ -1,7 +1,10 @@
 // The voice coach's Australian voice: POST /api/tts turns a short line into
-// speech with ElevenLabs, so the API key stays on the server. Answers are
-// cached by voice and text (most lines repeat: "1 kilometre."), and fresh
-// lines are rate limited per address so nobody can run up the bill.
+// speech with ElevenLabs, so the API key stays on the server. Every line is
+// kept for good in R2 (tts/<voice id>/<hash of text>.mp3) and in the edge
+// cache, so a line is paid for once and reused by every runner after that
+// (story dialogue and "1 kilometre." are the same for everyone). Fresh lines
+// are rate limited per address so nobody can run up the bill. A line sent
+// with keep: false (it names a device) skips R2 and only sits in the cache.
 import { hit } from './db.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
 
@@ -60,6 +63,10 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   const key = new Request(`https://tts.foothold.cache/${voiceKey}/${await sha(text)}.mp3`)
   const cached = cache ? await cache.match(key) : null
   if (cached) return cached
+  // Made before, by anyone: serve the copy kept in R2 (free, no rate limit)
+  const stored = `tts/${voiceId}/${await sha(text)}.mp3`
+  const kept = env.AUDIO ? await env.AUDIO.get(stored).catch(() => null) : null
+  if (kept) return keep(new Response(await kept.arrayBuffer(), { headers: AUDIO_HEADERS }), key, cache)
 
   const ip = req.headers.get('cf-connecting-ip') || 'unknown'
   const r = await hit(env, 'tts', ip)
@@ -84,7 +91,13 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
     return json({ error: "The voice didn't answer. Using the phone voice instead.", code: 'tts_failed' }, 502)
   }
   const audio = await res.arrayBuffer()
-  const out = new Response(audio, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=2592000' } })
+  if (env.AUDIO && body.keep !== false) await env.AUDIO.put(stored, audio, { httpMetadata: { contentType: 'audio/mpeg' } }).catch((e) => console.error('tts store', e?.message))
+  return keep(new Response(audio, { headers: AUDIO_HEADERS }), key, cache)
+}
+
+const AUDIO_HEADERS = { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=2592000' }
+
+async function keep(out, key, cache) {
   if (cache) await cache.put(key, out.clone())
   return out
 }

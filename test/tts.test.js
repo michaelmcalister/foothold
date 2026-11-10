@@ -1,5 +1,5 @@
 // Tests for the voice coach's server voice (worker/tts.js): key handling,
-// caching of repeated lines, limits and failures.
+// caching of repeated lines (edge cache and R2), limits and failures.
 import { describe, it, expect } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -47,6 +47,26 @@ describe('server voice', () => {
     // Unknown voices fall back to the default, they don't reach ElevenLabs as given
     await handleTts(req({ text: 'Hello', voice: 'not-a-voice' }), env, { fetcher, cache })
     expect(calls[1].url).toContain(VOICES.charlie.id)
+  })
+
+  it('keeps every line in R2, so it is paid for once and reused everywhere', async () => {
+    const calls = []
+    const fetcher = async (url) => { calls.push(url); return new Response(new Uint8Array([4, 5, 6])) }
+    const m = new Map()
+    const AUDIO = { get: async (k) => (m.has(k) ? { arrayBuffer: async () => m.get(k) } : null), put: async (k, v) => { m.set(k, v) } }
+    const env = { ELEVENLABS_API_KEY: 'k', DB: fakeDB(), AUDIO }
+    const a = await handleTts(req({ text: 'Two kilometres.', voice: 'emily' }), env, { fetcher, cache: fakeCache() })
+    expect(a.status).toBe(200)
+    const [stored] = [...m.keys()]
+    expect(stored).toMatch(new RegExp(`^tts/${VOICES.emily.id}/[0-9a-f]{64}\\.mp3$`))
+    // A different server location (empty edge cache) gets it from R2, with no new charge
+    const b = await handleTts(req({ text: 'Two kilometres.', voice: 'emily' }, '7.7.7.7'), env, { fetcher, cache: fakeCache() })
+    expect(new Uint8Array(await b.arrayBuffer())).toEqual(new Uint8Array([4, 5, 6]))
+    expect(b.headers.get('content-type')).toBe('audio/mpeg')
+    expect(calls).toHaveLength(1)
+    // Lines that name something personal stay out of R2
+    await handleTts(req({ text: "Music's playing on Sam's iPhone.", voice: 'emily', keep: false }), env, { fetcher, cache: null })
+    expect(m.size).toBe(1)
   })
 
   it('refuses empty or long lines', async () => {
