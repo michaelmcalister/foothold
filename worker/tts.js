@@ -7,6 +7,7 @@
 // with keep: false (it names a device) skips R2 and only sits in the cache.
 import { hit } from './db.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
+import { MISSIONS } from '../src/lib/missions/index.js'
 
 // Australian voices you can pick for the coach (Music and voice settings).
 // All sit in the Foothold ElevenLabs account; Charlie is ElevenLabs' own.
@@ -42,6 +43,24 @@ export function ttsConfig(env) {
   return ttsOn(env) ? { voices: Object.entries(VOICES).map(([key, v]) => ({ key, name: v.name, about: v.about })), default: DEFAULT_VOICE } : null
 }
 
+// Every line written into the mission scripts. A story voice reading one of
+// these skips the per-address limit: the set is fixed, each line is paid for
+// once and then served from R2, and a whole episode is made at the start of a
+// run (dozens of lines at once). Anything else still counts towards the limit.
+let scriptLines = null
+export function isScriptLine(text) {
+  if (!scriptLines) {
+    scriptLines = new Set()
+    const walk = (v) => {
+      if (typeof v === 'string') scriptLines.add(v.replace(/\s+/g, ' ').trim())
+      else if (Array.isArray(v)) v.forEach(walk)
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk)
+    }
+    walk(MISSIONS)
+  }
+  return scriptLines.has(text)
+}
+
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 
 async function sha(text) {
@@ -69,7 +88,7 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   if (kept) return keep(new Response(await kept.arrayBuffer(), { headers: AUDIO_HEADERS }), key, cache)
 
   const ip = req.headers.get('cf-connecting-ip') || 'unknown'
-  const r = await hit(env, 'tts', ip)
+  const r = story && isScriptLine(text) ? { ok: true } : await hit(env, 'tts', ip)
   if (!r.ok) return json({ error: 'The coach needs a breather. Updates will use the phone voice for a bit.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 600) })
 
   const ask = (model, words, settings) => fetcher(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {

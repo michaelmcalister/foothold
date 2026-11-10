@@ -53,9 +53,20 @@ const sheet = ref(null)
 const closeBtn = ref(null)
 let opener = null
 
-function show(m) {
+// Tapping a poster shows it up top and takes you there in one tap. The smooth
+// scroll waits for the new cover to render, and if iPhone Safari cuts it short
+// (the hero changes under it), it finishes the trip without the animation.
+let jump = 0 // bumped by each touch, so a finishing jump never fights your finger
+const touched = () => { jump++ }
+async function show(m) {
+  const mine = ++jump
   previewId.value = m.id
-  sheet.value?.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  await nextTick()
+  const el = sheet.value
+  if (!el) return
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
+  requestAnimationFrame(() => el.scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' }))
+  setTimeout(() => { if (jump === mine && sheet.value === el && el.scrollTop > 0) el.scrollTop = 0 }, calm ? 0 : 600)
 }
 function pick(id) {
   model.value = id
@@ -125,7 +136,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
     <!-- Open: the full screen browser -->
     <Teleport to="body">
       <Transition name="mb">
-        <div v-if="open" ref="sheet" class="browse" role="dialog" aria-modal="true" aria-labelledby="mb-title" :style="{ '--accent': look.accent, '--deep': look.deep }">
+        <div v-if="open" ref="sheet" class="browse" @touchstart.passive="touched" @wheel.passive="touched" role="dialog" aria-modal="true" aria-labelledby="mb-title" :style="{ '--accent': look.accent, '--deep': look.deep }">
           <header class="mb-top">
             <h2 id="mb-title" class="htitle">Missions</h2>
             <button ref="closeBtn" type="button" class="mb-x" aria-label="Close missions" @click="close">

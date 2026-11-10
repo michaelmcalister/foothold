@@ -3,7 +3,8 @@
 import { describe, it, expect } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
-import { handleTts, ttsConfig, VOICES } from '../worker/tts.js'
+import { handleTts, ttsConfig, VOICES, isScriptLine } from '../worker/tts.js'
+import { missionById } from '../src/lib/missions/index.js'
 import { LIMITS } from '../worker/db.js'
 
 // Minimal D1 stand-in for the rate limiter
@@ -67,6 +68,18 @@ describe('server voice', () => {
     // Lines that name something personal stay out of R2
     await handleTts(req({ text: "Music's playing on Sam's iPhone.", voice: 'emily', keep: false }), env, { fetcher, cache: null })
     expect(m.size).toBe(1)
+  })
+
+  it('lets a whole episode be made at once: script lines in a story voice skip the per-address limit', async () => {
+    const env = { ELEVENLABS_API_KEY: 'k', DB: fakeDB() }
+    const ok = async () => new Response(new Uint8Array([7]))
+    const line = missionById('signal-contact').beats[3].say
+    expect(isScriptLine(line)).toBe(true)
+    for (let i = 0; i < LIMITS.tts.max; i++) await handleTts(req({ text: `filler ${i}` }, '3.3.3.3'), env, { fetcher: ok, cache: null })
+    expect((await handleTts(req({ text: 'not in any script', voice: 'anika' }, '3.3.3.3'), env, { fetcher: ok, cache: null })).status).toBe(429)
+    expect((await handleTts(req({ text: line, voice: 'anika' }, '3.3.3.3'), env, { fetcher: ok, cache: null })).status).toBe(200)
+    // The coach voice reading a script line still counts
+    expect((await handleTts(req({ text: line, voice: 'charlie' }, '3.3.3.3'), env, { fetcher: ok, cache: null })).status).toBe(429)
   })
 
   it('refuses empty or long lines', async () => {
