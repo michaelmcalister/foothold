@@ -51,6 +51,12 @@ const tabs = [
   { name: 'coach', label: 'Coach', icon: 'M4 18l5-6 4 3 7-9 M15 6h5v5' },
   { name: 'you', label: 'You', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6' },
 ]
+
+// Run, Walk or Ride, with a soft click pitched for each
+function switchMode(m) {
+  if (store.mode !== m) play('mode', { mode: m, wait: false })
+  setMode(m)
+}
 </script>
 
 <template>
@@ -60,7 +66,7 @@ const tabs = [
         <BrandMark :size="26" />
       </RouterLink>
       <div class="seg" role="group" aria-label="Which map">
-        <button v-for="m in ['run', 'walk', 'ride']" :key="m" type="button" :aria-pressed="store.mode === m" @click="setMode(m)">
+        <button v-for="m in ['run', 'walk', 'ride']" :key="m" type="button" :aria-pressed="store.mode === m" @click="switchMode(m)">
           {{ m === 'run' ? 'Run' : m === 'walk' ? 'Walk' : 'Ride' }}
         </button>
       </div>

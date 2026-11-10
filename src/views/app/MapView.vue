@@ -26,6 +26,7 @@ import { plural } from '../../lib/format.js'
 import { todaysNudge } from '../../lib/nudge.js'
 import { hotAreas } from '../../lib/engine/hotspots.js'
 import { decodePolyline } from '../../lib/engine/index.js'
+import { play } from '../../lib/audio/sfx.js'
 
 const router = useRouter()
 const cells = ref([])
@@ -48,6 +49,7 @@ const questsOpen = ref(false)
 try { questsOpen.value = localStorage.getItem('fh-quests-open') === '1' } catch { /* fine */ }
 function toggleQuests() {
   questsOpen.value = !questsOpen.value
+  play('fold', { open: questsOpen.value, wait: false })
   try { localStorage.setItem('fh-quests-open', questsOpen.value ? '1' : '0') } catch { /* fine */ }
 }
 // The start card can fold down to just its buttons, to see more of the map.
@@ -56,6 +58,7 @@ const sheetMini = ref(false)
 try { sheetMini.value = localStorage.getItem('fh-sheet-mini') === '1' } catch { /* fine */ }
 function toggleSheet() {
   sheetMini.value = !sheetMini.value
+  play('fold', { open: !sheetMini.value, wait: false })
   try { localStorage.setItem('fh-sheet-mini', sheetMini.value ? '1' : '0') } catch { /* fine */ }
 }
 const questsDone = computed(() => quests.value.filter((q) => q.done).length)
@@ -177,6 +180,7 @@ function suggest() {
 }
 const loopCompact = ref(false)
 function showLoop(line) {
+  if (line && !suggestion.value) play('found', { wait: false })
   suggestion.value = line ? { ring: line } : null
   const m = tmap.value?.map
   if (!line || !m || line.length < 2) return

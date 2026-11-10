@@ -10,7 +10,7 @@
 import { reactive, watch } from 'vue'
 import { audio } from './settings.js'
 import { enqueue } from './queue.js'
-import { note, tone, noise, pluck, bell, blip, pad, kick, crash } from './synth.js'
+import { note, tone, noise, pluck, bell, blip, pad, kick, crash, swell } from './synth.js'
 
 // ---- the effects ----
 // Each one: dur (seconds, for queueing) and build(ctx, out, t, opts). Levels
@@ -192,6 +192,114 @@ export const EFFECTS = {
       return t + 0.1
     },
   },
+  // ---- the logo intro (IntroScreen.vue), one sound per phase ----
+  // The run line traces the hex: a footfall at each corner, climbing.
+  introTrace: {
+    celebration: true, // a longer moment, not queued in a run
+    dur: 1.2,
+    build(ctx, out, t) {
+      introCorners().forEach((at, i) => {
+        noise(ctx, out, t + at, { decay: 0.02, peak: 0.05, filter: { type: 'bandpass', freq: 2200 + i * 300, q: 1.4 } })
+        pluck(ctx, out, t + at, N(['D4', 'F#4', 'A4', 'D5', 'F#5', 'A5'][i]), { peak: 0.08 + i * 0.012, decay: 0.22, bright: 2200 + i * 300 })
+      })
+      swell(ctx, out, t, 1.1, { peak: 0.035, from: 500, to: 4000 })
+      return t + 1.2
+    },
+  },
+  // The loop closes and the hex fills: a soft thud, a warm chord, a shimmer
+  introFill: {
+    celebration: true, // a longer moment, not queued in a run
+    dur: 1.3,
+    build(ctx, out, t) {
+      kick(ctx, out, t, { peak: 0.22 })
+      pad(ctx, out, t, [N('D3'), N('A3'), N('D4'), N('F#4')], { peak: 0.045, attack: 0.03, hold: 0.5, decay: 0.8, cutoff: 1100, to: 2800 })
+      bell(ctx, out, t + 0.02, N('D6'), { peak: 0.11, decay: 1.0 })
+      noise(ctx, out, t, { attack: 0.01, decay: 0.6, peak: 0.03, filter: { type: 'highpass', freq: 7000, to: 4000, time: 0.6 } })
+      return t + 1.3
+    },
+  },
+  // The F draws in like a second, quicker run
+  introLetter: {
+    dur: 0.4,
+    build(ctx, out, t) {
+      pluck(ctx, out, t, N('A5'), { peak: 0.1, decay: 0.16, bright: 3200 })
+      pluck(ctx, out, t + 0.13, N('D6'), { peak: 0.11, decay: 0.3, bright: 3600 })
+      return t + 0.4
+    },
+  },
+  // The wordmark slides out, and the tagline lands with a final chime
+  introWord: {
+    celebration: true, // a longer moment, not queued in a run
+    dur: 1.2,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.18, decay: 0.3, peak: 0.035, filter: { type: 'bandpass', freq: 900, to: 3500, time: 0.45, q: 0.9 } })
+      bell(ctx, out, t + 0.5, N('A5'), { peak: 0.09, decay: 0.9 })
+      bell(ctx, out, t + 0.5, N('D6'), { peak: 0.07, decay: 1.0 })
+      return t + 1.2
+    },
+  },
+
+  // ---- small sounds around the app ----
+  // Run, Walk or Ride: a soft two step, pitched for each mode
+  mode: {
+    dur: 0.16,
+    build(ctx, out, t, { mode = 'run' } = {}) {
+      const top = { run: 'D6', walk: 'A5', ride: 'F#6' }[mode] || 'D6'
+      blip(ctx, out, t, N('D5'), { peak: 0.07, decay: 0.05 })
+      blip(ctx, out, t + 0.06, N(top), { peak: 0.08, decay: 0.08 })
+      return t + 0.16
+    },
+  },
+  // A card folding away (down) or opening up (up): a short soft swish
+  fold: {
+    dur: 0.22,
+    build(ctx, out, t, { open = false } = {}) {
+      const [a, b] = open ? [700, 2600] : [2600, 700]
+      noise(ctx, out, t, { attack: 0.03, decay: 0.16, peak: 0.05, filter: { type: 'bandpass', freq: a, to: b, time: 0.18, q: 1.1 } })
+      blip(ctx, out, t + 0.04, N(open ? 'A5' : 'D5'), { peak: 0.04, decay: 0.07 })
+      return t + 0.22
+    },
+  },
+  // Opening the mission browser: a cinematic whoosh into a low hit
+  reveal: {
+    dur: 1.0,
+    build(ctx, out, t) {
+      swell(ctx, out, t, 0.38, { peak: 0.06, from: 300, to: 3500 })
+      const hit = t + 0.38
+      kick(ctx, out, hit, { peak: 0.2 })
+      tone(ctx, out, hit, { freq: N('D2'), type: 'sawtooth', attack: 0.01, decay: 0.6, peak: 0.06, filter: { freq: 600, to: 150, time: 0.5 } })
+      bell(ctx, out, hit, N('A5'), { peak: 0.06, decay: 0.6 })
+      return hit + 0.6
+    },
+  },
+  // Looking at a mission poster
+  select: {
+    dur: 0.12,
+    build(ctx, out, t) {
+      tone(ctx, out, t, { freq: N('E6'), glideTo: N('A6'), glideTime: 0.05, attack: 0.003, decay: 0.08, peak: 0.07 })
+      return t + 0.12
+    },
+  },
+  // Locking in a mission for the next run
+  lockIn: {
+    dur: 0.9,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { decay: 0.03, peak: 0.08, filter: { type: 'bandpass', freq: 1800, q: 2 } }) // the click
+      tone(ctx, out, t, { freq: N('D3'), type: 'triangle', attack: 0.005, decay: 0.4, peak: 0.14 })
+      pluck(ctx, out, t + 0.06, N('A5'), { peak: 0.12, decay: 0.3 })
+      bell(ctx, out, t + 0.14, N('D6'), { peak: 0.12, decay: 0.7 })
+      return t + 0.85
+    },
+  },
+  // A suggested loop lands on the map: a sonar ping
+  found: {
+    dur: 0.9,
+    build(ctx, out, t) {
+      bell(ctx, out, t, N('A5'), { peak: 0.1, decay: 0.8 })
+      tone(ctx, out, t + 0.22, { freq: N('A5'), attack: 0.01, decay: 0.6, peak: 0.035 }) // the echo
+      return t + 0.9
+    },
+  },
   tap: {
     dur: 0.04,
     build(ctx, out, t) {
@@ -199,6 +307,16 @@ export const EFFECTS = {
       return t + 0.03
     },
   },
+}
+
+/**
+ * When the intro's run line sets off and reaches each corner of the hex
+ * (seconds from the start of the trace). The sixth corner closes the loop,
+ * where introFill takes over. Matches IntroScreen's trace: 1.15 seconds,
+ * eased 1 - (1 - k)^2.2.
+ */
+export function introCorners(duration = 1.15) {
+  return Array.from({ length: 6 }, (_, i) => +(duration * (1 - Math.pow(1 - i / 6, 1 / 2.2))).toFixed(3))
 }
 
 /** Start times for a run of effects played one after another. */

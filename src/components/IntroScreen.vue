@@ -1,5 +1,7 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { play } from '../lib/audio/sfx.js'
+import { isNativeApp } from '../lib/native.js'
 
 // Foothold startup sequence. Each phase starts when the previous one's
 // animation ends, so durations can be tuned in CSS without drifting.
@@ -8,6 +10,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 //   letter: the F draws in like a second run
 //   word:  the wordmark slides out from behind the mark, tagline fades up
 //   hold, then leave: the screen fades and emits `done`
+// In the iPhone app each phase has its sound (sfx.js, intro*), following the
+// sound effects setting and the silent switch. Browsers block sound before a
+// first tap, so the website plays the intro silently.
 
 const props = defineProps({ holdMs: { type: Number, default: 650 } })
 const emit = defineEmits(['done'])
@@ -24,6 +29,8 @@ const hexPath = 'M' + order.map(i => pts[i].map(n => n.toFixed(2)).join(' ')).jo
 const hexPoints = pts.map(p => p.map(n => n.toFixed(2)).join(',')).join(' ')
 
 const phase = ref('ready')
+const SOUNDS = { trace: 'introTrace', fill: 'introFill', letter: 'introLetter', word: 'introWord', static: 'introFill' }
+watch(phase, (p) => { if (SOUNDS[p] && isNativeApp()) play(SOUNDS[p], { wait: false }) })
 const trace = ref(null)
 const dot = ref({ x: pts[2][0], y: pts[2][1] })
 let raf = 0

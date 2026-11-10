@@ -11,6 +11,7 @@ import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, s
 import { coverSvg, lookFor } from '../lib/missions/covers.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
+import { play } from '../lib/audio/sfx.js'
 
 const model = defineModel({ type: String, default: null })
 const open = ref(false)
@@ -60,6 +61,7 @@ let jump = 0 // bumped by each touch, so a finishing jump never fights your fing
 const touched = () => { jump++ }
 async function show(m) {
   const mine = ++jump
+  if (previewId.value !== m.id) play('select', { wait: false })
   previewId.value = m.id
   await nextTick()
   const el = sheet.value
@@ -69,6 +71,7 @@ async function show(m) {
   setTimeout(() => { if (jump === mine && sheet.value === el && el.scrollTop > 0) el.scrollTop = 0 }, calm ? 0 : 600)
 }
 function pick(id) {
+  if (id) play('lockIn', { wait: false })
   model.value = id
   close()
 }
@@ -77,6 +80,7 @@ async function openBrowser(e) {
   progress.value = loadProgress()
   previewId.value = null
   open.value = true
+  play('reveal', { wait: false })
   await nextTick()
   closeBtn.value?.focus()
 }

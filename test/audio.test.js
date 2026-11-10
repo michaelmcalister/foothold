@@ -3,7 +3,7 @@
 // running order, and the score's sections and patterns.
 import { describe, it, expect } from 'vitest'
 import { midiToFreq, noteToMidi, note, envelope, envelopeAt, envelopeEnd, dbToGain, gainToDb, SILENT } from '../src/lib/audio/synth.js'
-import { EFFECTS, scheduleEffect, planSequence, claimNotes, resultSounds, firstTime } from '../src/lib/audio/sfx.js'
+import { EFFECTS, scheduleEffect, planSequence, claimNotes, resultSounds, firstTime, introCorners } from '../src/lib/audio/sfx.js'
 import { stepEvents, createScore, PROGRESSION, MELODY, LOOP_STEPS, stepSeconds, BPM } from '../src/lib/audio/score.js'
 import { DEFAULTS } from '../src/lib/audio/settings.js'
 
@@ -75,7 +75,8 @@ describe('envelopes', () => {
 })
 
 describe('sound effects', () => {
-  const names = ['claim', 'take', 'levelUp', 'pr', 'quest', 'crown', 'start', 'pause', 'resume', 'finish', 'loopReady', 'surge', 'surgeDone', 'chapter', 'kudos', 'tap']
+  const names = ['claim', 'take', 'levelUp', 'pr', 'quest', 'crown', 'start', 'pause', 'resume', 'finish', 'loopReady', 'surge', 'surgeDone', 'chapter', 'kudos', 'tap',
+    'introTrace', 'introFill', 'introLetter', 'introWord', 'mode', 'fold', 'reveal', 'select', 'lockIn', 'found']
 
   it('has every effect, short ones under a second and celebrations about 1.5 s', () => {
     for (const n of names) {
@@ -99,6 +100,14 @@ describe('sound effects', () => {
       // no single voice is loud enough to clip on its own (big values are FM depths in Hz, not levels)
       for (const g of ctx.log.gain) for (const [, v] of g.gain.events) if (v <= 10) expect(v).toBeLessThan(0.5)
     }
+  })
+
+  it('times the intro footfalls to the run line reaching each corner of the hex', () => {
+    const at = introCorners()
+    expect(at).toHaveLength(6)
+    expect(at[0]).toBe(0)
+    for (let i = 1; i < 6; i++) expect(at[i]).toBeGreaterThan(at[i - 1])
+    expect(at[5]).toBeLessThan(1.15) // the sixth corner closes the loop, where the fill sound plays
   })
 
   it('makes the claim figure bigger for more ground', () => {
