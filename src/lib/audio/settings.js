@@ -47,3 +47,4 @@ export function fixVoice(s) {
   return s
 }
 watch(audio, (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)) } catch { /* private mode */ } }, { deep: true })
+try { if (localStorage.getItem(KEY)) localStorage.setItem(KEY, JSON.stringify(audio)) } catch { /* private mode */ } // keep fixVoice's repair
