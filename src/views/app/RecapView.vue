@@ -402,8 +402,10 @@ onBeforeUnmount(() => {
 .stats .lbl { font-size: 0.82rem; opacity: 0.75; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .keep { margin-top: 14px; }
-.actions .btn { flex: 1; }
-.actions .reelbtn { flex-basis: 100%; }
+/* The main action gets its own full row; the others share the row below.
+   Labels stay on one line so every button keeps its pill shape. */
+.actions .btn { flex: 1 1 auto; white-space: nowrap; min-height: 50px; padding-inline: 16px; }
+.actions > .btn:first-child, .actions .reelbtn { flex-basis: 100%; }
 .btn.ghost { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; }
 .credit { font-size: 0.75rem; opacity: 0.6; }
 </style>
