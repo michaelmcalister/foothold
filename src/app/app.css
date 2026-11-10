@@ -69,7 +69,8 @@ html.night .app {
 
 .field { display: grid; gap: 6px; }
 .field label { font-weight: 650; }
-.field input, .field select, .field textarea {
+/* Text-style inputs only: checkboxes and radios keep their own size */
+.field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea {
   font: inherit; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--field-edge); background: var(--card); color: var(--ink); min-height: 48px;
 }
 .field textarea { min-height: 110px; resize: vertical; }
@@ -78,6 +79,8 @@ html.night .app {
 .field > *, .panel > *, .screen > * { min-width: 0; }
 .field input:not([type=checkbox]):not([type=radio]), .field select, .field textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
 .field select { text-overflow: ellipsis; }
+/* A ticked option inside a field reads like body text, not a field label */
+.field label.check { font-weight: inherit; }
 .field input:focus, .field select:focus, .field textarea:focus { outline: 3px solid var(--you); outline-offset: 1px; border-color: var(--you); }
 .hint { font-size: 0.85rem; color: var(--ink-60); }
 
