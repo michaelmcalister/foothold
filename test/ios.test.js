@@ -49,6 +49,7 @@ describe('top bars in the app', () => {
   it('sit below the clock and battery on every screen outside the app frame', () => {
     const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8')
     expect(read('index.html')).toContain('viewport-fit=cover')
+    expect(read('src/style.css')).not.toMatch(/^\.top \{/m) // a bare .top would pad every card's top row
     for (const f of ['src/style.css', 'src/views/Privacy.vue', 'src/views/try/TryView.vue', 'src/views/app/OnboardingView.vue', 'src/app/AppShell.vue']) {
       expect(read(f), f).toContain('env(safe-area-inset-top)')
     }

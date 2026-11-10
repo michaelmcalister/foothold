@@ -136,8 +136,9 @@ a { color: inherit; }
   border-radius: 4px;
 }
 
-/* Top bar (clear of the iPhone's clock and battery in the app) */
-.top {
+/* The landing page's top bar (clear of the iPhone's clock and battery in the
+   app). Its own class, so cards with a "top" row of their own aren't padded. */
+.site-top {
   display: flex;
   align-items: center;
   justify-content: space-between;

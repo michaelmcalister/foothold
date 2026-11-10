@@ -50,7 +50,7 @@ const rivals = [
 
 <template>
   <div class="landing">
-    <header class="top">
+    <header class="top site-top">
       <RouterLink class="brand" to="/">
         <BrandMark :size="30" />
         Foothold
