@@ -2,6 +2,10 @@
   "appId": "au.net.mcalister.foothold",
   "appName": "Foothold",
   "webDir": "dist",
+  "android": {
+    "useLegacyBridge": true,
+    "backgroundColor": "#16302A"
+  },
   "ios": {
     "contentInset": "never",
     "backgroundColor": "#16302A",

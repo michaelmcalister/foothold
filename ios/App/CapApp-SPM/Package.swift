@@ -12,11 +12,12 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.6.0"),
-        .package(name: "CapacitorCommunityBackgroundGeolocation", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor-community/background-geolocation"),
-        .package(name: "CapacitorCommunityKeepAwake", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor-community/keep-awake"),
-        .package(name: "CapacitorApp", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor/app"),
-        .package(name: "CapacitorBrowser", path: "../../../../../../../../../home/claude/foothold/node_modules/@capacitor/browser"),
-        .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../../../../../../../home/claude/foothold/node_modules/@capgo/capacitor-speech-recognition")
+        .package(name: "CapacitorCommunityBackgroundGeolocation", path: "../../../node_modules/@capacitor-community/background-geolocation"),
+        .package(name: "CapacitorCommunityKeepAwake", path: "../../../node_modules/@capacitor-community/keep-awake"),
+        .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
+        .package(name: "CapacitorBrowser", path: "../../../node_modules/@capacitor/browser"),
+        .package(name: "CapacitorLocalNotifications", path: "../../../node_modules/@capacitor/local-notifications"),
+        .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../node_modules/@capgo/capacitor-speech-recognition")
     ],
     targets: [
         .target(
@@ -28,6 +29,7 @@ let package = Package(
                 .product(name: "CapacitorCommunityKeepAwake", package: "CapacitorCommunityKeepAwake"),
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
                 .product(name: "CapacitorBrowser", package: "CapacitorBrowser"),
+                .product(name: "CapacitorLocalNotifications", package: "CapacitorLocalNotifications"),
                 .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition")
             ]
         )

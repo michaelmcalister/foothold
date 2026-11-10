@@ -1,15 +1,32 @@
-// Running as the iPhone app (Capacitor) rather than in a browser. In the app
+// Running as the iPhone or Android app (Capacitor) rather than in a browser. In the app
 // a few things go through native plugins instead of the browser: background
 // GPS (recorder.js), sign-in in a secure sheet (auth.js, spotify.js), speech
 // recognition (audio/listen.js) and keeping the screen awake. The plugins are
 // loaded only inside the app, so the website never downloads them.
-// docs/IOS.md has the build steps.
+// docs/IOS.md and docs/ANDROID.md have the build steps.
 
 /** The app's id, also its own link scheme (au.net.mcalister.foothold://...). */
 export const APP_ID = 'au.net.mcalister.foothold'
 
 /** True inside the iPhone (or Android) app. */
 export const isNativeApp = () => typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.()
+
+/** True inside the Android app. */
+export const isAndroidApp = () => isNativeApp() && window.Capacitor?.getPlatform?.() === 'android'
+
+/**
+ * Android 13 and later only shows the "Foothold is recording" notification
+ * (which keeps GPS going with the screen off) once you allow notifications.
+ * Asks once, before the first recording. Never throws.
+ */
+export async function allowRecordingNotice() {
+  if (!isAndroidApp()) return
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display === 'prompt' || display === 'prompt-with-rationale') await LocalNotifications.requestPermissions()
+  } catch { /* plugin missing or refused: GPS still records */ }
+}
 
 /** The website's address, for links people share (the app's own address isn't a web link). */
 export const webOrigin = () => {

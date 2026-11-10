@@ -11,3 +11,10 @@ ios/DerivedData
 ios/App/App/public
 ios/App/App/capacitor.config.json
 ios/App/App/config.xml
+
+# Android: build output is ignored by android/.gitignore. Never commit the
+# upload key or its passwords (docs/ANDROID.md).
+*.jks
+*.keystore
+keystore.properties
+android/app/release/

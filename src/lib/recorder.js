@@ -11,7 +11,7 @@
 
 import { reactive } from 'vue'
 import { distance, summarise } from './engine/geo.js'
-import { isNativeApp, keepScreenOn } from './native.js'
+import { isNativeApp, isAndroidApp, keepScreenOn, allowRecordingNotice } from './native.js'
 
 export const rec = reactive({
   status: 'idle', // idle | acquiring | recording | paused | error
@@ -147,7 +147,9 @@ function onPosition(pos) {
 function onError(err) {
   rec.error = err.code === 1
     ? (isNativeApp()
-      ? 'Foothold needs your location to record. Open Settings, then Foothold, then Location, and choose While Using the App or Always.'
+      ? (isAndroidApp()
+        ? 'Foothold needs your location to record. Open Settings, then Apps, then Foothold, then Permissions, then Location, and choose Allow only while using the app.'
+        : 'Foothold needs your location to record. Open Settings, then Foothold, then Location, and choose While Using the App or Always.')
       : 'Foothold needs your location to record. Allow location for this site in your browser settings, then try again.')
     : "We can't get a GPS fix. Head outside with a clear view of the sky and try again."
   if (rec.status === 'acquiring' && err.code === 1) rec.status = 'error'
@@ -158,6 +160,7 @@ function onError(err) {
 async function startNative() {
   const { registerPlugin } = await import('@capacitor/core')
   const BackgroundGeolocation = registerPlugin('BackgroundGeolocation')
+  await allowRecordingNotice()
   nativeWatcher = await BackgroundGeolocation.addWatcher({
     backgroundTitle: 'Foothold is recording',
     backgroundMessage: 'Recording your route. Finish the activity to stop.',
