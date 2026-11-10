@@ -11,6 +11,7 @@ import { auth, login } from '../lib/auth.js'
 import { api } from '../lib/api/index.js'
 import { freshPromotion, markPromotionSeen } from '../lib/divisionSeen.js'
 import { play } from '../lib/audio/sfx.js'
+import { audio } from '../lib/audio/settings.js'
 import CarryOver from '../components/CarryOver.vue'
 import { rec } from '../lib/recorder.js'
 
@@ -52,6 +53,13 @@ const tabs = [
   { name: 'you', label: 'You', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6' },
 ]
 
+// The speaker button: mutes everything Foothold plays (effects, music, voices).
+// Turning sound back on gives a little blip so you know it worked.
+function toggleMute() {
+  audio.muted = !audio.muted
+  if (!audio.muted) play('select', { wait: false })
+}
+
 // Run, Walk or Ride, with a soft click pitched for each
 function switchMode(m) {
   if (store.mode !== m) play('mode', { mode: m, wait: false })
@@ -70,10 +78,19 @@ function switchMode(m) {
           {{ m === 'run' ? 'Run' : m === 'walk' ? 'Walk' : 'Ride' }}
         </button>
       </div>
+      <div class="tr">
+      <button type="button" class="bell spk" :aria-pressed="audio.muted" :aria-label="audio.muted ? 'Sound is off. Turn it on' : 'Sound is on. Mute it'" :title="audio.muted ? 'Turn sound on' : 'Mute'" @click="toggleMute">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+          <path v-if="audio.muted" d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path v-else d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
       <RouterLink to="/app/notifications" class="bell" :aria-label="store.unread ? `${store.unread} unread notifications` : 'Notifications'">
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
         <span v-if="store.unread" class="badge">{{ store.unread > 9 ? '9+' : store.unread }}</span>
       </RouterLink>
+      </div>
     </header>
 
     <main class="body" :class="{ full }">
@@ -118,6 +135,9 @@ function switchMode(m) {
   border-bottom: 1px solid var(--line);
 }
 .brand { display: inline-flex; }
+.tr { display: flex; align-items: center; gap: 0; }
+.spk { border: 0; background: none; cursor: pointer; }
+.spk[aria-pressed="true"] { color: var(--ink-60); }
 .bell { position: relative; display: inline-flex; padding: 8px; color: var(--ink); border-radius: 10px; }
 .badge {
   position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px;

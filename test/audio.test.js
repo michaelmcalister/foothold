@@ -147,7 +147,8 @@ describe('sound effects', () => {
     expect(firstTime('t1')).toBe(false)
   })
 
-  it('defaults: effects and recap music on, tap tick off', () => {
+  it('defaults: sound on (not muted), effects and recap music on, tap tick off', () => {
+    expect(DEFAULTS.muted).toBe(false)
     expect(DEFAULTS.sfx).toBe(true)
     expect(DEFAULTS.sfxVolume).toBe(0.6)
     expect(DEFAULTS.recapMusic).toBe(true)

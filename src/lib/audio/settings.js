@@ -27,6 +27,7 @@ export const DEFAULTS = {
   storySound: true, // scene sounds and music in the thriller missions
   runMusic: true, // Foothold's own tracks during a run when Spotify isn't playing
   tapSound: false, // a very soft tick on button taps
+  muted: false, // the speaker button in the top bar: silences everything Foothold plays
 }
 
 function load() {

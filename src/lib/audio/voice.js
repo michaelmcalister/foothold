@@ -4,7 +4,9 @@
 // so they never talk over each other; speak() resolves when the line ends.
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
-import { context } from './sfx.js'
+import { watch } from 'vue'
+import { context, speakerOut } from './sfx.js'
+import { audio } from './settings.js'
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -117,7 +119,7 @@ export async function asAnnouncement(fn) {
 }
 
 function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {
-  if (!text || !('speechSynthesis' in window)) return Promise.resolve()
+  if (!text || audio.muted || !('speechSynthesis' in window)) return Promise.resolve()
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
     const v = pickVoice(voiceName)
@@ -158,6 +160,7 @@ async function playBlob(blob, text) {
       player.onended = () => { clearTimeout(t); resolve() }
       player.onerror = () => { clearTimeout(t); reject(new Error('playback')) }
       player.src = url
+      player.muted = audio.muted
       player.play().catch((e) => { clearTimeout(t); reject(e) })
     })
   } finally {
@@ -173,7 +176,7 @@ async function playWeb(blob, text) {
   await new Promise((resolve) => {
     const src = ctx.createBufferSource()
     src.buffer = buf
-    src.connect(ctx.destination)
+    src.connect(speakerOut() || ctx.destination)
     const t = setTimeout(resolve, 3000 + text.length * 130)
     src.onended = () => { clearTimeout(t); resolve() }
     src.start()
@@ -264,3 +267,10 @@ export function hush() {
   if ('speechSynthesis' in window) speechSynthesis.cancel()
   if (player) { player.pause(); player.removeAttribute('src') }
 }
+
+// The top bar's speaker button: muting stops a line mid sentence, and the
+// voice element stays quiet until it's turned back on.
+watch(() => audio.muted, (m) => {
+  if (player) player.muted = m
+  if (m && typeof window !== 'undefined' && 'speechSynthesis' in window) speechSynthesis.cancel()
+})

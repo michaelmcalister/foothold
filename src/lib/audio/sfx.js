@@ -365,6 +365,7 @@ let ctx = null
 let limiter = null
 let sfxBus = null
 let musicBus = null
+let speaker = null // the last stop before the speaker: the top bar's mute button turns it to zero
 
 const Ctor = () => (typeof window === 'undefined' ? null : window.AudioContext || window.webkitAudioContext || null)
 
@@ -384,7 +385,10 @@ export function context() {
   limiter.ratio.value = 12
   limiter.attack.value = 0.003
   limiter.release.value = 0.15
-  limiter.connect(ctx.destination)
+  speaker = ctx.createGain()
+  speaker.gain.value = audio.muted ? 0 : 1
+  speaker.connect(ctx.destination)
+  limiter.connect(speaker)
   sfxBus = ctx.createGain()
   sfxBus.gain.value = audio.sfxVolume
   sfxBus.connect(limiter)
@@ -395,6 +399,15 @@ export function context() {
   ctx.onstatechange = () => { sound.state = ctx.state }
   return ctx
 }
+
+/** Straight to the speaker (past the limiter), still under the mute button. Voice clips use it. */
+export function speakerOut() {
+  return context() ? speaker : null
+}
+
+watch(() => audio.muted, (m) => {
+  if (speaker && ctx) speaker.gain.setTargetAtTime(m ? 0 : 1, ctx.currentTime, 0.03)
+})
 
 /** Where the recap music plays into. */
 export function musicOut() {
