@@ -88,6 +88,14 @@ function seeFirstLoop() {
   finder.value = { startKm: journey.value.loopKm, auto: true, key: Date.now() }
 }
 
+// Terrain: shade the hills under the hexes. Remembered on this device.
+const terrain = ref(false)
+try { terrain.value = localStorage.getItem('fh-terrain') === '1' } catch { /* fine */ }
+function toggleTerrain() {
+  terrain.value = !terrain.value
+  try { localStorage.setItem('fh-terrain', terrain.value ? '1' : '0') } catch { /* fine */ }
+}
+
 // Explored view: dims every hex your tracks haven't passed through
 const exploring = ref(false)
 const explored = ref(null)
@@ -211,6 +219,7 @@ function closeFinder() {
       :me="store.located ? store.centre : null"
       :suggestion="suggestion?.ring || null"
       :explored="exploring ? explored || [] : null"
+      :terrain="terrain"
       :strongholds="strongholds"
       :stronghold-route="shRoute"
       :hills="hills"
@@ -257,6 +266,7 @@ function closeFinder() {
       </div>
     </div>
 
+    <button class="fogbtn terrbtn" type="button" :aria-pressed="terrain" @click="toggleTerrain">Terrain</button>
     <button class="fogbtn" type="button" :aria-pressed="exploring" @click="toggleExplored">Explored</button>
     <button class="hot-toggle" type="button" :aria-pressed="hot" @click="toggleHot">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-3.8 2.4-5 .2 1.8 1 2.8 2.1 3.2C11 8.6 11 5.8 12 3z" fill="currentColor" /></svg>
@@ -429,6 +439,7 @@ function closeFinder() {
   font: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
+.fogbtn.terrbtn { bottom: 254px; }
 .fogbtn[aria-pressed='true'] { background: var(--ink); color: var(--on-ink, #F3F5EF); }
 .pick > .crest { margin-top: 1px; }
 .hot-toggle {

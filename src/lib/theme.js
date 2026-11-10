@@ -114,3 +114,48 @@ export function setTheme(choice) {
 
 /** The look right now, for maps that pick their style once when they start. */
 export const currentLook = () => theme.look
+
+// The street style is calm grey on purpose, so hexes stand out. These soft
+// tints bring back parks, bush and water without shouting over the hexes.
+const TINTS = {
+  day: { park: '#D5E6C9', wood: '#C9DDBD', grass: '#DCEBD1', water: '#BCD5E3' },
+  night: { park: '#1F3124', wood: '#1C2D21', grass: '#22342A', water: '#18303D' },
+}
+
+/**
+ * A copy of an OpenFreeMap style with parks, woods and grass in soft greens
+ * and water in soft blue. Adds a grass layer when the style has none.
+ */
+export function tintStyle(style, look) {
+  if (!style?.layers) return style
+  const t = TINTS[look === 'night' ? 'night' : 'day']
+  const fill = (l, c) => ({ ...l, paint: { ...l.paint, 'fill-color': c } })
+  const cls = (l) => JSON.stringify(l.filter || '')
+  const layers = style.layers.map((l) => {
+    if (l.type !== 'fill') return l
+    const sl = l['source-layer']
+    if (sl === 'park') return fill(l, t.park)
+    if (sl === 'water') return fill(l, t.water)
+    if (sl === 'landcover' && cls(l).includes('"wood"')) return fill(l, t.wood)
+    if (sl === 'landcover' && cls(l).includes('"grass"')) return fill(l, t.grass)
+    return l
+  })
+  const park = layers.find((l) => l['source-layer'] === 'park' && l.type === 'fill')
+  const hasGrass = layers.some((l) => l['source-layer'] === 'landcover' && cls(l).includes('"grass"'))
+  if (park && !hasGrass) {
+    const at = layers.indexOf(park)
+    layers.splice(at, 0, {
+      id: 'fh-grass', type: 'fill', source: park.source, 'source-layer': 'landcover',
+      filter: ['==', ['get', 'class'], 'grass'], paint: { 'fill-color': t.grass },
+    })
+  }
+  return { ...style, layers }
+}
+
+/** Hills shaded from open elevation data (the Terrain switch on the map). */
+export const TERRAIN_TILES = 'https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'
+export function hillshadePaint(look) {
+  return look === 'night'
+    ? { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': '#000000', 'hillshade-highlight-color': '#3A4A44', 'hillshade-accent-color': '#000000' }
+    : { 'hillshade-exaggeration': 0.4, 'hillshade-shadow-color': '#5E6F66', 'hillshade-highlight-color': '#FFFFFF', 'hillshade-accent-color': '#3E5048' }
+}

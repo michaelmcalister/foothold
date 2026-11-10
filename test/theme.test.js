@@ -1,7 +1,7 @@
 // Night mode: the Auto, Day or Night setting, how it resolves against the
-// phone's dark setting, saving it, and the map style and colours it picks.
+// phone's dark setting, saving it, and the map style and colours it picks, and the park, water and hill tints.
 import { describe, it, expect } from 'vitest'
-import { THEME_KEY, normalise, readChoice, saveChoice, resolveLook, mapStyleUrl, mapColours, applyLook, markInApp, DAY_MAP_STYLE, NIGHT_MAP_STYLE, THEME_COLOUR } from '../src/lib/theme.js'
+import { THEME_KEY, normalise, readChoice, saveChoice, resolveLook, mapStyleUrl, mapColours, applyLook, markInApp, DAY_MAP_STYLE, NIGHT_MAP_STYLE, THEME_COLOUR, tintStyle, hillshadePaint } from '../src/lib/theme.js'
 
 function memoryStorage(initial = {}) {
   const data = { ...initial }
@@ -118,5 +118,33 @@ describe('applyLook', () => {
   it('does nothing without a document', () => {
     expect(() => applyLook('night', null)).not.toThrow()
     expect(() => markInApp(true, null)).not.toThrow()
+  })
+})
+
+describe('map tints', () => {
+  const style = {
+    version: 8,
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#eee' } },
+      { id: 'park', type: 'fill', source: 'openmaptiles', 'source-layer': 'park', paint: { 'fill-color': '#e6e9e5' } },
+      { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': '#c2c8ca' } },
+      { id: 'landcover_wood', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover', filter: ['==', ['get', 'class'], 'wood'], paint: { 'fill-color': '#dce0dc' } },
+      { id: 'road', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', paint: {} },
+    ],
+  }
+  it('colours parks, woods and water, adds grass under the parks, and leaves the rest alone', () => {
+    const out = tintStyle(style, 'day')
+    const by = Object.fromEntries(out.layers.map((l) => [l.id, l]))
+    expect(by.park.paint['fill-color']).toMatch(/^#D/)
+    expect(by.water.paint['fill-color']).toBe('#BCD5E3')
+    expect(by.landcover_wood.paint['fill-color']).toBe('#C9DDBD')
+    expect(by.road).toBe(style.layers[4])
+    expect(out.layers.findIndex((l) => l.id === 'fh-grass')).toBe(out.layers.findIndex((l) => l.id === 'park') - 1)
+    expect(style.layers[1].paint['fill-color']).toBe('#e6e9e5') // the cached original isn't changed
+  })
+  it('uses dark tints at night, and passes a broken style through', () => {
+    expect(tintStyle(style, 'night').layers.find((l) => l.id === 'water').paint['fill-color']).toBe('#18303D')
+    expect(tintStyle(null, 'day')).toBe(null)
+    expect(hillshadePaint('night')['hillshade-exaggeration']).toBeGreaterThan(hillshadePaint('day')['hillshade-exaggeration'])
   })
 })

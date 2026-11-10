@@ -1,7 +1,8 @@
 <script setup>
 // The live territory map: OpenFreeMap streets underneath, hexes on top
 // (yours in cobalt, rivals in their colours, faded by strength), plus an
-// optional track, closed loops, a suggested loop and the player's dot.
+// optional track, closed loops, a suggested loop and the player's dot. Parks,
+// bush and water get soft tints (theme.js), and `terrain` shades the hills.
 // With `explored` set, everywhere your tracks haven't been is dimmed (fog of war).
 // With `heat` on, hexes are shaded by how often they changed hands lately.
 // Strongholds show as crown badges in the holder's colour; tap one to pick it.
@@ -18,7 +19,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { cellToBoundary, cellToLatLng } from 'h3-js'
 import { fogMask } from '../lib/engine/explore.js'
 import { hillGlow } from '../lib/engine/hills.js'
-import { theme, mapStyleUrl, mapColours } from '../lib/theme.js'
+import { theme, mapStyleUrl, mapColours, tintStyle, TERRAIN_TILES, hillshadePaint } from '../lib/theme.js'
 
 const props = defineProps({
   centre: { type: Object, required: true },
@@ -39,6 +40,7 @@ const props = defineProps({
   strongholds: { type: Array, default: () => [] }, // [{ id, name, start: {lat,lng}, holder: { colour, me } | null }]
   strongholdRoute: { type: Array, default: null }, // [{lat,lng}] of the picked stronghold
   hills: { type: Array, default: () => [] }, // [{ id, name, line: [[lng,lat]], top: {lat,lng}, holder: { colour, me, name } | null }]
+  terrain: { type: Boolean, default: false }, // shade the hills
 })
 const emit = defineEmits(['cell', 'moved', 'ready', 'restyled', 'stronghold', 'hill'])
 
@@ -208,12 +210,27 @@ async function loadStyle(look) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(6000) })
     if (!r.ok) throw new Error('style')
-    styleCache.set(url, await r.json())
+    styleCache.set(url, tintStyle(await r.json(), look))
   } catch {
     return fallback(look)
   }
   return styleCache.get(url)
 }
+
+// Terrain: hills shaded from open elevation tiles, under the labels and
+// everything of ours. Added and removed live; put back after a style change.
+function setTerrain(m, on) {
+  if (!m) return
+  if (!on) {
+    if (m.getLayer('hillshade')) m.removeLayer('hillshade')
+    return
+  }
+  if (!m.getSource('dem')) m.addSource('dem', { type: 'raster-dem', tiles: [TERRAIN_TILES], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Elevation: Mapzen, AWS Terrain Tiles' })
+  if (m.getLayer('hillshade')) return
+  const labels = m.getStyle().layers.find((l) => l.type === 'symbol')
+  m.addLayer({ id: 'hillshade', type: 'hillshade', source: 'dem', paint: hillshadePaint(theme.look) }, labels?.id || 'fog')
+}
+watch(() => props.terrain, (on) => { if (loaded.value) setTerrain(map.value, on) })
 
 // Our own sources and layers on top of the street style. Run on load, and
 // again after the style changes (setStyle clears them).
@@ -272,6 +289,7 @@ onMounted(async () => {
   map.value = m
   m.on('load', () => {
     addOwnLayers(m)
+    setTerrain(m, props.terrain)
     // Layer events belong to the map, so they keep working after a style change
     m.on('click', 'hills-case', (e) => { const id = e.features?.[0]?.properties?.id; if (id) emit('hill', id) })
     m.on('click', 'cells-fill', (e) => {
@@ -307,6 +325,7 @@ async function restyle() {
   loaded.value = false
   m.once('style.load', () => {
     addOwnLayers(m)
+    setTerrain(m, props.terrain)
     loaded.value = true
     syncAll()
     applyPaint()
