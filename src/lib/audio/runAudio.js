@@ -231,7 +231,7 @@ function startMission(script) {
   episode = null
   missionOffer.value = null
   if (narrator) {
-    prepareLines(missionLines(script, narrator, saga), { coachVoice: audio.coachVoice }) // in the background
+    prepareLines(missionLines(script, narrator, saga)) // in the background
     scape = startScape(saga)
     // get the episode's recorded scenes ready while the title music plays
     const ctx = sfx.context()

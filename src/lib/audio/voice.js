@@ -15,13 +15,22 @@ let serverPaused = 0 // after a refusal, use the phone voice for a while
 // ---- what the server offers ----
 let ttsPromise = null
 /** { voices: [{ key, name, about }], default } or null */
+// A failed check (no signal, a slow start) is tried again after 30 seconds,
+// so one bad moment doesn't leave the phone voice on for the whole session.
+let ttsFailedAt = 0
 export function serverVoices() {
+  if (ttsPromise && ttsFailedAt && Date.now() - ttsFailedAt > 30000) ttsPromise = null
   if (!ttsPromise) {
+    ttsFailedAt = 0
     ttsPromise = (async () => {
       try {
-        const r = await fetch(import.meta.env.BASE_URL + 'api/config', { signal: AbortSignal.timeout(4000) })
-        if (r.ok && (r.headers.get('content-type') || '').includes('json')) return (await r.json())?.tts || null
-      } catch { /* no server (GitHub Pages) */ }
+        const r = await fetch(import.meta.env.BASE_URL + 'api/config', { signal: AbortSignal.timeout(6000) })
+        if (r.ok && (r.headers.get('content-type') || '').includes('json')) {
+          const tts = (await r.json())?.tts || null
+          if (tts) return tts
+        }
+      } catch { /* no server (GitHub Pages) or no signal */ }
+      ttsFailedAt = Date.now()
       return null
     })()
   }
@@ -204,8 +213,9 @@ async function speakServer(text, voiceKey, keep) {
  * plays the moment it's due (and with no signal later on). lines: [{ who, text }].
  * Quietly gives up if the server voice isn't there.
  */
-export async function prepareLines(lines, { coachVoice = 'charlie' } = {}) {
-  if (coachVoice === 'phone' || !(await serverVoices())) return 0
+// The cast keep their own voices even when the coach is on the phone's voice
+export async function prepareLines(lines) {
+  if (!(await serverVoices())) return 0
   const todo = lines.filter((l) => isCast(l.who) && !made.has(madeKey(l.who, l.text)))
   let i = 0
   let ready = 0
@@ -236,7 +246,7 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
   if (!text) return
   const c = CAST[who]
   if (!c) return speak(stripTags(text), { coachVoice, voiceName })
-  if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
+  if (Date.now() > serverPaused && (await serverVoices())) {
     try {
       const k = madeKey(who, text)
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 15000)) // the expressive model can take a while on a long line

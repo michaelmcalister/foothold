@@ -7,6 +7,7 @@ const KEY = 'fh-audio'
 export const DEFAULTS = {
   voice: true, // spoken updates during a run
   coachVoice: 'charlie', // the server's Australian voice ('charlie', 'brenna'), or 'phone'
+  coachVoicePicked: false, // true once someone chooses a coach voice in settings themselves
   voiceName: '', // with 'phone': a specific phone voice; empty picks an Australian one
   every: 'km', // 'km' | 'half' (0.5 km) | '5min' | '10min' | 'off'
   sayPace: true,
@@ -34,5 +35,15 @@ function load() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') } } catch { return { ...DEFAULTS } }
 }
 
-export const audio = reactive(load())
+export const audio = reactive(fixVoice(load()))
+
+/**
+ * Settings used to switch the coach to the phone's voice for good whenever
+ * the server voices didn't answer once (a slow start, no signal). Undo that
+ * for anyone who never chose the phone voice themselves.
+ */
+export function fixVoice(s) {
+  if (s.coachVoice === 'phone' && !s.coachVoicePicked) s.coachVoice = DEFAULTS.coachVoice
+  return s
+}
 watch(audio, (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)) } catch { /* private mode */ } }, { deep: true })

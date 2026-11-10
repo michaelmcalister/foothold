@@ -44,8 +44,9 @@ onMounted(async () => {
   if (linked.value) loadLists()
   voiceList.value = (await voicesReady(), australianVoices()).map((v) => ({ name: v.name, lang: v.lang }))
   coachVoices.value = (await serverVoices())?.voices || []
-  if (!coachVoices.value.length) audio.coachVoice = 'phone'
-  else if (audio.coachVoice !== 'phone' && !coachVoices.value.some((v) => v.key === audio.coachVoice)) audio.coachVoice = coachVoices.value[0].key
+  // No server voices right now (no signal, a slow start): the page shows the
+  // phone voices, but the saved choice stays as it is for next time.
+  if (coachVoices.value.length && audio.coachVoice !== 'phone' && !coachVoices.value.some((v) => v.key === audio.coachVoice)) audio.coachVoice = coachVoices.value[0].key
 })
 
 async function connect() {
@@ -172,7 +173,7 @@ function testVoice() {
         </div>
         <div v-if="coachVoices.length" class="field">
           <label for="s-coachvoice">Coach's voice</label>
-          <select id="s-coachvoice" v-model="audio.coachVoice">
+          <select id="s-coachvoice" v-model="audio.coachVoice" @change="audio.coachVoicePicked = true">
             <option v-for="v in coachVoices" :key="v.key" :value="v.key">{{ v.name }}, {{ v.about }}</option>
             <option value="phone">The phone's own voice (works offline)</option>
           </select>

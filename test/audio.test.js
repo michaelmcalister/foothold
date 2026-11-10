@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { midiToFreq, noteToMidi, note, envelope, envelopeAt, envelopeEnd, dbToGain, gainToDb, SILENT } from '../src/lib/audio/synth.js'
 import { EFFECTS, scheduleEffect, planSequence, claimNotes, resultSounds, firstTime, introCorners } from '../src/lib/audio/sfx.js'
 import { stepEvents, createScore, PROGRESSION, MELODY, LOOP_STEPS, stepSeconds, BPM } from '../src/lib/audio/score.js'
-import { DEFAULTS } from '../src/lib/audio/settings.js'
+import { DEFAULTS, fixVoice } from '../src/lib/audio/settings.js'
 
 // ---- a fake AudioContext that records what gets scheduled ----
 function fakeParam(log, value = 0) {
@@ -145,6 +145,12 @@ describe('sound effects', () => {
   it('plays a result once per visit', () => {
     expect(firstTime('t1')).toBe(true)
     expect(firstTime('t1')).toBe(false)
+  })
+
+  it('undoes the old automatic switch to the phone voice, but keeps a phone voice someone chose', () => {
+    expect(fixVoice({ ...DEFAULTS, coachVoice: 'phone' }).coachVoice).toBe('charlie')
+    expect(fixVoice({ ...DEFAULTS, coachVoice: 'phone', coachVoicePicked: true }).coachVoice).toBe('phone')
+    expect(fixVoice({ ...DEFAULTS, coachVoice: 'brenna' }).coachVoice).toBe('brenna')
   })
 
   it('defaults: sound on (not muted), effects and recap music on, tap tick off', () => {
