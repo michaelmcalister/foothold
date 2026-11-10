@@ -103,7 +103,7 @@ async function finish() {
 </template>
 
 <style scoped>
-.onb { min-height: 100dvh; display: grid; place-items: center; padding: 24px 18px; background: var(--paper); }
+.onb { min-height: 100dvh; display: grid; place-items: center; padding: calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom)); background: var(--paper); }
 .inner { width: min(440px, 100%); display: grid; gap: 18px; }
 fieldset { border: 0; padding: 0; margin: 0; }
 legend { font-weight: 650; margin-bottom: 6px; }

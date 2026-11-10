@@ -66,7 +66,7 @@ function signUp() {
 
 <style scoped>
 .try { min-height: 100dvh; background: #16302A; color: #fff; display: grid; grid-template-rows: auto 1fr; }
-.top { display: flex; align-items: center; justify-content: space-between; padding: 14px var(--pad, 16px); }
+.top { display: flex; align-items: center; justify-content: space-between; padding: calc(14px + env(safe-area-inset-top)) var(--pad, 16px) 14px; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: #fff; text-decoration: none; font-weight: 800; font-stretch: 112%; }
 .signup { background: none; border: 0; color: #fff; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px 0; }
 .body { display: grid; align-content: center; justify-items: center; text-align: center; gap: 14px; padding: 8px var(--pad, 16px) calc(32px + env(safe-area-inset-bottom)); max-width: 30rem; margin: 0 auto; }

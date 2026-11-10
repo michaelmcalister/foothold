@@ -136,12 +136,12 @@ a { color: inherit; }
   border-radius: 4px;
 }
 
-/* Top bar */
+/* Top bar (clear of the iPhone's clock and battery in the app) */
 .top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px var(--gutter);
+  padding: calc(18px + env(safe-area-inset-top)) var(--gutter) 18px;
 }
 .brand {
   display: inline-flex;

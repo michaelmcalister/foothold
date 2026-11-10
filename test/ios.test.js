@@ -1,6 +1,8 @@
 // The iPhone app setup: the Info.plist patch adds everything Foothold needs
-// once, and the native helpers stay out of the way on the website.
+// once, the native helpers stay out of the way on the website, and top bars
+// clear the iPhone's clock and battery.
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { patchPlist } from '../scripts/ios.mjs'
 import { isNativeApp, appLink, webOrigin, APP_ID } from '../src/lib/native.js'
 
@@ -34,5 +36,15 @@ describe('iPhone app setup', () => {
     expect(appLink('spotify-callback')).toBe('au.net.mcalister.foothold://spotify-callback')
     globalThis.location ??= { origin: 'https://foothold.example' }
     expect(webOrigin()).toBe(globalThis.location.origin)
+  })
+})
+
+describe('top bars in the app', () => {
+  it('sit below the clock and battery on every screen outside the app frame', () => {
+    const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8')
+    expect(read('index.html')).toContain('viewport-fit=cover')
+    for (const f of ['src/style.css', 'src/views/Privacy.vue', 'src/views/try/TryView.vue', 'src/views/app/OnboardingView.vue', 'src/app/AppShell.vue']) {
+      expect(read(f), f).toContain('env(safe-area-inset-top)')
+    }
   })
 })

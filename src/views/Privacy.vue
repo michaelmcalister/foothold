@@ -80,7 +80,7 @@ import BrandMark from '../components/BrandMark.vue'
 </template>
 
 <style scoped>
-.top { padding: 18px var(--gutter); }
+.top { padding: calc(18px + env(safe-area-inset-top)) var(--gutter) 18px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-stretch: 112%; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
 .body { padding: 8px var(--gutter) 64px; max-width: 70ch; display: grid; gap: 14px; }
 h1 { font-size: clamp(2.2rem, 6vw, 3.2rem); font-weight: 850; font-stretch: 112%; letter-spacing: -0.02em; }
