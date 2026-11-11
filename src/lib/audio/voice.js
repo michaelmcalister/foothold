@@ -7,7 +7,7 @@ import { CAST, isCast, stripTags } from '../missions/cast.js'
 import { watch, reactive } from 'vue'
 import { context, speakerOut, resume } from './sfx.js'
 import { audio } from './settings.js'
-import { isAndroidApp, isNativeApp } from '../native.js'
+import { isAndroidApp, isNativeApp, isIOSApp, audioMix } from '../native.js'
 
 // The last few reasons a server voice didn't play, newest first, shown under
 // "Hear a sample" in settings so a problem on a phone can be read off the screen.
@@ -116,8 +116,19 @@ function holdSpeaker(on) {
     holder.play().catch(() => { /* needs a tap: the next one will do */ })
   } else holder?.pause()
 }
+// In the iPhone app the app's own audio session does this instead (AudioMix):
+// it keeps playing when the phone locks, which the web view's 'ambient'
+// mode doesn't, and still plays alongside Spotify.
+let nativeMix = false
 export function setRunSession(kind) {
   runSession = kind
+  if (isIOSApp()) {
+    audioMix().then((ok) => { nativeMix = ok; if (!ok) webSession(kind) })
+    return
+  }
+  webSession(kind)
+}
+function webSession(kind) {
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
   if (s && 'type' in s) { try { s.type = kind || 'auto' } catch { /* not allowed here */ } }
   if (!s || !('type' in s)) holdSpeaker(kind === 'playback')
@@ -127,6 +138,16 @@ export const runSessionKind = () => runSession
 
 let announcing = 0 // nested announcements share one switch
 export async function asAnnouncement(fn) {
+  if (nativeMix) {
+    // lower Spotify under the line, then bring it back
+    if (announcing) return fn()
+    announcing++
+    await audioMix({ duck: true })
+    try { return await fn() } finally {
+      announcing--
+      await audioMix({ duck: false })
+    }
+  }
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
   if (!s || !('type' in s) || runSession === 'playback' || announcing) return fn()
   const was = s.type

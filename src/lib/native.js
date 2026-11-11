@@ -11,6 +11,24 @@ export const APP_ID = 'au.net.mcalister.foothold'
 /** True inside the iPhone (or Android) app. */
 export const isNativeApp = () => typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.()
 
+/** True inside the iPhone app. */
+export const isIOSApp = () => isNativeApp() && window.Capacitor?.getPlatform?.() === 'ios'
+
+/**
+ * The iPhone app's sound mode, set natively (AudioMix in AppDelegate.swift):
+ * plays with the screen locked, mixes with Spotify, and with duck: true
+ * lowers Spotify while a line is spoken. Resolves false if it isn't there
+ * (an older build of the app). Never throws.
+ */
+export async function audioMix({ duck = false } = {}) {
+  if (!isIOSApp()) return false
+  try {
+    const { registerPlugin } = await import('@capacitor/core')
+    await registerPlugin('AudioMix').set({ duck })
+    return true
+  } catch { return false }
+}
+
 /** True inside the Android app. */
 export const isAndroidApp = () => isNativeApp() && window.Capacitor?.getPlatform?.() === 'android'
 

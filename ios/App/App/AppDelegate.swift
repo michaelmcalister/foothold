@@ -1,5 +1,43 @@
 import UIKit
 import Capacitor
+import AVFoundation
+
+// Foothold's sound during a run (src/lib/audio/voice.js, setRunSession).
+// The web view's own sound modes either stop when the phone locks ('ambient')
+// or stop Spotify ('playback'). This sets the app's audio session itself:
+// playback that keeps going with the screen locked, mixed with Spotify, and
+// Spotify lowered while a line is spoken (duck).
+@objc(AudioMixPlugin)
+public class AudioMixPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AudioMixPlugin"
+    public let jsName = "AudioMix"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func set(_ call: CAPPluginCall) {
+        let duck = call.getBool("duck") ?? false
+        let session = AVAudioSession.sharedInstance()
+        do {
+            var options: AVAudioSession.CategoryOptions = [.mixWithOthers]
+            if duck { options.insert(.duckOthers) }
+            // Spotify only comes back up when the session is switched off and on again
+            if !duck { try? session.setActive(false, options: .notifyOthersOnDeactivation) }
+            try session.setCategory(.playback, mode: .default, options: options)
+            try session.setActive(true)
+            call.resolve()
+        } catch {
+            call.reject(error.localizedDescription)
+        }
+    }
+}
+
+// The app's screen: Capacitor's, plus the AudioMix plugin above.
+class FootholdViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(AudioMixPlugin())
+    }
+}
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
