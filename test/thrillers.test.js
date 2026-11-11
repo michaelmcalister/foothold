@@ -451,12 +451,13 @@ describe('listening keeps going', async () => {
 })
 
 describe('the microphone keeps the phone while it listens', () => {
-  it('never wakes the sound while the mic is open (it would cut the mic off on iPhone)', async () => {
+  it('never wakes the sound while the mic is open or the phone is locked (it would cut the sound off on iPhone)', async () => {
     const { shouldWake } = await import('../src/lib/audio/runAudio.js')
-    expect(shouldWake({ mic: true, state: 'interrupted' })).toBe(false)
-    expect(shouldWake({ mic: true, state: 'suspended' })).toBe(false)
-    expect(shouldWake({ mic: false, state: 'interrupted' })).toBe(true)
-    expect(shouldWake({ mic: false, state: 'running' })).toBe(false)
-    expect(shouldWake({ mic: false, state: 'none' })).toBe(false)
+    expect(shouldWake({ mic: true, state: 'interrupted', hidden: false })).toBe(false)
+    expect(shouldWake({ mic: false, state: 'interrupted', hidden: true })).toBe(false) // locked: iOS won't start sound for a hidden app
+    expect(shouldWake({ mic: true, state: 'suspended', hidden: false })).toBe(false)
+    expect(shouldWake({ mic: false, state: 'interrupted', hidden: false })).toBe(true)
+    expect(shouldWake({ mic: false, state: 'running', hidden: false })).toBe(false)
+    expect(shouldWake({ mic: false, state: 'none', hidden: false })).toBe(false)
   })
 })

@@ -158,7 +158,7 @@ function askAloud() {
   if (scape) enqueue(() => scape?.sting('question'))
   else sfx.cue('loopReady')
   sayLine(narrator ? { text: optionsPrompt(v.options), who: narrator } : optionsPrompt(v.options))
-  if (!audio.answerByVoice || !canListen()) return
+  if (!audio.answerByVoice || !canListen() || pageHidden()) return // locked: no mic (it would switch the phone to record mode and stop the sound)
   enqueue(async () => {
     const now = mission?.view().ask
     if (!now) return // answered with a tap while the options were read
@@ -210,6 +210,7 @@ export function answerMission(key) {
 let scapeSaga = null
 let scapeScene = null
 async function afterListening({ force = false } = {}) {
+  if (pageHidden()) return // locked or in the background: wait for onVisible
   if (!(await reclaimSpeaker()) && !force) return
   const had = !!scape
   scape?.stop(0)
@@ -257,9 +258,13 @@ function watchSprint() {
 // While the microphone is open the iPhone is in record mode and pauses web
 // sound. Waking the sound then would switch the phone back to playback and
 // cut the microphone off mid answer, so nothing wakes it until the answer is in.
+// The same goes for a locked phone or another app in front: iOS won't let a
+// hidden app start sound, so rebuilding it then left the run silent. The
+// sound comes back by itself, or when the app is in front again (onVisible).
 let micOpen = false
-export function shouldWake({ mic = micOpen, state = sfx.sound.state } = {}) {
-  return !mic && state !== 'running' && state !== 'none'
+const pageHidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden'
+export function shouldWake({ mic = micOpen, state = sfx.sound.state, hidden = pageHidden() } = {}) {
+  return !mic && !hidden && state !== 'running' && state !== 'none'
 }
 const onTouch = () => { if (!micOpen) sfx.resume() }
 const onVisible = () => { if (document.visibilityState === 'visible' && shouldWake() && isIOSApp()) afterListening({ force: true }) }
@@ -355,7 +360,7 @@ function offerNext(script) {
   })
   const ask = `Want to go straight into ${ep}? Say yes or no.`
   sayLine(narrator ? { text: ask, who: narrator } : ask)
-  if (!audio.answerByVoice || !canListen()) return
+  if (!audio.answerByVoice || !canListen() || pageHidden()) return // locked: no mic (it would switch the phone to record mode and stop the sound)
   enqueue(async () => {
     if (!missionOffer.value) return
     sfx.play('kudos', { wait: false })
