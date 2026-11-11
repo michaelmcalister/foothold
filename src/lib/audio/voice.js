@@ -221,7 +221,7 @@ const asDataUrl = (blob) => new Promise((resolve, reject) => {
 // short silence follows, so a line never stops dead (and the speaker doesn't
 // switch away mid word). Done on the decoded sound, so it works on iPhone,
 // where an <audio> element's volume can't be changed. Pure parts exported for tests.
-export const FADE_S = 0.6
+export const FADE_S = 0.5
 export const TAIL_S = 0.35
 export function fadeOut(samples, sampleRate, fadeS = FADE_S, tailS = TAIL_S) {
   const n = samples.length

@@ -5,5 +5,6 @@
 import * as deepcover from './deepcover.js'
 import * as timerunners from './timerunners.js'
 import * as velocity from './velocity.js'
+import * as penrith from './penrith.js'
 
-export const SERIES = [deepcover, timerunners, velocity].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith].filter((s) => s.EPISODES.length)
