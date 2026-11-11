@@ -34,7 +34,11 @@ describe('Run Your Mouth', () => {
     expect(CHAINS.quiz).toEqual(['quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5'])
     expect(sagaById('quiz').title).toBe('Run Your Mouth')
     for (const k of ['tex', 'milly', 'announcer']) expect(isCast(k)).toBe(true)
-    expect(SCENES.studio && SCORES.quiz && THEMES.quiz && STINGS.bonk && STINGS.cash).toBeTruthy()
+    expect(SCENES.showfloor && SCORES.quiz && THEMES.quiz && STINGS.bonk && STINGS.cash).toBeTruthy()
+    expect(SCENES.showfloor.spots).toEqual([]) // no random applause: only right answers and the host get a clap
+    expect(SCORES.quiz.drone).toBe(null) // no hum under the quiz
+    expect(THEMES.quiz.jingle).toBe(true) // opens with a jingle, not the cinematic cold open
+    expect(STINGS.applause).toBeTruthy()
   })
 
   it('a quick right answer is worth more than a slow one', () => {

@@ -178,6 +178,7 @@ function answered(events) {
     if (e.type !== 'answer') continue
     if (e.kind === 'choice') { if (scape) enqueue(() => scape?.sting('impact')); continue }
     if (scape) enqueue(() => scape?.sting(e.right ? (show ? 'cash' : 'correct') : (show ? 'bonk' : 'downer')))
+    if (scape && show && e.right) enqueue(() => scape?.sting('applause')) // the crowd only claps when it's earned
     else sfx.cue(e.right ? 'surgeDone' : 'chapter')
   }
 }

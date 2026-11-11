@@ -17,7 +17,7 @@ export const AMBIENCE = {
   street: 'A wet city street at night in light rain: tyres hissing on wet road, cars passing, rain dripping from awnings, distant traffic, no music, no clear voices',
   tower: 'Inside an empty office tower stairwell at night: air conditioning hum, fluorescent light buzz, distant lift machinery, echoing footsteps far below, no music, no voices',
   gala: 'A glamorous rooftop party heard from the next room: murmuring crowd, glasses clinking, muffled string quartet music through a wall, laughter, no clear words',
-  studio: 'A lively television game show studio: excited audience murmuring, bursts of applause and laughter, light studio band noodling quietly, no clear words',
+  showfloor: 'A television game show studio between questions: a calm seated audience murmuring quietly, the odd soft chuckle and cough, air conditioning, no applause, no cheering, no music, no clear words',
   flood: 'A flash flood in a country town during a heavy storm: a swollen creek roaring and churning, torrential rain on tin roofs and trees, water rushing in gutters, rolling thunder, no music, no voices',
   vivid: 'A huge happy crowd on a Sydney harbour foreshore on a winter night during a light festival: murmuring voices and laughter, footsteps, a ferry engine nearby, distant soft electronic thumping from the light show, no clear words',
   festival: 'A busy country town main street during a summer street festival at night: crowds chatting and laughing, a rock and roll band playing a few streets away, cheering, footsteps, no clear words',

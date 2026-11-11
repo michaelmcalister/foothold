@@ -227,12 +227,13 @@ export const SCENES = {
     ],
     spots: [{ name: 'clink', rate: 0.25 }],
   },
-  studio: {
+  // the game show studio (the recorded version is 'showfloor': a calm
+  // audience, with applause only when it's earned, from the show's own cues)
+  showfloor: {
     beds: [
-      { filter: { type: 'bandpass', freq: 700, q: 0.7 }, level: 0.04, lfo: { rate: 0.25, depth: 0.4 } }, // the audience murmuring
-      { filter: { type: 'lowpass', freq: 180 }, level: 0.025 },
+      { filter: { type: 'bandpass', freq: 700, q: 0.7 }, level: 0.025, lfo: { rate: 0.25, depth: 0.4 } }, // the audience murmuring
     ],
-    spots: [{ name: 'clap', rate: 0.08 }],
+    spots: [], // applause only when it's earned (a right answer, the host walking on)
   },
   flood: {
     beds: [
@@ -310,7 +311,7 @@ export const AROUND = {
   tower: [],
   gala: [{ name: 'chatter', rate: 0.03 }],
   harbour: [{ name: 'chatter', rate: 0.01 }, { name: 'helicopter', rate: 0.003 }],
-  studio: [],
+  showfloor: [],
   flood: [{ name: 'helicopter', rate: 0.004 }, { name: 'car', rate: 0.01 }],
   vivid: [{ name: 'chatter', rate: 0.04 }, { name: 'boat', rate: 0.006 }],
   festival: [{ name: 'chatter', rate: 0.05 }, { name: 'car', rate: 0.01 }],
@@ -699,6 +700,15 @@ Object.assign(STINGS, {
       return t + 0.75
     },
   },
+  // a right answer on the game show: the till rings, then the crowd claps
+  applause: {
+    dur: 1.6,
+    build(ctx, out, t) {
+      const r = rng(7)
+      for (let i = 0; i < 3; i++) SPOTS.clap(ctx, out, t + i * 0.32, r)
+      return t + 1.5
+    },
+  },
   cash: {
     dur: 0.9,
     build(ctx, out, t) {
@@ -746,6 +756,7 @@ export const THEMES = {
     chord: ['C2', 'G2', 'C3', 'E3', 'G3'],
     end: ['C3', 'E3', 'G3', 'C4'],
     voice: 'horn',
+    jingle: true, // a game show jingle, not a cinematic cold open
   },
   ember: {
     motif: ['D4', 'F4', 'A4', 'G4', 'F4', 'E4', 'D4'], // a horn line
@@ -799,6 +810,7 @@ function hitsBus(ctx, out) {
 
 export function scheduleIntro(ctx, out, name, t) {
   const th = THEMES[name] || THEMES.ember
+  if (th.jingle) return scheduleJingle(ctx, out, th, t)
   const hits = hitsBus(ctx, out)
   pad(ctx, out, t, th.chord.slice(0, 2).map(note), { peak: 0.05, attack: 4, hold: 3, decay: 3, cutoff: 500, to: 1200 })
   STINGS.riser.build(ctx, out, t + 1.2)
@@ -815,6 +827,20 @@ export function scheduleIntro(ctx, out, name, t) {
   return t + 5.8
 }
 export const INTRO_S = 12 // how long the cold open runs before it settles
+
+// The game show opens like a game show: its bright tune over a cheer, no
+// riser, drums or brass hit. The announcer comes in as it lands.
+function scheduleJingle(ctx, out, th, t) {
+  STINGS.cheer.build(ctx, out, t + 0.1)
+  let at = t + 0.4
+  th.motif.forEach((n, i) => {
+    const len = th.beats[i] * 0.3
+    motifNote(ctx, out, at, th.voice, note(n), len)
+    at += len
+  })
+  pad(ctx, out, at - 0.6, th.end.map(note), { peak: 0.03, attack: 0.1, hold: 0.8, decay: 1.2, cutoff: 2200 })
+  return Math.max(t + 4.2, at + 0.4)
+}
 
 /** The end theme: the motif once more, landing on a lifted chord and a hit. */
 export function scheduleOutro(ctx, out, name, t) {
@@ -869,7 +895,7 @@ export const SCORES = {
   },
   quiz: {
     bpm: [96, 112, 132, 112],
-    drone: ['C3', 'G3'],
+    drone: null, // a game show has no brooding hum between questions
     tension: ['C3', 'E3', 'G3'],
     lift: ['C3', 'E3', 'G3', 'C4'],
     pulse: 'tick',
@@ -919,7 +945,8 @@ export function musicStep(scoreName, intensity, step) {
   const bar = s % 16 === 0
   const out = []
   // the drone, a long swell every two bars
-  if (s % 32 === 0) out.push({ inst: 'pad', notes: lvl === 3 ? sc.lift : lvl >= 1 ? sc.tension : sc.drone, peak: lvl === 3 ? 0.035 : 0.028 })
+  const swell = lvl === 3 ? sc.lift : lvl >= 1 ? sc.tension : sc.drone
+  if (s % 32 === 0 && swell) out.push({ inst: 'pad', notes: swell, peak: lvl === 3 ? 0.035 : lvl >= 1 ? 0.028 : 0.018 })
   if (lvl >= 1) {
     // the pulse
     if (sc.pulse === 'tom') {
