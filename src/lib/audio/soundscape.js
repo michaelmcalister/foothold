@@ -811,6 +811,10 @@ function hitsBus(ctx, out) {
 export function scheduleIntro(ctx, out, name, t) {
   const th = THEMES[name] || THEMES.ember
   if (th.jingle) return scheduleJingle(ctx, out, th, t)
+  const lvl = ctx.createGain() // the whole cold open sits a little back, so it never blasts
+  lvl.gain.value = INTRO_LEVEL
+  lvl.connect(out)
+  out = lvl
   const hits = hitsBus(ctx, out)
   pad(ctx, out, t, th.chord.slice(0, 2).map(note), { peak: 0.05, attack: 4, hold: 3, decay: 3, cutoff: 500, to: 1200 })
   STINGS.riser.build(ctx, out, t + 1.2)
@@ -827,6 +831,9 @@ export function scheduleIntro(ctx, out, name, t) {
   return t + 5.8
 }
 export const INTRO_S = 12 // how long the cold open runs before it settles
+export const SETTLE_S = 20 // a new scene plays at full level this long...
+export const SETTLED = 0.35 // ...then eases back to this share of it, under the story
+export const INTRO_LEVEL = 0.6 // the whole cold open plays at this level
 
 // The game show opens like a game show: its bright tune over a cheer, no
 // riser, drums or brass hit. The announcer comes in as it lands.
@@ -1027,6 +1034,15 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
   const recBus = ctx.createGain()
   recBus.gain.value = 0.4 // the recorded loops are mastered around -22 dB; this sits them where the synthesised beds were
   recBus.connect(master)
+  // each scene arrives at full level, then eases back to about a third after SETTLE_S
+  const settle = (t) => {
+    for (const [bus, full] of [[recBus, 0.4], [sceneBus, 2.6]]) {
+      bus.gain.cancelScheduledValues(t)
+      bus.gain.setValueAtTime(full, t)
+      bus.gain.setValueAtTime(full, t + SETTLE_S)
+      bus.gain.linearRampToValueAtTime(full * SETTLED, t + SETTLE_S + 8)
+    }
+  }
   const chaseBus = ctx.createGain()
   chaseBus.gain.value = 0.5
   chaseBus.connect(master)
@@ -1115,6 +1131,8 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
     },
     setScene(name) {
       if (!SCENES[name] || name === sceneName) return
+      // A new place comes in at full level to set the scene, then settles
+      // well back so rain, wind or a crowd don't sit on top of the story.
       const t = ctx.currentTime
       scene?.stop(t, 3)
       recLoop?.stop(3)
@@ -1122,6 +1140,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       recScene = null
       scene = startScene(ctx, sceneBus, name, t + 0.05)
       sceneName = name
+      settle(t)
       spotsUpTo = t + 1 // let the new scene fade in before its spots
       // swap to the recording once it arrives (if this is still the scene)
       recorded?.ambience(name).then((buf) => {
