@@ -128,19 +128,36 @@ export async function playlists() {
   return out
 }
 
+const onPhone = () => typeof navigator !== 'undefined' && /iPhone|iPad|Android/i.test(navigator.userAgent)
+
 // The device to play on. On a phone it's this phone's Spotify app, even when
 // a laptop or TV was the last one playing (otherwise the music starts over
-// there and Spotify on the phone says it's in use on another device). On a
-// computer, whatever is active. Exported for tests.
-export function pickDevice(list, { mobile = typeof navigator !== 'undefined' && /iPhone|iPad|Android/i.test(navigator.userAgent) } = {}) {
+// there and Spotify on the phone says it's in use on another device). When
+// the phone's Spotify isn't awake, there's no device: never a laptop, TV or
+// speaker in another room. On a computer, whatever is active. Exported for tests.
+export function pickDevice(list, { mobile = onPhone() } = {}) {
   const usable = (list || []).filter((x) => x && x.id && !x.is_restricted)
   const phones = usable.filter((x) => x.type === 'Smartphone')
-  if (mobile && phones.length) return phones.find((x) => x.is_active) || phones[0]
+  if (mobile) return phones.find((x) => x.is_active) || phones[0] || null
   return usable.find((x) => x.is_active) || phones[0] || usable[0] || (list || [])[0] || null
 }
 async function device() {
   const d = await call('GET', '/me/player/devices')
   return pickDevice(d?.devices || [])
+}
+
+// The phone's Spotify only shows up as a device while it's awake. Inside the
+// app, open Spotify (it wakes and joins), then look for it for a little while
+// as the runner comes back to Foothold.
+async function wakePhoneSpotify({ waitMs = 20000, stepMs = 1500 } = {}) {
+  if (!isNativeApp()) return null
+  try { window.location.href = 'spotify:' } catch { return null }
+  for (let t = 0; t < waitMs; t += stepMs) {
+    await new Promise((r) => setTimeout(r, stepMs))
+    const dev = await device().catch(() => null)
+    if (dev) return dev
+  }
+  return null
 }
 
 let session = { deviceId: null, volume: null, canVolume: false }
@@ -158,8 +175,8 @@ const playingOn = async (id) => {
 // try a plain play, then a hand over to this phone, and check what's
 // actually playing before calling it a failure.
 export async function startMusic({ context = '', shuffle = true } = {}) {
-  const dev = await device()
-  if (!dev) throw new Error('Open Spotify on this phone and play anything for a second, then try again.')
+  const dev = (await device()) || (onPhone() ? await wakePhoneSpotify() : null)
+  if (!dev) throw new Error('Spotify isn\u2019t awake on this phone. Open Spotify, then come back and try again. Foothold won\u2019t start it on another device.')
   session = { deviceId: dev.id, volume: dev.volume_percent ?? null, canVolume: !!dev.supports_volume && dev.volume_percent != null }
   const done = { device: dev.name, canVolume: session.canVolume, ios: isIOS() }
   if (dev.is_restricted) throw new Error(RESTRICTED)

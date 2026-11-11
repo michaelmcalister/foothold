@@ -270,8 +270,17 @@ describe('Spotify start', () => {
     const tv = { id: 't1', name: 'Lounge TV', type: 'TV', is_active: false }
     expect(pickDevice([laptop, tv, { ...phone, is_active: false }], { mobile: true }).id).toBe('p1')
     expect(pickDevice([laptop, tv, { ...phone, is_active: false }], { mobile: false }).id).toBe('m1')
-    expect(pickDevice([laptop], { mobile: true }).id).toBe('m1') // no phone app open: the only one there
+    expect(pickDevice([laptop, tv], { mobile: true })).toBe(null) // phone's Spotify asleep: never start it in another room
+    expect(pickDevice([laptop], { mobile: false }).id).toBe('m1')
     expect(pickDevice([], { mobile: true })).toBe(null)
+  })
+
+  it('on a phone, refuses to start the music on a laptop when the Spotify app there is asleep', async () => {
+    const { startMusic } = await import('../src/lib/audio/spotify.js')
+    setFetch({ 'GET /me/player/devices': { body: { devices: [{ id: 'm1', name: 'MacBook', type: 'Computer', is_active: true }] } } })
+    Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'iPhone' }, configurable: true })
+    await expect(startMusic()).rejects.toThrow(/another device/)
+    expect(calls.filter((c) => c.startsWith('PUT'))).toEqual([])
   })
 
   it('moves playback over to the phone when something else had it', async () => {
