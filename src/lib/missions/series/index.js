@@ -18,5 +18,6 @@ import * as opal from './opal.js'
 import * as tunnels from './tunnels.js'
 import * as canberra from './canberra.js'
 import * as panther from './panther.js'
+import * as hawkesbury from './hawkesbury.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury].filter((s) => s.EPISODES.length)
