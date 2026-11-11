@@ -72,7 +72,15 @@ const ASK = {
   notifications: allowRecordingNotice,
 }
 
-/** Shows the phone's own prompt for one permission. Never throws. */
-export async function askPermission(id, ask = ASK) {
-  try { await ask[id]?.() } catch { /* declined or not available: the app asks again when it needs it */ }
+/**
+ * Shows the phone's own prompt for one permission. Never throws, and never
+ * waits more than timeoutMs: some phones never report back (the iPhone's
+ * speech prompt can go quiet), and the welcome must not get stuck.
+ */
+export async function askPermission(id, ask = ASK, timeoutMs = 12000) {
+  let timer
+  const waited = new Promise((resolve) => { timer = setTimeout(resolve, timeoutMs) })
+  const asked = Promise.resolve().then(() => ask[id]?.()).catch(() => { /* declined or not available: the app asks again when it needs it */ })
+  await Promise.race([asked, waited])
+  clearTimeout(timer)
 }

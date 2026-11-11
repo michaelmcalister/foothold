@@ -39,3 +39,11 @@ describe('permissions explainer', () => {
     expect(asked).toEqual(['mic'])
   })
 })
+
+describe('permissions explainer never gets stuck', () => {
+  it('moves on when the phone never answers', async () => {
+    const started = Date.now()
+    await askPermission('microphone', { microphone: () => new Promise(() => {}) }, 50)
+    expect(Date.now() - started).toBeLessThan(1000)
+  })
+})

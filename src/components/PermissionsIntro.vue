@@ -12,13 +12,15 @@ const step = ref(-1) // -1 is the welcome card, items.length is the last one
 const busy = ref(false)
 const current = computed(() => items[step.value])
 
+// Move on when the phone answers (or gives up waiting). Not now always works,
+// even while a prompt is pending, so nobody gets stuck on a card.
 async function yes() {
+  const at = step.value
   busy.value = true
   await askPermission(current.value.id)
-  busy.value = false
-  step.value++
+  if (step.value === at) { busy.value = false; step.value++ }
 }
-function next() { step.value++ }
+function next() { busy.value = false; step.value++ }
 function finish() {
   markPermissionsExplained()
   emit('done')
@@ -40,7 +42,8 @@ function finish() {
         <p>{{ current.blurb }}</p>
         <p class="tip">{{ current.tip }}</p>
         <button class="go" :disabled="busy" @click="yes">{{ current.button }}</button>
-        <button class="later" :disabled="busy" @click="next">Not now</button>
+        <p v-if="busy" class="waiting" role="status">Over to your phone…</p>
+        <button class="later" @click="next">{{ busy ? 'Skip this one' : 'Not now' }}</button>
       </template>
       <template v-else>
         <div class="icon" aria-hidden="true">🏁</div>
@@ -102,7 +105,8 @@ p { font-size: 17px; line-height: 1.5; margin: 0 0 12px; color: var(--on-ink-mut
   font-size: 18px;
   font-weight: 700;
 }
-.go:disabled, .later:disabled { opacity: 0.6; }
+.go:disabled { opacity: 0.6; }
+.waiting { margin: 12px 0 0; font-size: 15px; }
 .later {
   margin-top: 10px;
   padding: 12px;
