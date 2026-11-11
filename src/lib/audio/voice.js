@@ -7,6 +7,7 @@ import { CAST, isCast, stripTags } from '../missions/cast.js'
 import { watch } from 'vue'
 import { context, speakerOut } from './sfx.js'
 import { audio } from './settings.js'
+import { isAndroidApp } from '../native.js'
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -29,7 +30,7 @@ export function serverVoices() {
           const tts = (await r.json())?.tts || null
           if (tts) return tts
         }
-      } catch { /* no server (GitHub Pages) or no signal */ }
+      } catch (e) { console.warn('voice check', e?.message || e) /* no server (GitHub Pages) or no signal */ }
       ttsFailedAt = Date.now()
       return null
     })()
@@ -127,8 +128,19 @@ export async function asAnnouncement(fn) {
   }
 }
 
+// Android's web view has no built-in speech, so the Android app speaks
+// through the phone's own text to speech engine instead.
+async function speakAndroid(text, { pitch = 1, rate = 1.02 } = {}) {
+  try {
+    const { TextToSpeech } = await import('@capacitor-community/text-to-speech')
+    await TextToSpeech.speak({ text, lang: 'en-AU', rate, pitch, queueStrategy: 1 })
+  } catch (e) { console.warn('phone voice', e?.message || e) }
+}
+
 function speakPhone(text, voiceName, { pitch = 1, rate = 1.02 } = {}) {
-  if (!text || audio.muted || !('speechSynthesis' in window)) return Promise.resolve()
+  if (!text || audio.muted) return Promise.resolve()
+  if (isAndroidApp()) return speakAndroid(text, { pitch, rate })
+  if (!('speechSynthesis' in window)) return Promise.resolve()
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text)
     const v = pickVoice(voiceName)
@@ -252,7 +264,7 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 15000)) // the expressive model can take a while on a long line
       await playVoice(blob, text)
       return
-    } catch { /* fall back to the phone voice below */ }
+    } catch (e) { console.warn('server voice', e?.message || e) /* fall back to the phone voice below */ }
   }
   await asAnnouncement(() => speakPhone(stripTags(text), voiceName, { pitch: c.pitch, rate: c.rate * 1.02 }))
 }
@@ -268,7 +280,7 @@ export async function speak(text, { coachVoice = 'charlie', voiceName = '', keep
     try {
       await speakServer(text, coachVoice, keep)
       return
-    } catch { /* fall back to the phone voice below */ }
+    } catch (e) { console.warn('server voice', e?.message || e) /* fall back to the phone voice below */ }
   }
   await asAnnouncement(() => speakPhone(text, voiceName))
 }
