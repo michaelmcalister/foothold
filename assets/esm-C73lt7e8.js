@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-CRp4PEhA.js","assets/dist-D8sT8Tmx.js"])))=>i.map(i=>d[i]);
+import{registerPlugin as e}from"./dist-D8sT8Tmx.js";import{t}from"./preload-helper-BGDvBy5Y.js";var n;(function(e){e[e.Flush=0]=`Flush`,e[e.Add=1]=`Add`})(n||={});var r=e(`TextToSpeech`,{web:()=>t(()=>import(`./web-CRp4PEhA.js`).then(e=>new e.TextToSpeechWeb),__vite__mapDeps([0,1]))});`speechSynthesis`in window&&window.speechSynthesis;export{r as TextToSpeech};
