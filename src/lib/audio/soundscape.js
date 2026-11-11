@@ -787,12 +787,23 @@ function motifNote(ctx, out, t, voice, freq, len) {
  * The cold open: a swell from nothing, drums, a big hit, then the series
  * motif. Returns the time the narrator should come in (after the hit).
  */
+// The big drum and brass hits in the opening and end themes play through this,
+// about 9 dB down, so they land under the music instead of over the top of it.
+export const HIT_LEVEL = 0.35
+function hitsBus(ctx, out) {
+  const g = ctx.createGain()
+  g.gain.value = HIT_LEVEL
+  g.connect(out)
+  return g
+}
+
 export function scheduleIntro(ctx, out, name, t) {
   const th = THEMES[name] || THEMES.ember
+  const hits = hitsBus(ctx, out)
   pad(ctx, out, t, th.chord.slice(0, 2).map(note), { peak: 0.05, attack: 4, hold: 3, decay: 3, cutoff: 500, to: 1200 })
   STINGS.riser.build(ctx, out, t + 1.2)
-  STINGS.taiko.build(ctx, out, t + 4.2)
-  STINGS.braam.build(ctx, out, t + 5.4)
+  STINGS.taiko.build(ctx, hits, t + 4.2)
+  STINGS.braam.build(ctx, hits, t + 5.4)
   let at = t + 6.4
   const beat = name === 'heist' ? 0.32 : 0.42
   th.motif.forEach((n, i) => {
@@ -808,7 +819,8 @@ export const INTRO_S = 12 // how long the cold open runs before it settles
 /** The end theme: the motif once more, landing on a lifted chord and a hit. */
 export function scheduleOutro(ctx, out, name, t) {
   const th = THEMES[name] || THEMES.ember
-  STINGS.timpani.build(ctx, out, t)
+  const hits = hitsBus(ctx, out)
+  STINGS.timpani.build(ctx, hits, t)
   let at = t + 1.65
   const beat = name === 'heist' ? 0.32 : 0.42
   th.motif.forEach((n, i) => {
@@ -817,7 +829,7 @@ export function scheduleOutro(ctx, out, name, t) {
     at += len
   })
   pad(ctx, out, at - 0.6, th.end.map(note), { peak: 0.045, attack: 0.4, hold: 2.5, decay: 3.5, cutoff: 1800 })
-  STINGS.impact.build(ctx, out, at - 0.6)
+  STINGS.impact.build(ctx, hits, at - 0.6)
   return at + 5
 }
 
