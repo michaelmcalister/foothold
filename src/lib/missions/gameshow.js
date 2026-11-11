@@ -1,6 +1,8 @@
 // Run Your Mouth: a trivia game show you play on the run. A cheeky host (Tex
 // Tilley), a sidekick (Milly) and an announcer. Questions are answered out
-// loud or with a tap, and quicker answers score more. The ad breaks are
+// loud or with a tap, and quicker answers score more. (A clock ticks
+// through each ad break and beeps down the last ten seconds: runAudio.js.)
+// The ad breaks are
 // sprints that pay more the harder you push, and every metre you climb earns
 // a hill bonus (engine.js: points, climbPoints). Five shows, unlocking in
 // order. Same beat format as thrillers.js.
@@ -34,10 +36,11 @@ const line = (who, text) => ({ who, text })
 const SPRINT_WIN = line('tex', 'Look at that pace! Bonus points in the bank. Ease right back now.')
 const SPRINT_OKAY = line('tex', 'Points on the board all the same. Ease right back now.')
 const HALF = line('milly', 'Halfway! Keep it going!')
+const TEN = line('tex', 'Ten seconds! Give it everything!')
 const EASY = line('tex', 'Easy does it. Save the legs for the sprints, that is where the money is.')
 
 const sprint = (at, seconds, say, points, recover, extra = {}) =>
-  ({ at, kind: 'surge', seconds, who: 'tex', say, success: SPRINT_WIN, okay: SPRINT_OKAY, recover, points, half: HALF, ...extra })
+  ({ at, kind: 'surge', seconds, who: 'tex', say, success: SPRINT_WIN, okay: SPRINT_OKAY, recover, points, half: HALF, ten: TEN, clock: true, ...extra })
 
 const q = (at, who, say, options, answer, right, wrong, points = 1000, extra = {}) => ({
   at, kind: 'quiz', who, say, points, wait: 22,

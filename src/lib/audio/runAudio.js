@@ -145,7 +145,7 @@ export function missionLines(script, narratorKey, saga = null) {
 
   for (const b of script.beats) {
     add(b.say, b.who)
-    for (const k of ['success', 'okay', 'half', 'done', 'easyNudge']) add(b[k], b.who)
+    for (const k of ['success', 'okay', 'half', 'ten', 'done', 'easyNudge']) add(b[k], b.who)
   }
   const seen = new Set()
   return out.filter((l) => l.who && !seen.has(l.who + l.text) && seen.add(l.who + l.text))
@@ -224,6 +224,36 @@ async function afterListening({ force = false } = {}) {
 
 // During a run, any tap wakes the effects (iPhone may only let sound restart
 // from a touch), and coming back to the app starts them fresh if needed.
+// ---- the game show's ad breaks: a clock ticks all the way through, and the
+// last ten seconds count down with a beep each second (louder for 3, 2, 1).
+// Timed here, every quarter second, so the beats land on the second even
+// when GPS updates are slow. Surges marked clock: true only.
+let sprintClock = null
+export function clockSound(left) {
+  if (left <= 0) return null
+  if (left <= 3) return 'countfinal'
+  if (left <= 10) return 'countbeep'
+  return 'tick'
+}
+function watchSprint() {
+  clearInterval(sprintClock)
+  let endsAt = 0
+  let last = null
+  sprintClock = setInterval(() => {
+    const v = mission?.view()
+    const on = v?.kind === 'surge' && v.clock && v.remainingS != null && !v.paused
+    if (!on) { endsAt = 0; last = null; return }
+    if (!endsAt) endsAt = Date.now() + v.remainingS * 1000
+    const left = Math.ceil((endsAt - Date.now()) / 1000)
+    if (left === last) return
+    last = left
+    const name = clockSound(left)
+    if (!name) return
+    if (scape) scape.sting(name)
+    else if (name !== 'tick') sfx.play('kudos', { wait: false }) // no story sound: just the countdown blips
+  }, 250)
+}
+
 // While the microphone is open the iPhone is in record mode and pauses web
 // sound. Waking the sound then would switch the phone back to playback and
 // cut the microphone off mid answer, so nothing wakes it until the answer is in.
@@ -375,6 +405,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   // iPhone pauses web sound when the mic opens or a call comes in: wake it again
   clearInterval(keepAwake)
   wakeOnTouch(false)
+  watchSprint()
   // If the phone stops the effects mid run (a notification, Siri, a call),
   // wake them; if they stay stopped, start them fresh (iPhone app). A tap
   // anywhere, or coming back to the app, wakes them too.
@@ -486,6 +517,7 @@ export function finishRun({ elapsedS, distanceM }) {
   const m = runMusic
   if (m) enqueue(() => m.stop(6))
   runMusic = null
+  clearInterval(sprintClock)
   enqueue(async () => { clearInterval(keepAwake); wakeOnTouch(false); setRunSession(null) }) // after the last word
   stopListening()
   return summary
@@ -506,6 +538,7 @@ function stopListening() {
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
   clearInterval(keepAwake)
+  clearInterval(sprintClock)
   wakeOnTouch(false)
   setRunSession(null)
   stopMic()

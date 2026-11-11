@@ -3,7 +3,8 @@
 // final score read out at the end, and the questions themselves.
 import { describe, it, expect } from 'vitest'
 import { GAMESHOW } from '../src/lib/missions/gameshow.js'
-import { missionById, sagaById, CHAINS } from '../src/lib/missions/scripts.js'
+import { missionById, sagaById, CHAINS, MISSIONS } from '../src/lib/missions/scripts.js'
+const MISSIONS_ALL = () => MISSIONS
 import { createMission, lineText } from '../src/lib/missions/engine.js'
 import { missionHeadline } from '../src/lib/missions/index.js'
 import { isCast } from '../src/lib/missions/cast.js'
@@ -160,5 +161,45 @@ describe('the next episode', async () => {
     expect(nextEpisode('heist-vivid')).toBe(null)
     expect(nextEpisode('first-steps').id).toBe('supply-line')
     expect(nextEpisode('steady-scout')).toBe(null)
+  })
+})
+
+describe('the ad break clock', () => {
+  it('ticks through every ad break, beeps the last ten seconds, and Tex calls ten seconds', () => {
+    const m = createMission(show, { paces: trainingPaces(30 * 60) })
+    play.dist = 0
+    const seen = []
+    let said = null
+    for (let t = 0; t <= 600; t++) {
+      const v = m.view()
+      const out = m.update({ elapsedS: t, distanceM: (play.dist += v.kind === 'surge' ? 4 : 3), toStartM: 2000 })
+      const now = m.view()
+      if (now.kind === 'surge') seen.push({ t, left: now.remainingS, clock: now.clock })
+      for (const l of out.lines) if (lineText(l) === 'Ten seconds! Give it everything!') said = { t, left: m.view().remainingS }
+      const ask = m.view().ask
+      if (ask) m.answer(ask.options[0].key)
+    }
+    expect(seen.length).toBeGreaterThan(20)
+    expect(seen.every((s) => s.clock)).toBe(true)
+    expect(said).toBeTruthy()
+    expect(said.left).toBeLessThanOrEqual(11)
+    expect(said.left).toBeGreaterThanOrEqual(7)
+  })
+
+  it('picks the right sound for each second', async () => {
+    const { clockSound } = await import('../src/lib/audio/runAudio.js')
+    expect(clockSound(30)).toBe('tick')
+    expect(clockSound(11)).toBe('tick')
+    expect(clockSound(10)).toBe('countbeep')
+    expect(clockSound(4)).toBe('countbeep')
+    expect(clockSound(3)).toBe('countfinal')
+    expect(clockSound(1)).toBe('countfinal')
+    expect(clockSound(0)).toBe(null)
+    for (const n of ['tick', 'countbeep', 'countfinal']) expect(STINGS[n]).toBeTruthy()
+  })
+
+  it('only the game show ad breaks tick, not story surges', () => {
+    const story = MISSIONS_ALL().find((x) => x.id === 'penrith-emuhall')
+    expect(story.beats.filter((b) => b.kind === 'surge').some((b) => b.clock)).toBe(false)
   })
 })

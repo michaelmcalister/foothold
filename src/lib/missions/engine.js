@@ -108,7 +108,7 @@ export function createMission(script, { paces = null } = {}) {
 
   function startSegment(beat, out) {
     if (st.seg) endSegment(out, { quiet: true })
-    const seg = { kind: beat.kind, beat, at: st.clock, dist: st.dist, seconds: beat.seconds || null, metres: beat.metres || null, halfSaid: false, nudged: false }
+    const seg = { kind: beat.kind, beat, at: st.clock, dist: st.dist, seconds: beat.seconds || null, metres: beat.metres || null, halfSaid: false, tenSaid: false, nudged: false }
     if (beat.kind === 'surge') seg.before = paceBefore()
     st.seg = seg
     out.events.push({ type: `${beat.kind}-start`, seconds: seg.seconds, metres: seg.metres })
@@ -261,6 +261,12 @@ export function createMission(script, { paces = null } = {}) {
         const half = seg.metres ? st.dist - seg.dist >= seg.metres / 2 : st.clock - seg.at >= seg.seconds / 2
         if (half) { seg.halfSaid = true; say(out, seg.beat.half, seg.beat.who); return }
       }
+      // "Ten seconds!": the call that starts the countdown (too late to be useful under 7)
+      if (seg.kind === 'surge' && seg.beat.ten && !seg.tenSaid && seg.seconds && !seg.metres) {
+        const left = seg.seconds - (st.clock - seg.at)
+        if (left <= 11 && left < 7) seg.tenSaid = true
+        else if (left <= 11 && canSpeak()) { seg.tenSaid = true; say(out, seg.beat.ten, seg.beat.who); return }
+      }
       if (seg.kind === 'steady' && seg.beat.easyNudge && !seg.nudged && st.clock - seg.at >= 60 && canSpeak()) {
         const d = distSince(st.clock - 60)
         if (d > 50 && 60 / (d / 1000) < easy[0] - STEADY_QUICK_S) { seg.nudged = true; say(out, seg.beat.easyNudge, seg.beat.who); return }
@@ -393,6 +399,7 @@ export function createMission(script, { paces = null } = {}) {
         title: script.title,
         chapter: st.chapter,
         kind: seg?.kind || null,
+        clock: !!seg?.beat?.clock, // a game show ad break: tick through it
         remainingS,
         remainingM,
         progress,

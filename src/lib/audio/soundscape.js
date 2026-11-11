@@ -594,6 +594,30 @@ Object.assign(STINGS, {
       return t + 1.5
     },
   },
+  // the game show's ad break clock: a soft tick each second, a beep each of
+  // the last ten, and a bright double beep for 3, 2, 1
+  tick: {
+    dur: 0.12,
+    build(ctx, out, t) {
+      noise(ctx, out, t, { attack: 0.001, decay: 0.018, peak: 0.25, filter: { type: 'bandpass', freq: 3000, q: 6 } })
+      return t + 0.1
+    },
+  },
+  countbeep: {
+    dur: 0.3,
+    build(ctx, out, t) {
+      tone(ctx, out, t, { freq: 880, type: 'square', attack: 0.004, hold: 0.09, decay: 0.08, peak: 0.05, filter: { freq: 2500 } })
+      noise(ctx, out, t, { attack: 0.001, decay: 0.018, peak: 0.2, filter: { type: 'bandpass', freq: 3000, q: 6 } })
+      return t + 0.28
+    },
+  },
+  countfinal: {
+    dur: 0.4,
+    build(ctx, out, t) {
+      for (const at of [0, 0.14]) tone(ctx, out, t + at, { freq: 1320, type: 'square', attack: 0.004, hold: 0.08, decay: 0.06, peak: 0.07, filter: { freq: 3200 } })
+      return t + 0.38
+    },
+  },
   clock: {
     dur: 3.0,
     build(ctx, out, t) {
