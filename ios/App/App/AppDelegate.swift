@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import AVFoundation
+import CoreLocation
 
 // Foothold's sound during a run (src/lib/audio/voice.js, setRunSession).
 // The web view's own sound modes either stop when the phone locks ('ambient')
@@ -32,10 +33,34 @@ public class AudioMixPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-// The app's screen: Capacitor's, plus the AudioMix plugin above.
+// Whether Foothold may use location yet, without asking (the background
+// location plugin can only ask). The first-open welcome uses it to say
+// "already sorted" instead of waiting for a prompt that never comes.
+public class AppPermissionsPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AppPermissionsPlugin"
+    public let jsName = "AppPermissions"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func status(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let location: String
+            switch CLLocationManager().authorizationStatus {
+            case .authorizedAlways, .authorizedWhenInUse: location = "granted"
+            case .denied, .restricted: location = "denied"
+            default: location = "prompt"
+            }
+            call.resolve(["location": location])
+        }
+    }
+}
+
+// The app's screen: Capacitor's, plus the AudioMix and AppPermissions plugins above.
 class FootholdViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(AudioMixPlugin())
+        bridge?.registerPluginInstance(AppPermissionsPlugin())
     }
 }
 

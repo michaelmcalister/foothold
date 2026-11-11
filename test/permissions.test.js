@@ -47,3 +47,22 @@ describe('permissions explainer never gets stuck', () => {
     expect(Date.now() - started).toBeLessThan(1000)
   })
 })
+
+describe('knowing what the phone already allows', () => {
+  it('reads each answer plainly, and never hangs or throws', async () => {
+    const { permissionStatus } = await import('../src/lib/permissions.js')
+    expect(await permissionStatus('location', { location: async () => 'granted' })).toBe('granted')
+    expect(await permissionStatus('microphone', { microphone: async () => 'denied' })).toBe('denied')
+    expect(await permissionStatus('notifications', { notifications: async () => 'prompt-with-rationale' })).toBe('prompt')
+    expect(await permissionStatus('location', { location: async () => { throw new Error('not in this build') } })).toBe(null)
+    expect(await permissionStatus('location', { location: () => new Promise(() => {}) }, 30)).toBe(null)
+    expect(await permissionStatus('nothing', {})).toBe(null)
+  })
+
+  it('the iPhone app can say whether location is already allowed', async () => {
+    const { readFileSync } = await import('node:fs')
+    const swift = readFileSync('ios/App/App/AppDelegate.swift', 'utf8')
+    expect(swift).toContain('jsName = "AppPermissions"')
+    expect(swift).toContain('registerPluginInstance(AppPermissionsPlugin())')
+  })
+})

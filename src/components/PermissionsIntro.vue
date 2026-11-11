@@ -3,14 +3,28 @@
 // microphone, and on Android the recording notice), then the phone's own
 // prompt when they tap the button. "Not now" skips one. Shown once
 // (lib/permissions.js decides and asks).
-import { ref, computed } from 'vue'
-import { permissionsFor, askPermission, markPermissionsExplained } from '../lib/permissions.js'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { permissionsFor, askPermission, permissionStatus, openAppSettings, markPermissionsExplained } from '../lib/permissions.js'
 
 const emit = defineEmits(['done'])
 const items = permissionsFor()
 const step = ref(-1) // -1 is the welcome card, items.length is the last one
 const busy = ref(false)
 const current = computed(() => items[step.value])
+// What the phone already allows: no point waiting for a prompt that never comes
+const state = ref(null)
+async function check() {
+  const id = current.value?.id
+  state.value = null
+  if (!id) return
+  const s = await permissionStatus(id)
+  if (current.value?.id === id) state.value = s
+}
+watch(step, check)
+// back from Settings: look again
+const onShow = () => { if (document.visibilityState === 'visible') check() }
+onMounted(() => document.addEventListener('visibilitychange', onShow))
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onShow))
 
 // Move on when the phone answers (or gives up waiting). Not now always works,
 // even while a prompt is pending, so nobody gets stuck on a card.
@@ -40,10 +54,21 @@ function finish() {
         <div class="icon" aria-hidden="true">{{ current.icon }}</div>
         <h1 id="perms-title">{{ current.title }}</h1>
         <p>{{ current.blurb }}</p>
-        <p class="tip">{{ current.tip }}</p>
-        <button class="go" :disabled="busy" @click="yes">{{ current.button }}</button>
-        <p v-if="busy" class="waiting" role="status">Over to your phone…</p>
-        <button class="later" @click="next">{{ busy ? 'Skip this one' : 'Not now' }}</button>
+        <template v-if="state === 'granted'">
+          <p class="tip done" role="status">✅ Already sorted. Nice one.</p>
+          <button class="go" @click="next">Next</button>
+        </template>
+        <template v-else-if="state === 'denied'">
+          <p class="tip">You said no earlier, so your phone won’t ask again. You can switch it on in Settings, under Foothold.</p>
+          <button class="go" @click="openAppSettings">Open Settings</button>
+          <button class="later" @click="next">Not now</button>
+        </template>
+        <template v-else>
+          <p class="tip">{{ current.tip }}</p>
+          <button class="go" :disabled="busy" @click="yes">{{ current.button }}</button>
+          <p v-if="busy" class="waiting" role="status">Over to your phone…</p>
+          <button class="later" @click="next">{{ busy ? 'Skip this one' : 'Not now' }}</button>
+        </template>
       </template>
       <template v-else>
         <div class="icon" aria-hidden="true">🏁</div>
@@ -106,6 +131,7 @@ p { font-size: 17px; line-height: 1.5; margin: 0 0 12px; color: var(--on-ink-mut
   font-weight: 700;
 }
 .go:disabled { opacity: 0.6; }
+.done { color: #9BE3B0; }
 .waiting { margin: 12px 0 0; font-size: 15px; }
 .later {
   margin-top: 10px;

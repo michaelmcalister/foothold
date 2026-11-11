@@ -66,6 +66,43 @@ async function askLocation(timeoutMs = 20000) {
   if (id != null) await BackgroundGeolocation.removeWatcher({ id }).catch(() => {})
 }
 
+// ---- what the phone already allows ----
+const speech = () => import('@capgo/capacitor-speech-recognition').then((m) => m.SpeechRecognition)
+const plain = (v) => (v === 'granted' ? 'granted' : v === 'denied' ? 'denied' : v ? 'prompt' : null)
+
+async function locationStatus() {
+  if (!isNativeApp() || isAndroidApp()) return null // Android: asking is quick when it's already allowed
+  const { registerPlugin } = await import('@capacitor/core')
+  return (await registerPlugin('AppPermissions').status()).location // older app builds don't have it: null, so we just ask
+}
+
+const STATUS = {
+  location: locationStatus,
+  microphone: async () => (await (await speech()).checkPermissions()).speechRecognition,
+  notifications: async () => {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    return (await LocalNotifications.checkPermissions()).display
+  },
+}
+
+/** 'granted', 'denied' (the phone won't ask again), 'prompt', or null when we can't tell. Never throws. */
+export async function permissionStatus(id, status = STATUS, timeoutMs = 3000) {
+  let timer
+  const waited = new Promise((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs) })
+  const got = Promise.resolve().then(() => status[id]?.()).then(plain, () => null)
+  const result = await Promise.race([got, waited])
+  clearTimeout(timer)
+  return result ?? null
+}
+
+/** Opens Foothold's page in the phone's Settings. Never throws. */
+export async function openAppSettings() {
+  try {
+    const { registerPlugin } = await import('@capacitor/core')
+    await registerPlugin('BackgroundGeolocation').openSettings()
+  } catch { /* no settings link here */ }
+}
+
 const ASK = {
   location: askLocation,
   microphone: primeMicrophone,
