@@ -37,7 +37,7 @@ function fakeCtx() {
   }
 }
 
-const NEW = ['penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'bondi-breakers', 'druitt-relay']
+const NEW = ['penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'bondi-breakers', 'druitt-relay', 'sydney-stjames', 'sydney-sub', 'sydney-barracks']
 const ep = (id) => MISSIONS.find((m) => m.id === id)
 
 describe('the Sydney local stories', () => {
@@ -93,7 +93,8 @@ describe('the Sydney local stories', () => {
     for (const id of Object.keys(KIT.spatial)) { const c = fakeCtx(); expect(() => playSpatial(c, c.destination, id, 5, { r: () => 0.5 })).not.toThrow() }
     for (const id of Object.keys(KIT.scenes)) expect(AMBIENCE[id], id).toMatch(/no music|no clear words/)
     for (const s of Object.values(KIT.spatial)) expect(SFX[s.recorded], s.recorded).toBeTruthy()
-    for (const saga of ['bondi', 'druitt']) expect(SAGA_LOOK[saga]).toBeTruthy()
+    for (const saga of ['bondi', 'druitt', 'sydney']) expect(SAGA_LOOK[saga]).toBeTruthy()
+    expect(sagaById('sydney')).toMatchObject({ title: 'Sydney After Dark' })
     for (const id of NEW) expect(coverSvg(ep(id))).toContain('<svg')
   })
 })

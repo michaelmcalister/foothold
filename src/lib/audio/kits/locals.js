@@ -1,11 +1,12 @@
 // Sound kit for the Sydney local stories (River Town's later episodes,
-// Breakers at Bondi and The Major's Hill at Mount Druitt): a lifesaver's
-// whistle, a Sydney train horn and a brass discovery chime as stings; four
-// scenes (a sandstone railway cutting at night, Bondi at sunrise, a western
-// Sydney suburb at dusk and a train platform); lorikeets and gulls as little
-// sounds; a Sydney train and a flock of lorikeets going past; and a bright,
-// sunny theme and score. Everything is synthesised; the recorded versions
-// are in each series' LIBRARY. soundscape.js and spatial.js merge it in.
+// Breakers, The Major's Hill and Sydney After Dark): a lifesaver's whistle,
+// a Sydney train horn, a brass discovery chime, a bell in a tunnel and a
+// sonar ping as stings; five scenes (a sandstone railway cutting at night,
+// Bondi at sunrise, a western Sydney suburb at dusk, a train platform and an
+// old tunnel under the city); lorikeets and gulls as little sounds; a Sydney
+// train and a flock of lorikeets going past; and a bright, sunny theme and
+// score. Everything is synthesised; the recorded versions are in each
+// series' LIBRARY. soundscape.js and spatial.js merge it in.
 import { note, tone, noise, bell, kick } from '../synth.js'
 
 const stings = {
@@ -29,6 +30,26 @@ const stings = {
       }
       noise(ctx, out, t, { attack: 0.6, hold: 1.0, decay: 0.7, peak: 0.05, filter: { type: 'lowpass', freq: 400 } })
       return t + 2.3
+    },
+  },
+  bellring: {
+    dur: 4.2,
+    build(ctx, out, t) {
+      // a big old bell in a tunnel, struck once and echoing away
+      for (const [r, p] of [[1, 0.16], [2.4, 0.07], [3.9, 0.04], [5.4, 0.02]]) bell(ctx, out, t, 196 * r, { peak: p, decay: 3.4 })
+      tone(ctx, out, t, { freq: 98, type: 'triangle', attack: 0.005, decay: 3.2, peak: 0.08 })
+      for (const [d, g] of [[0.35, 0.05], [0.7, 0.025]]) bell(ctx, out, t + d, 196, { peak: g, decay: 2.4 }) // the echo
+      return t + 4.1
+    },
+  },
+  sonar: {
+    dur: 3.0,
+    build(ctx, out, t) {
+      // a sonar ping going out into deep water, and its faint return
+      tone(ctx, out, t, { freq: 1480, glideTo: 1420, glideTime: 0.4, attack: 0.005, decay: 1.4, peak: 0.12 })
+      tone(ctx, out, t + 1.6, { freq: 1460, attack: 0.01, decay: 1.0, peak: 0.035 })
+      noise(ctx, out, t, { attack: 0.4, hold: 1.5, decay: 1.0, peak: 0.02, filter: { type: 'lowpass', freq: 300 } })
+      return t + 2.9
     },
   },
   found: {
@@ -77,6 +98,13 @@ const scenes = {
     ],
     spots: [{ name: 'lorikeet', rate: 0.06 }, { name: 'bird', rate: 0.05 }],
   },
+  tunnel: {
+    beds: [
+      { filter: { type: 'lowpass', freq: 180 }, level: 0.03, lfo: { rate: 0.04, depth: 0.5 } }, // a deep underground rumble
+      { filter: { type: 'bandpass', freq: 1200, q: 3 }, level: 0.004, lfo: { rate: 0.02, depth: 0.6 } }, // air moving down a long tunnel
+    ],
+    spots: [{ name: 'drip', rate: 0.9 }],
+  },
   station: {
     beds: [
       { filter: { type: 'bandpass', freq: 900, q: 0.6 }, level: 0.018, lfo: { rate: 0.06, depth: 0.4 } }, // people waiting on the platform
@@ -91,6 +119,7 @@ const around = {
   surfdawn: [{ name: 'chatter', rate: 0.008 }, { name: 'helicopter', rate: 0.002 }],
   suburb: [{ name: 'lorikeets', rate: 0.012 }, { name: 'car', rate: 0.01 }, { name: 'dog', rate: 0.004 }, { name: 'sydneytrain', rate: 0.006 }],
   station: [{ name: 'sydneytrain', rate: 0.02 }, { name: 'chatter', rate: 0.01 }],
+  tunnel: [{ name: 'sydneytrain', rate: 0.008 }],
 }
 
 const spatial = {
