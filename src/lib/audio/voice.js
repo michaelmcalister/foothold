@@ -146,6 +146,7 @@ export async function asAnnouncement(fn) {
     resume() // changing the sound mode can pause the effects: wake them
     try { return await fn() } finally {
       announcing--
+      await new Promise((r) => setTimeout(r, 450)) // let the last word ring out before Spotify comes back
       await audioMix({ duck: false })
       resume()
     }
@@ -215,6 +216,48 @@ const asDataUrl = (blob) => new Promise((resolve, reject) => {
   r.readAsDataURL(blob)
 })
 
+// Ease each clip out: the last FADE_S seconds fade with a soft curve, and a
+// short silence follows, so a line never stops dead (and the speaker doesn't
+// switch away mid word). Done on the decoded sound, so it works on iPhone,
+// where an <audio> element's volume can't be changed. Pure parts exported for tests.
+export const FADE_S = 0.6
+export const TAIL_S = 0.35
+export function fadeOut(samples, sampleRate, fadeS = FADE_S, tailS = TAIL_S) {
+  const n = samples.length
+  const out = new Float32Array(n + Math.round(tailS * sampleRate))
+  out.set(samples)
+  const f = Math.min(n, Math.round(fadeS * sampleRate))
+  for (let i = 0; i < f; i++) out[n - f + i] *= 0.5 * (1 + Math.cos((Math.PI * (i + 1)) / f))
+  return out
+}
+export function wavBytes(samples, sampleRate) {
+  const b = new ArrayBuffer(44 + samples.length * 2)
+  const v = new DataView(b)
+  const text = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)) }
+  text(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); text(8, 'WAVE'); text(12, 'fmt ')
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true)
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true)
+  text(36, 'data'); v.setUint32(40, samples.length * 2, true)
+  for (let i = 0; i < samples.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 0x7fff, true)
+  return new Uint8Array(b)
+}
+async function softenEnd(blob) {
+  try {
+    const C = window.OfflineAudioContext || window.webkitOfflineAudioContext
+    if (!C) return blob
+    const buf = await new C(1, 1, 44100).decodeAudioData(await blob.arrayBuffer())
+    let mono = buf.getChannelData(0)
+    if (buf.numberOfChannels > 1) {
+      const r = buf.getChannelData(1)
+      mono = Float32Array.from(mono, (x, i) => (x + r[i]) / 2)
+    }
+    return new Blob([wavBytes(fadeOut(mono, buf.sampleRate), buf.sampleRate)], { type: 'audio/wav' })
+  } catch (e) {
+    console.warn('voice fade', e?.message || e)
+    return blob // play it as it came
+  }
+}
+
 async function playBlob(blob, text) {
   const native = isNativeApp()
   const url = native ? await asDataUrl(blob) : URL.createObjectURL(blob)
@@ -256,6 +299,7 @@ async function playWeb(blob, text) {
  * caller fall back to the phone's own voice.
  */
 async function playVoice(blob, text) {
+  blob = await softenEnd(blob)
   try { return await asAnnouncement(() => playBlob(blob, text)) } catch (e) { trouble('voice element', e) /* next way */ }
   try { return await asAnnouncement(() => playWeb(blob, text)) } catch (e) { trouble('voice web audio', e) /* next way */ }
   return playBlob(blob, text)
