@@ -4,10 +4,20 @@
 // so they never talk over each other; speak() resolves when the line ends.
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
-import { watch } from 'vue'
+import { watch, reactive } from 'vue'
 import { context, speakerOut, resume } from './sfx.js'
 import { audio } from './settings.js'
 import { isAndroidApp, isNativeApp } from '../native.js'
+
+// The last few reasons a server voice didn't play, newest first, shown under
+// "Hear a sample" in settings so a problem on a phone can be read off the screen.
+export const voiceTrouble = reactive([])
+function trouble(where, e) {
+  const msg = `${where}: ${e?.name && e.name !== 'Error' ? e.name + ' ' : ''}${e?.message || e}`
+  console.warn(msg)
+  voiceTrouble.unshift(`${new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}  ${msg}`)
+  voiceTrouble.splice(4)
+}
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -30,7 +40,7 @@ export function serverVoices() {
           const tts = (await r.json())?.tts || null
           if (tts) return tts
         }
-      } catch (e) { console.warn('voice check', e?.message || e) /* no server (GitHub Pages) or no signal */ }
+      } catch (e) { trouble('voice check', e) /* no server (GitHub Pages) or no signal */ }
       ttsFailedAt = Date.now()
       return null
     })()
@@ -223,8 +233,8 @@ async function playWeb(blob, text) {
  * caller fall back to the phone's own voice.
  */
 async function playVoice(blob, text) {
-  try { return await asAnnouncement(() => playBlob(blob, text)) } catch (e) { console.warn('voice element', e?.message || e) /* next way */ }
-  try { return await asAnnouncement(() => playWeb(blob, text)) } catch (e) { console.warn('voice web audio', e?.message || e) /* next way */ }
+  try { return await asAnnouncement(() => playBlob(blob, text)) } catch (e) { trouble('voice element', e) /* next way */ }
+  try { return await asAnnouncement(() => playWeb(blob, text)) } catch (e) { trouble('voice web audio', e) /* next way */ }
   return playBlob(blob, text)
 }
 
@@ -270,13 +280,14 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
   if (!text) return
   const c = CAST[who]
   if (!c) return speak(stripTags(text), { coachVoice, voiceName })
+  if (Date.now() <= serverPaused) trouble('server voice', 'paused after the server said no')
   if (Date.now() > serverPaused && (await serverVoices())) {
     try {
       const k = madeKey(who, text)
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 15000)) // the expressive model can take a while on a long line
       await playVoice(blob, text)
       return
-    } catch (e) { console.warn('server voice', e?.message || e) /* fall back to the phone voice below */ }
+    } catch (e) { trouble('server voice', e) /* fall back to the phone voice below */ }
   }
   await asAnnouncement(() => speakPhone(stripTags(text), voiceName, { pitch: c.pitch, rate: c.rate * 1.02 }))
 }
@@ -288,11 +299,12 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
  */
 export async function speak(text, { coachVoice = 'charlie', voiceName = '', keep = true } = {}) {
   if (!text) return
+  if (coachVoice !== 'phone' && Date.now() <= serverPaused) trouble('server voice', 'paused after the server said no')
   if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
     try {
       await speakServer(text, coachVoice, keep)
       return
-    } catch (e) { console.warn('server voice', e?.message || e) /* fall back to the phone voice below */ }
+    } catch (e) { trouble('server voice', e) /* fall back to the phone voice below */ }
   }
   await asAnnouncement(() => speakPhone(text, voiceName))
 }

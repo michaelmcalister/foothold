@@ -5,7 +5,7 @@
 // app's sound effects and the recap flyover music.
 import { ref, computed, onMounted } from 'vue'
 import { audio } from '../lib/audio/settings.js'
-import { australianVoices, voicesReady, speak, unlock, serverVoices } from '../lib/audio/voice.js'
+import { australianVoices, voicesReady, speak, unlock, serverVoices, voiceTrouble } from '../lib/audio/voice.js'
 import * as spotify from '../lib/audio/spotify.js'
 import { canListen } from '../lib/audio/listen.js'
 import { toast } from '../lib/store.js'
@@ -187,6 +187,10 @@ function testVoice() {
           </select>
         </div>
         <button class="btn quiet" type="button" @click="testVoice">Hear a sample</button>
+        <div v-if="voiceTrouble.length" class="trouble">
+          <span class="hint">Why the last lines used the phone's voice (send a screenshot of this if voices sound robotic):</span>
+          <code v-for="(t, i) in voiceTrouble" :key="i">{{ t }}</code>
+        </div>
       </template>
     </div>
 
@@ -232,4 +236,6 @@ function testVoice() {
 .check input { width: 20px; height: 20px; flex: none; }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
 input[type='range'] { width: 100%; }
+.trouble { display: flex; flex-direction: column; gap: 4px; }
+.trouble code { font-size: 12px; overflow-wrap: anywhere; color: var(--ink-60); }
 </style>
