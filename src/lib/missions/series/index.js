@@ -14,5 +14,6 @@ import * as tiger from './tiger.js'
 import * as mahogany from './mahogany.js'
 import * as catalpa from './catalpa.js'
 import * as minmin from './minmin.js'
+import * as opal from './opal.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal].filter((s) => s.EPISODES.length)
