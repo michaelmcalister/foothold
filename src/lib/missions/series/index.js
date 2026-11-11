@@ -10,5 +10,6 @@ import * as twocities from './twocities.js'
 import * as bondi from './bondi.js'
 import * as druitt from './druitt.js'
 import * as sydney from './sydney.js'
+import * as tiger from './tiger.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger].filter((s) => s.EPISODES.length)
