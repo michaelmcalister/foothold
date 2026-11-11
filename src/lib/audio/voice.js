@@ -4,20 +4,15 @@
 // so they never talk over each other; speak() resolves when the line ends.
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
-import { watch, reactive } from 'vue'
+import { watch } from 'vue'
+import { noteTrouble } from './trouble.js'
 import { context, speakerOut, resume, rebuildContext } from './sfx.js'
 import { audio } from './settings.js'
 import { isAndroidApp, isNativeApp, isIOSApp, audioMix } from '../native.js'
 
-// The last few reasons a server voice didn't play, newest first, shown under
-// "Hear a sample" in settings so a problem on a phone can be read off the screen.
-export const voiceTrouble = reactive([])
-function trouble(where, e) {
-  const msg = `${where}: ${e?.name && e.name !== 'Error' ? e.name + ' ' : ''}${e?.message || e}`
-  console.warn(msg)
-  voiceTrouble.unshift(`${new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}  ${msg}`)
-  voiceTrouble.splice(4)
-}
+// Why a server voice didn't play goes on the shared trouble list (trouble.js)
+export { soundTrouble as voiceTrouble } from './trouble.js'
+const trouble = noteTrouble
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -138,6 +133,16 @@ function webSession(kind) {
   if (s && 'type' in s) { try { s.type = kind || 'auto' } catch { /* not allowed here */ } }
   if (!s || !('type' in s)) holdSpeaker(kind === 'playback')
 }
+/**
+ * iPhone app: the microphone takes over the app's sound while it listens and
+ * switches it off afterwards, which silences everything else. Put Foothold's
+ * own mode back. Resolves true if it did (the caller then restarts the effects).
+ */
+export async function reclaimSpeaker() {
+  if (!nativeMix) return false
+  return audioMix()
+}
+
 /** The sound mode set for this run or flyover (null when none). */
 export const runSessionKind = () => runSession
 

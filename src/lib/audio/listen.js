@@ -9,6 +9,7 @@
 
 import { ref } from 'vue'
 import { isNativeApp } from '../native.js'
+import { noteTrouble } from './trouble.js'
 
 /** True while the microphone is open for an answer (the screen shows it). */
 export const listening = ref(false)
@@ -89,7 +90,9 @@ function listenNative(options, { timeoutMs, lang }) {
   return new Promise((resolve) => {
     let done = false
     let handle = null
+    let errHandle = null
     let speech = null
+    let heard = ''
     const finish = (key) => {
       if (done) return
       done = true
@@ -97,7 +100,9 @@ function listenNative(options, { timeoutMs, lang }) {
       listening.value = false
       nativeStop = null
       handle?.remove?.()
+      errHandle?.remove?.()
       speech?.stop().catch(() => {})
+      if (!key) noteTrouble('microphone', heard ? `heard "${heard.slice(0, 60)}" but it didn't match an answer` : 'heard nothing before the question closed')
       resolve(key)
     }
     const timer = setTimeout(() => finish(null), timeoutMs)
@@ -109,12 +114,15 @@ function listenNative(options, { timeoutMs, lang }) {
       if (perm?.speechRecognition !== 'granted') {
         const asked = await s.requestPermissions().catch(() => null)
         if (asked?.speechRecognition !== 'granted') {
+          noteTrouble('microphone', `not allowed (${asked?.speechRecognition || perm?.speechRecognition || 'no answer'})`)
           listenProblem.value = 'The microphone or speech recognition isn\u2019t allowed for Foothold. Open Settings, then Foothold, and switch them on.'
           return finish(null)
         }
       }
+      errHandle = await s.addListener('error', (e) => noteTrouble('microphone', e?.message || e?.error || JSON.stringify(e))).catch(() => null)
       handle = await s.addListener('partialResults', (e) => {
         for (const t of e.matches || [e.accumulatedText || '']) {
+          if (t) heard = t
           const key = matchAnswer(t, options)
           if (key) { listenProblem.value = null; return finish(key) }
         }
@@ -122,7 +130,7 @@ function listenNative(options, { timeoutMs, lang }) {
       if (done) return handle.remove()
       listening.value = true
       await s.start({ language: lang, maxResults: 3, partialResults: true, popup: false })
-    }).catch(() => finish(null))
+    }).catch((e) => { noteTrouble('microphone', e); finish(null) })
   })
 }
 

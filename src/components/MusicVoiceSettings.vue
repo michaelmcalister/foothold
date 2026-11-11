@@ -188,7 +188,7 @@ function testVoice() {
         </div>
         <button class="btn quiet" type="button" @click="testVoice">Hear a sample</button>
         <div v-if="voiceTrouble.length" class="trouble">
-          <span class="hint">Why the last lines used the phone's voice (send a screenshot of this if voices sound robotic):</span>
+          <span class="hint">Recent sound and microphone problems (send a screenshot of this if something isn't working):</span>
           <code v-for="(t, i) in voiceTrouble" :key="i">{{ t }}</code>
         </div>
       </template>

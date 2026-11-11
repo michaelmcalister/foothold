@@ -11,7 +11,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind } from './voice.js'
+import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
@@ -165,7 +165,8 @@ function askAloud() {
     s?.duck(true)
     sfx.play('kudos', { wait: false }) // a little blip: the microphone is open, say your answer
     const key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
-    s?.duck(false)
+    await afterListening()
+    scape?.duck(false)
     if (key) applyAnswer(key)
   })
 }
@@ -197,7 +198,25 @@ export function answerMission(key) {
   applyAnswer(key)
 }
 
+// iPhone app: after the microphone listens, put Foothold's sound back and
+// start the effects and the story's soundscape fresh, where it was.
+let scapeSaga = null
+let scapeScene = null
+async function afterListening() {
+  if (!(await reclaimSpeaker())) return
+  const had = !!scape
+  scape?.stop(0)
+  sfx.rebuildContext()
+  await sfx.resume()
+  if (had && scapeSaga) {
+    scape = startScape(scapeSaga)
+    if (scapeScene) scape?.setScene(scapeScene)
+    scape?.setIntensity(level)
+  }
+}
+
 function startScape(saga) {
+  scapeSaga = saga
   if (!saga?.score || !audio.sfx || !audio.storySound) return null
   const ctx = sfx.context()
   const out = sfx.musicOut()
@@ -233,6 +252,7 @@ function startMission(script) {
   missionOffer.value = null
   if (narrator) {
     prepareLines(missionLines(script, narrator, saga)) // in the background
+    scapeScene = null
     scape = startScape(saga)
     // get the episode's recorded scenes ready while the title music plays
     const ctx = sfx.context()
@@ -286,6 +306,7 @@ function offerNext(script) {
     if (!missionOffer.value) return
     sfx.play('kudos', { wait: false })
     const key = await listenFor(missionOffer.value.options, { timeoutMs: Math.max(5000, (missionOffer.value.remainingS - 1) * 1000) })
+    await afterListening()
     if (key && missionOffer.value) answerOffer(key)
   })
 }
@@ -378,7 +399,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
           const out = mission.update(live)
           for (const e of out.events) {
             if (e.type === 'loop') loopSaid = true
-            if (e.type === 'scene') scape?.setScene(e.scene)
+            if (e.type === 'scene') { scapeScene = e.scene; scape?.setScene(e.scene) }
             if (e.type === 'spatial') scape?.spatial(e.name)
             if (scape) {
               level = intensityFor(e.type, level)
