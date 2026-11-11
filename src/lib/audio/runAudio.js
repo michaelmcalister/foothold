@@ -165,7 +165,13 @@ function askAloud() {
     const s = scape
     s?.duck(true)
     sfx.play('kudos', { wait: false }) // a little blip: the microphone is open, say your answer
-    const key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
+    micOpen = true // hands off the phone's sound until the answer is in (see shouldWake)
+    let key = null
+    try {
+      key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
+    } finally {
+      micOpen = false
+    }
     await afterListening()
     scape?.duck(false)
     if (key) applyAnswer(key)
@@ -218,8 +224,15 @@ async function afterListening({ force = false } = {}) {
 
 // During a run, any tap wakes the effects (iPhone may only let sound restart
 // from a touch), and coming back to the app starts them fresh if needed.
-const onTouch = () => sfx.resume()
-const onVisible = () => { if (document.visibilityState === 'visible' && sfx.sound.state !== 'running' && isIOSApp()) afterListening({ force: true }) }
+// While the microphone is open the iPhone is in record mode and pauses web
+// sound. Waking the sound then would switch the phone back to playback and
+// cut the microphone off mid answer, so nothing wakes it until the answer is in.
+let micOpen = false
+export function shouldWake({ mic = micOpen, state = sfx.sound.state } = {}) {
+  return !mic && state !== 'running' && state !== 'none'
+}
+const onTouch = () => { if (!micOpen) sfx.resume() }
+const onVisible = () => { if (document.visibilityState === 'visible' && shouldWake() && isIOSApp()) afterListening({ force: true }) }
 function wakeOnTouch(on) {
   if (typeof document === 'undefined') return
   document[on ? 'addEventListener' : 'removeEventListener']('pointerdown', onTouch, { capture: true, passive: true })
@@ -367,7 +380,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   // anywhere, or coming back to the app, wakes them too.
   let quiet = 0
   keepAwake = setInterval(() => {
-    if (sfx.sound.state === 'running' || sfx.sound.state === 'none') { quiet = 0; return }
+    if (!shouldWake()) { quiet = 0; return }
     sfx.resume()
     if (++quiet >= 2 && isIOSApp()) { quiet = 0; afterListening({ force: true }) }
   }, 2000)

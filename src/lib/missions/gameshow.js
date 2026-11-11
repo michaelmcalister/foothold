@@ -70,7 +70,8 @@ export const QUIZ_SAGA = {
 }
 
 const intro = (show) => [
-  { at: 3, kind: 'recover', seconds: 150, chapter: 'Welcome', scene: 'showfloor', who: 'announcer', fx: 'cheer', say: `From the Foothold studios, it is the trivia show you play on your feet. It is Run Your Mouth! ${show}. And here is your host, Tex Tilley!` },
+  // no scene: the studio audience bed sounded like static under the voices
+  { at: 3, kind: 'recover', seconds: 150, chapter: 'Welcome', who: 'announcer', fx: 'cheer', say: `From the Foothold studios, it is the trivia show you play on your feet. It is Run Your Mouth! ${show}. And here is your host, Tex Tilley!` },
   { at: 14, kind: 'story', who: 'tex', fx: 'hostin', say: '[excited] Thank you, thank you! What a crowd! Here is how it works. Answer out loud or tap, and quicker answers score more.' },
   { at: 26, kind: 'story', who: 'tex', say: 'Sprints pay bonus points, and so does every hill you climb. Let us play!' },
 ]

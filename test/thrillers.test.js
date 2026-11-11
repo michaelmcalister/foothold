@@ -449,3 +449,14 @@ describe('listening keeps going', async () => {
     delete globalThis.window
   })
 })
+
+describe('the microphone keeps the phone while it listens', () => {
+  it('never wakes the sound while the mic is open (it would cut the mic off on iPhone)', async () => {
+    const { shouldWake } = await import('../src/lib/audio/runAudio.js')
+    expect(shouldWake({ mic: true, state: 'interrupted' })).toBe(false)
+    expect(shouldWake({ mic: true, state: 'suspended' })).toBe(false)
+    expect(shouldWake({ mic: false, state: 'interrupted' })).toBe(true)
+    expect(shouldWake({ mic: false, state: 'running' })).toBe(false)
+    expect(shouldWake({ mic: false, state: 'none' })).toBe(false)
+  })
+})
