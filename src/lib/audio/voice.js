@@ -143,9 +143,11 @@ export async function asAnnouncement(fn) {
     if (announcing) return fn()
     announcing++
     await audioMix({ duck: true })
+    resume() // changing the sound mode can pause the effects: wake them
     try { return await fn() } finally {
       announcing--
       await audioMix({ duck: false })
+      resume()
     }
   }
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null

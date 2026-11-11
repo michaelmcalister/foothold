@@ -365,6 +365,7 @@ let ctx = null
 let limiter = null
 let sfxBus = null
 let musicBus = null
+let wasRunning = false // once sound has played, an interruption is woken back up
 let speaker = null // the last stop before the speaker: the top bar's mute button turns it to zero
 
 const Ctor = () => (typeof window === 'undefined' ? null : window.AudioContext || window.webkitAudioContext || null)
@@ -396,7 +397,14 @@ export function context() {
   musicBus.gain.value = 0.9
   musicBus.connect(limiter)
   sound.state = ctx.state
-  ctx.onstatechange = () => { sound.state = ctx.state }
+  ctx.onstatechange = () => {
+    sound.state = ctx.state
+    // iPhone app: switching the app's sound mode (ducking Spotify under a line,
+    // or a phone call) interrupts Web Audio. Wake it straight back up once it
+    // has been running, so effects and mission sound don't go quiet for good.
+    if (ctx.state !== 'running' && ctx.state !== 'closed' && wasRunning) setTimeout(() => ctx?.resume?.().catch(() => {}), 150)
+    if (ctx.state === 'running') wasRunning = true
+  }
   return ctx
 }
 
