@@ -7,6 +7,10 @@
 //      attack on the harbour, and found by recreational divers in 2006.
 //   3. The Rat Nests: the 120,000 lost things found under the floors of the
 //      Hyde Park Barracks, and a bonnet with a name stitched inside.
+//   4. The Writing on the Rocks: the carvings at the North Head quarantine
+//      station, and a kangaroo cut by Sam's great grandad in 1919.
+//   5. The Pinchgut Prank: a cannon booms over the harbour at midnight, like
+//      Lightoller's prank of 1900. (A film crew, with a very big speaker.)
 //
 // Pure data (imports nothing): series/index.js hands it on. Same beat format
 // as signal.js. Sounds come from audio/kits/locals.js and the city scenes in
@@ -38,6 +42,22 @@
 //     rubbish, including bonnets, rosaries, clay pipes and playing cards. It
 //     has been World Heritage listed since 2010. (Museums of History NSW;
 //     Hyde Park Barracks, Wikipedia)
+//   - North Head Quarantine Station ran from 1832 to 1984; over 13,000 people
+//     were held there; at least 854 rock carvings are recorded (likely over
+//     1,000), mostly by the wharf and at Old Man's Hat. The first ship held
+//     was the Bussorah Merchant (1828). In February 1919 about 900 soldiers
+//     from the Argyllshire walked off and were moved to the Sydney Cricket
+//     Ground. North Head's little penguins are the only mainland breeding
+//     colony in NSW. (North Head Quarantine Station, Wikipedia)
+//   - Pinchgut: in 1788 the convict Thomas Hill spent a week there on bread
+//     and water. Fort Denison was finished in 1857 for fear of a Russian
+//     attack in the Crimean War; its Martello tower is the only one in
+//     Australia and the last in the British Empire, with walls 3.3 to 6.7 m
+//     thick, and its guns were too slow to be much use. The one o'clock gun
+//     has fired since 1906 (stopped in the war, back in 1986). In 1900
+//     Charles Lightoller, later an officer on the Titanic, fired a cannon
+//     there as a prank and broke windows. A shell from USS Chicago hit the
+//     tower in 1942. (Fort Denison, Wikipedia)
 //
 // Real people are only mentioned, never voiced; the losses of 1942 are
 // spoken of with respect. Everyone with lines is made up. House rules:
@@ -64,7 +84,7 @@ const surge = (at, seconds, who, say, recover, extra = {}) => ({ at, kind: 'surg
 export const SAGA = {
   id: 'sydney',
   title: 'Sydney After Dark',
-  blurb: 'True Sydney mysteries on night runs: sealed tunnels under the city, a lost submarine, and treasure hidden by rats.',
+  blurb: 'True Sydney mysteries on night runs: sealed tunnels, a lost submarine, treasure hidden by rats, carvings at North Head and a midnight cannon.',
   note: 'The history is real; the characters and clues are made up. The tunnels, the wreck and the archives are off limits, so the story keeps you above ground.',
   narrator: 'sydney-narrator',
   score: 'deepcover',
@@ -198,6 +218,7 @@ export const EPISODES = [
     id: 'sydney-barracks',
     episode: 3,
     previously: 'Previously on Sydney After Dark: a submarine that vanished in 1942, and the weekend divers who found it.',
+    next: 'Next time on Sydney After Dark: a thousand carvings on the rocks at North Head, and a kangaroo cut into stone in 1919.',
     saga: 'sydney',
     title: 'The Rat Nests',
     series: 'thriller',
@@ -247,16 +268,142 @@ export const EPISODES = [
       { at: 1120, kind: 'story', who: 'sd-june', say: '[laughs] You made it! Look. The bonnet, and the scrap from the rats’ nest. Two halves of the same bit of cloth, apart for a hundred and fifty years.' },
       { at: 1175, kind: 'story', who: 'sd-june', say: 'A rat stole half of Bridget’s bonnet, so she must have left the rest in church. We will put them on show together. Her story, home at last.' },
       { at: 1230, kind: 'steady', seconds: 150, chapter: 'Goodnight, Sydney', say: 'Cool down now with an easy jog or a walk back down Macquarie Street.', easyNudge: EASY },
-      { at: 1260, kind: 'quiz', who: 'sd-ivy', say: 'Last question of the season. In 2010 the Barracks joined a famous list. Which one?',
+      { at: 1260, kind: 'quiz', who: 'sd-ivy', say: 'Last one. In 2010 the Barracks joined a famous list. Which one?',
         options: [{ key: 'A', label: 'World Heritage' }, { key: 'B', label: 'Tallest buildings' }, { key: 'C', label: 'Best cafes' }], answer: 'A',
         right: line('sd-ivy', 'World Heritage! One of eleven Australian convict sites. Not bad for a building full of rats.'),
         wrong: line('sd-ivy', 'It was World Heritage. One of eleven Australian convict sites. Not bad for a building full of rats.') },
-      { at: 1320, kind: 'finale', say: 'Sydney After Dark is complete. A bell rung by rain, a submarine at rest, and a bonnet made whole. Goodnight, Sydney. Goodnight, Runner.' },
+      { at: 1320, kind: 'finale', say: 'The Rat Nests is solved. A scrap from a rat’s nest, a bonnet in a church, and Bridget’s story home at last. To be continued.' },
+    ],
+  },
+  {
+    id: 'sydney-qstation',
+    episode: 4,
+    previously: 'Previously on Sydney After Dark: rats under the Barracks floors, and half a bonnet that waited 150 years.',
+    next: 'Next time on Sydney After Dark, the finale: a cannon fired over the harbour at midnight, and the oldest prank in Sydney.',
+    saga: 'sydney',
+    title: 'The Writing on the Rocks',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 24,
+    difficulty: 'Steady effort',
+    blurb: 'Episode 4. At North Head, people kept apart from Sydney carved over a thousand messages into the rocks. One is a kangaroo, cut by Sam’s great grandad.',
+    place: { name: 'Q Station, North Head, Manly', lat: -33.8040, lng: 151.2860 },
+    loop: line('sd-sam', 'A loop! Like the ferry. Manly and back, all day long.'),
+    early: line('sd-ivy', 'That is fine to stop there. The rocks have kept these messages for nearly two hundred years.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Manly', scene: 'harbour', say: 'Manly, at dusk. The last ferries churn in and out, and North Head rises dark against the sea. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', who: 'sd-sam', fx: 'horn', say: 'Sam here! Off shift, and I need your legs. My family has a legend. Great grandad Joe carved a kangaroo on a rock at North Head. In 1919.' },
+      { at: 110, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'And I need a story. North Head was Sydney’s quarantine station. Ships with sickness on board stopped here, and everyone waited it out.' },
+      { at: 165, kind: 'quiz', who: 'sd-ivy', say: 'Warm up. The quarantine station opened in 1832. When did it finally close?',
+        options: [{ key: 'A', label: '1984' }, { key: 'B', label: '1850' }, { key: 'C', label: '1919' }], answer: 'A',
+        right: line('sd-ivy', '1984! More than 150 years of ships, and over 13,000 people kept here till they were safe to go.'),
+        wrong: line('sd-ivy', 'It closed in 1984. More than 150 years of ships, and over 13,000 people kept here till they were safe to go.') },
+      surge(230, 30, 'sd-sam', 'Pick it up for 30 seconds along the Manly foreshore!', 110, { chapter: 'North Head', fx: 'whoosh' }),
+      { at: 310, kind: 'story', scene: 'ranges', spatial: 'owl', say: 'The road climbs onto the headland. Old sandstone buildings sit in the bush, quiet and pale in the dusk. This is Q Station.' },
+      { at: 365, kind: 'story', who: 'sd-ivy', say: 'While people waited here, they carved messages into the rocks. Names, dates, ships, pictures. In English, and in many other languages too.' },
+      { at: 420, kind: 'quiz', who: 'sd-ivy', say: 'How many carvings do people think are on these rocks?',
+        options: [{ key: 'A', label: 'Over 1,000' }, { key: 'B', label: 'About 10' }, { key: 'C', label: 'About 100' }], answer: 'A',
+        right: line('sd-ivy', 'Over 1,000! At least 854 recorded so far. Finding Joe’s kangaroo will take some looking.'),
+        wrong: line('sd-ivy', 'It is over 1,000. At least 854 recorded so far. Finding Joe’s kangaroo will take some looking.') },
+      { at: 485, kind: 'story', who: 'sd-sam', say: 'Here is the thing. Joe came home from the war in 1919 on a ship called the Argyllshire. They kept everyone here, in case of the Spanish flu.' },
+      { at: 540, kind: 'story', who: 'sd-sam', say: '[laughs] And the family story says Joe and hundreds of his mates got fed up and just walked out. Is that even true?' },
+      { at: 590, kind: 'puzzle', who: 'sd-ivy', say: 'It is true! About 900 soldiers walked off North Head in February 1919. Where were they moved to?',
+        options: [{ key: 'A', label: 'The Cricket Ground' }, { key: 'B', label: 'The Opera House' }, { key: 'C', label: 'Taronga Zoo' }], answer: 'A',
+        right: line('sd-ivy', 'The Cricket Ground! The Sydney Cricket Ground. Imagine camping on the pitch.'),
+        wrong: line('sd-ivy', 'It was the Cricket Ground. The Sydney Cricket Ground. Imagine camping on the pitch.') },
+      { at: 655, kind: 'choice', id: 'way', who: 'sd-sam', say: 'Most carvings are by the old wharf, or up at a rock called Old Man’s Hat. Which first?',
+        options: [
+          { key: 'A', label: 'The old wharf', flag: 'wharf', say: line('sd-sam', 'The wharf! Down to the water.') },
+          { key: 'B', label: 'Old Man’s Hat', flag: 'hat', say: line('sd-sam', 'Old Man’s Hat! Up the hill, then.') },
+        ],
+        default: 'A', timeout: line('sd-sam', 'The wharf, then. Go!') },
+      surge(705, 30, 'sd-sam', 'Down to the wharf! Pick it up for 30 seconds!', 110, { if: 'wharf', chapter: 'The carvings', fx: 'whoosh' }),
+      surge(706, 30, 'sd-sam', 'Up to Old Man’s Hat! Pick it up for 30 seconds!', 110, { unless: 'wharf', chapter: 'The carvings', fx: 'whoosh' }),
+      { at: 785, kind: 'story', if: 'wharf', say: 'By the old wharf, the sandstone is covered in letters. Ship names, dates from the 1800s, a sailing ship cut so finely you can count its ropes.' },
+      { at: 786, kind: 'story', unless: 'wharf', say: 'Up at Old Man’s Hat, a great overhang of rock is crowded with carvings, some so old the wind has nearly rubbed them away.' },
+      { at: 840, kind: 'steady', seconds: 150, chapter: 'The search', say: 'Settle into an easy pace while Sam searches with his torch.', easyNudge: EASY },
+      { at: 870, kind: 'story', who: 'sd-sam', say: 'There is a shield, a ship, some names. Nineteen nineteen. Lots from nineteen nineteen. No kangaroo yet. Come on, Joe.' },
+      { at: 925, kind: 'quiz', who: 'sd-ivy', say: 'While Sam looks. Little penguins nest on North Head. What makes this colony special?',
+        options: [{ key: 'A', label: 'Only mainland one in NSW' }, { key: 'B', label: 'They are purple' }, { key: 'C', label: 'They live in trees' }], answer: 'A',
+        right: line('sd-ivy', 'The only mainland one in NSW! So we stay on the path and keep our torches low.'),
+        wrong: line('sd-ivy', 'It is the only mainland one in NSW. So we stay on the path and keep our torches low.') },
+      { at: 990, kind: 'story', who: 'sd-sam', fx: 'found', say: '[excited] Got it! A little kangaroo, mid hop. J. K. 1919. Argyllshire. And underneath, two words. Home soon.' },
+      { at: 1040, kind: 'story', who: 'sd-sam', say: '[sighs] Home soon. And he was. Three weeks later he married my great nan. Mate, I need to show Mum this.' },
+      surge(1090, 45, 'sd-sam', 'The last ferry back to the city! Pick it up for 45 seconds to the wharf!', 120, { chapter: 'The last ferry', fx: 'horn' }),
+      { at: 1175, kind: 'story', scene: 'harbour', say: 'You make the ferry as the ropes come in. North Head slides away behind you, its carvings keeping their stories in the dark.' },
+      { at: 1225, kind: 'steady', seconds: 150, chapter: 'Across the water', say: 'Cool down now with an easy jog or a walk when you reach the other side.', easyNudge: EASY },
+      { at: 1255, kind: 'quiz', who: 'sd-ivy', say: 'Last one. The first ship ever held at the quarantine station arrived in 1828. What was it called?',
+        options: [{ key: 'A', label: 'Bussorah Merchant' }, { key: 'B', label: 'Endeavour' }, { key: 'C', label: 'Titanic' }], answer: 'A',
+        right: line('sd-ivy', 'The Bussorah Merchant! The first of at least 580 ships to wait at North Head.'),
+        wrong: line('sd-ivy', 'It was the Bussorah Merchant. The first of at least 580 ships to wait at North Head.') },
+      { at: 1315, kind: 'finale', say: 'The Writing on the Rocks is solved. A thousand messages in stone, and one little kangaroo that said home soon. To be continued.' },
+    ],
+  },
+  {
+    id: 'sydney-pinchgut',
+    episode: 5,
+    previously: 'Previously on Sydney After Dark: a thousand carvings at North Head, and a kangaroo that said home soon.',
+    saga: 'sydney',
+    title: 'The Pinchgut Prank',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 25,
+    difficulty: 'Hard effort',
+    blurb: 'Episode 5, the finale. A cannon booms over the harbour at midnight. Fort Denison has done this before, in 1900, as a prank.',
+    place: { name: 'Mrs Macquarie’s Chair, facing Fort Denison', lat: -33.8597, lng: 151.2225 },
+    loop: line('sd-ivy', 'You closed a loop. Round the harbour and home. Perfect finale.'),
+    early: line('sd-ivy', 'Stopping there is fine. The fort has stood since 1857. It will wait for you.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Farm Cove', scene: 'harbour', say: 'The Royal Botanic Garden, near midnight. Across Farm Cove, the Opera House glows, and out in the water sits a small stone fort. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', fx: 'boom', say: 'Then, from the harbour, a deep BOOM. It rolls off the water and rattles the windows along the shore. Every bat in the garden takes off.' },
+      { at: 100, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'Ivy! Did you hear that? That came from Fort Denison. Our finale just walked in the door. Run to Mrs Macquarie’s Chair and tell me what you see.' },
+      { at: 160, kind: 'quiz', who: 'sd-ivy', say: 'While you go. Fort Denison has an old nickname from 1788, when a convict was left there on bread and water. What is it?',
+        options: [{ key: 'A', label: 'Pinchgut' }, { key: 'B', label: 'Rumbletum' }, { key: 'C', label: 'Hungry Rock' }], answer: 'A',
+        right: line('sd-ivy', 'Pinchgut! A week on bread and water would pinch anyone’s gut.'),
+        wrong: line('sd-ivy', 'It is Pinchgut. A week on bread and water would pinch anyone’s gut.') },
+      surge(225, 30, 'sd-ivy', 'Pick it up for 30 seconds round Farm Cove to the point!', 110, { chapter: 'The boom', fx: 'whoosh' }),
+      { at: 305, kind: 'story', spatial: 'boat', say: 'At Mrs Macquarie’s Chair, the fort is right there across the water. A round stone tower, and lights moving on its roof.' },
+      { at: 355, kind: 'story', who: 'sd-frank', say: 'Frank here. Ivy rang me. I know that fort. They built it in the 1850s, scared of a Russian attack. Finished in 1857.' },
+      { at: 410, kind: 'quiz', who: 'sd-frank', say: 'That round tower on Fort Denison is the only one of its kind in Australia. What kind of tower is it?',
+        options: [{ key: 'A', label: 'A Martello tower' }, { key: 'B', label: 'A lighthouse' }, { key: 'C', label: 'A water tower' }], answer: 'A',
+        right: line('sd-frank', 'A Martello tower! The last one built anywhere in the British Empire. Walls up to six metres thick.'),
+        wrong: line('sd-frank', 'It is a Martello tower. The last one built anywhere in the British Empire. Walls up to six metres thick.') },
+      { at: 475, kind: 'story', who: 'sd-frank', say: '[laughs] And here is a funny one. The cannons were nearly useless. By the time they loaded a gun, the ship had already sailed past.' },
+      { at: 530, kind: 'story', fx: 'boom', say: 'BOOM. Another one. A puff of white smoke drifts off the tower. Along the shore, apartment lights flick on, one after another.' },
+      { at: 580, kind: 'story', who: 'sd-ivy', say: '[whispers] Okay, Frank. Is this a real cannon? Who is out there, firing a cannon over Sydney at midnight?' },
+      { at: 630, kind: 'choice', id: 'way', who: 'sd-sam', say: 'Sam here, on the harbour patrol radio! I can pick you up at the Opera House steps, or you can watch from the Botanic Garden wall.',
+        options: [
+          { key: 'A', label: 'Opera House steps', flag: 'boat', say: line('sd-sam', 'Steps it is. I will bring the boat round!') },
+          { key: 'B', label: 'The garden wall', flag: 'wall', say: line('sd-sam', 'The wall. Best view in Sydney. Go!') },
+        ],
+        default: 'A', timeout: line('sd-sam', 'Opera House steps, then. Run!') },
+      surge(680, 45, 'sd-sam', 'To the Opera House steps! Pick it up for 45 seconds!', 130, { if: 'boat', chapter: 'Out on the water', fx: 'whoosh' }),
+      surge(681, 45, 'sd-sam', 'Along the garden wall! Pick it up for 45 seconds!', 130, { unless: 'boat', chapter: 'The wall', fx: 'whoosh' }),
+      { at: 780, kind: 'story', if: 'boat', spatial: 'boat', say: 'Sam’s boat noses up to the steps. You climb in, and the harbour opens around you, black and glittering.' },
+      { at: 781, kind: 'story', unless: 'boat', say: 'From the sandstone wall, you can see the whole fort, the tower, and a small crowd of people with cameras on its roof.' },
+      { at: 840, kind: 'steady', seconds: 150, chapter: 'The prank', say: 'Settle into an easy pace while Frank tells you about the oldest prank in Sydney.', easyNudge: EASY },
+      { at: 870, kind: 'story', who: 'sd-frank', say: 'In 1900, a young sailor called Charles Lightoller and two mates snuck onto the fort and fired a cannon, to fake an attack. It broke windows.' },
+      { at: 930, kind: 'quiz', who: 'sd-frank', say: 'Lightoller became famous later on, as an officer on a very famous ship. Which one?',
+        options: [{ key: 'A', label: 'The Titanic' }, { key: 'B', label: 'The Endeavour' }, { key: 'C', label: 'The Bounty' }], answer: 'A',
+        right: line('sd-frank', 'The Titanic! The prankster of Pinchgut became an officer on the Titanic. He survived it, too.'),
+        wrong: line('sd-frank', 'It was the Titanic. The prankster of Pinchgut became an officer on the Titanic. He survived it, too.') },
+      { at: 995, kind: 'story', who: 'sd-sam', fx: 'found', say: '[laughs] Mystery solved! It is a film crew! They are shooting a documentary about the 1900 prank. With a cannon sound out of a speaker. A very big speaker.' },
+      { at: 1050, kind: 'story', who: 'sd-ivy', say: '[sighs] They forgot to tell the neighbours. Three hundred phone calls to the police later, they are packing up. Nobody is in trouble. Much.' },
+      { at: 1100, kind: 'story', who: 'sd-frank', say: 'And look at the tower, in the floodlights. That dent. In 1942, a shell from the USS Chicago hit it, the night of the midget subs. Still there.' },
+      surge(1160, 45, 'sd-ivy', 'One last run for the finale! Pick it up for 45 seconds round to the Opera House!', 130, { chapter: 'Finale', fx: 'whoosh' }),
+      { at: 1250, kind: 'story', scene: 'city', say: 'You stop on the Opera House steps, breathing hard. The fort sits quiet now. The city hums. Ivy hits record one last time.' },
+      { at: 1300, kind: 'steady', seconds: 150, chapter: 'Goodnight, Sydney', say: 'Cool down now with an easy jog or a walk along the harbour.', easyNudge: EASY },
+      { at: 1330, kind: 'quiz', who: 'sd-ivy', say: 'Last question of the season. Every day since 1906, apart from a long break, a gun on Fort Denison has fired at what time?',
+        options: [{ key: 'A', label: 'One o’clock' }, { key: 'B', label: 'Midnight' }, { key: 'C', label: 'Six in the morning' }], answer: 'A',
+        right: line('sd-ivy', 'One o’clock! So sailors could set their clocks. Not at midnight. Never at midnight.'),
+        wrong: line('sd-ivy', 'It is one o’clock. So sailors could set their clocks. Not at midnight. Never at midnight.') },
+      { at: 1395, kind: 'story', who: 'sd-ivy', say: 'Tunnels, a lost sub, rats, carvings and a cannon. Thank you for running Sydney with me. This has been Under Sydney.' },
+      { at: 1440, kind: 'finale', say: 'Sydney After Dark is complete. A bell, a submarine, a bonnet, a kangaroo and a cannon. Goodnight, Sydney. Goodnight, Runner.' },
     ],
   },
 ]
 
-export const CHAIN = ['sydney-stjames', 'sydney-sub', 'sydney-barracks']
+export const CHAIN = ['sydney-stjames', 'sydney-sub', 'sydney-barracks', 'sydney-qstation', 'sydney-pinchgut']
 
 export const CAST = {
   'sydney-narrator': { name: 'Narrator', voiceId: 'oKDz3nEzNfwKIVvUwPs0', pitch: 0.85, rate: 0.98 }, // Peter Michael

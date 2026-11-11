@@ -51,6 +51,15 @@
 //   hectares became the regional park, one of the largest remnants of
 //   Cumberland Plain Woodland. The Luxfords trail runs through it.
 //
+// Episode 5, The Lucky Paddle: Tash's race at the Penrith Whitewater
+// Stadium, her missing paddle, and Gus and Lou's wedding (from episode 1).
+// Facts checked (web search, November 2026): the stadium opened in March
+// 1999 for the 2000 Olympic canoe slalom; five 300 kW pumps lift 14 cubic
+// metres a second; a U shaped course about 320 m long with a 5.5 m drop; the
+// lakes are old sand and gravel pits filled by rain and groundwater, not the
+// river; world championships were held there in 2005 and 2025. (Penrith
+// Whitewater Stadium, Wikipedia)
+//
 // Facts in the story and the trivia were checked (web search, November 2026):
 // - Dharug (Darug) Country. The Dharug name for the river is Yandhai; the
 //   Yandhai Nepean Crossing's name means "walking in past and present". The
@@ -331,6 +340,7 @@ export const EPISODES = [
     id: 'penrith-orphans',
     episode: 4,
     previously: 'Previously on River Town: a letter under a St Marys floor, a brass plate at Ropes Creek, and a wedding photo eighty years late.',
+    next: 'Next time on River Town, the finale: Tash’s big race at the Whitewater Stadium, and a lucky paddle that has gone missing.',
     saga: 'penrith',
     title: 'The Orphan Mob',
     series: 'thriller',
@@ -395,9 +405,72 @@ export const EPISODES = [
       { at: 1560, kind: 'finale', say: 'The Orphan Mob is solved. An old tag, a dusk count, and a bush full of families who found a home. Thank you, Runner.' },
     ],
   },
+  {
+    id: 'penrith-whitewater',
+    episode: 5,
+    previously: 'Previously on River Town: an old tag behind Jordan Springs, a dusk kangaroo count, and Duchess, the orphan red.',
+    saga: 'penrith',
+    title: 'The Lucky Paddle',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 26,
+    difficulty: 'Hard effort',
+    blurb: 'The finale. Tash races at the Penrith Whitewater Stadium in an hour, and her lucky paddle has vanished. Everyone from River Town comes to help.',
+    place: { name: 'Penrith Whitewater Stadium, Penrith Lakes', lat: -33.7300, lng: 150.6780 },
+    loop: line('pr-tash', 'A loop! Like the whitewater course. Round and round, and the water never stops.'),
+    early: line('pr-dot', 'That is all right, dear. Tash will race either way. We will save you a seat.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Penrith Lakes', scene: 'harbour', say: 'Penrith Lakes, on a bright Saturday morning. Rowers glide across flat water, and somewhere ahead, rapids roar. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', who: 'pr-tash', fx: 'squelch', say: '[sighs] Tash here. Disaster. My race is in an hour, and my lucky paddle is gone. It was right here on the rack. Now it is not.' },
+      { at: 105, kind: 'story', who: 'pr-dot', say: 'Don’t you worry, dear. River Town is on the case. I have rung everyone. Kev, Col, Ranger Mick, Priya. All of them.' },
+      { at: 160, kind: 'quiz', who: 'pr-dot', say: 'While they come. These calm lakes were once something very different. What?',
+        options: [{ key: 'A', label: 'Sand and gravel pits' }, { key: 'B', label: 'A golf course' }, { key: 'C', label: 'An airport' }], answer: 'A',
+        right: line('pr-dot', 'Sand and gravel pits! Dug out, then filled by rain and groundwater. Not the river, mind.'),
+        wrong: line('pr-dot', 'They were sand and gravel pits. Dug out, then filled by rain and groundwater. Not the river, mind.') },
+      dash(225, 30, 'pr-tash', 'Pick it up for 30 seconds to the whitewater course!', 110, { chapter: 'The course', fx: 'whoosh' }),
+      { at: 305, kind: 'story', scene: 'flood', say: 'The Whitewater Stadium thunders. A U shaped channel of white water, boulders and foam, built for the 2000 Olympics.' },
+      { at: 355, kind: 'story', who: 'pr-sarge', say: 'Kev here. I have done a lap of the boat sheds. No paddle. But there is glitter on the rack. Pink glitter. Very suspicious.' },
+      { at: 410, kind: 'quiz', who: 'pr-tash', say: 'Quick, distract me. Giant pumps push the water back to the top of the course. How much water every second?',
+        options: [{ key: 'A', label: '14 cubic metres' }, { key: 'B', label: '14 buckets' }, { key: 'C', label: '14 bathtubs' }], answer: 'A',
+        right: line('pr-tash', '14 cubic metres a second! Five huge pumps. It is like paddling up a moving mountain.'),
+        wrong: line('pr-tash', 'It is 14 cubic metres a second. Five huge pumps. It is like paddling up a moving mountain.') },
+      { at: 475, kind: 'story', who: 'pr-priya', spatial: 'kookaburra', say: 'Priya here, from the Zig Zag! I am sketching by the finish pool. I saw someone carry a paddle that way, wrapped in ribbon.' },
+      { at: 530, kind: 'story', who: 'pr-col', say: 'Col here, from St Marys. Ribbon and glitter? I have seen that before. My grandkids call it a wedding.' },
+      { at: 585, kind: 'choice', id: 'way', who: 'pr-tash', say: 'A wedding? Here? Is it by the regatta lake, or down on the beach by the boat ramp?',
+        options: [
+          { key: 'A', label: 'The regatta lake', flag: 'regatta', say: line('pr-tash', 'The regatta lake! Where they raced the Olympic rowing.') },
+          { key: 'B', label: 'The boat ramp', flag: 'ramp', say: line('pr-tash', 'The boat ramp! Down by the water.') },
+        ],
+        default: 'A', timeout: line('pr-tash', 'The regatta lake, then. Go!') },
+      dash(635, 30, 'pr-tash', 'To the regatta lake! Pick it up for 30 seconds!', 110, { if: 'regatta', chapter: 'Ribbons', fx: 'whoosh' }),
+      dash(636, 30, 'pr-tash', 'Down to the boat ramp! Pick it up for 30 seconds!', 110, { unless: 'regatta', chapter: 'Ribbons', fx: 'whoosh' }),
+      { at: 715, kind: 'story', if: 'regatta', say: 'Beside the long rowing lake, white chairs stand in rows. Flowers, ribbons, and an arch made of oars. And one paddle.' },
+      { at: 716, kind: 'story', unless: 'regatta', say: 'From the boat ramp you can see it: white chairs by the rowing lake, flowers, ribbons, and an arch made of oars. And one paddle.' },
+      { at: 770, kind: 'steady', seconds: 150, chapter: 'The arch', say: 'Settle into an easy pace while Kev goes to have a word.', easyNudge: K_EASY },
+      { at: 800, kind: 'story', who: 'pr-gus', say: '[laughs] Oh no. Is that Tash’s paddle? We are so sorry. The florist needed one more for the arch. We thought it was spare!' },
+      { at: 855, kind: 'story', who: 'pr-lou', say: 'Gus. Of course it is you. Hi, Runner! Remember us? The bridge? He proposed. Today, I marry him. Apparently with stolen paddles.' },
+      { at: 910, kind: 'quiz', who: 'pr-gus', say: 'Here, a peace offering. This whitewater course was built for the Olympics. Which year?',
+        options: [{ key: 'A', label: '2000' }, { key: 'B', label: '1956' }, { key: 'C', label: '2032' }], answer: 'A',
+        right: line('pr-gus', '2000! It opened in 1999, just in time. And the world championships came back here in 2025.'),
+        wrong: line('pr-gus', 'It was 2000. It opened in 1999, just in time. And the world championships came back here in 2025.') },
+      { at: 975, kind: 'story', fx: 'found', who: 'pr-tash', say: '[excited] My paddle! With a ribbon on it! Okay, I am keeping the ribbon. That is extra lucky now.' },
+      dash(1025, 45, 'pr-tash', 'Ten minutes to race start! Pick it up for 45 seconds back to the course!', 120, { chapter: 'The race', fx: 'whoosh' }),
+      { at: 1110, kind: 'story', scene: 'flood', say: 'At the top of the course, Tash slides into her kayak. The starter counts down. And she is off, into the white water.' },
+      { at: 1160, kind: 'story', who: 'pr-ranger', say: 'Ranger Mick here, on the bank. Look at her go! Through the gates, round the boulders. That girl paddles like a platypus.' },
+      { at: 1215, kind: 'story', fx: 'cheer', say: 'She flies across the finish. The board flashes. A personal best. The whole River Town crew is on its feet, cheering, with a wedding party behind them.' },
+      { at: 1270, kind: 'story', who: 'pr-dot', say: '[laughs] A pocket watch, a ghost train, a love letter, an orphan mob, and now a lucky paddle. What a year, dear. What a town.' },
+      { at: 1320, kind: 'steady', seconds: 180, chapter: 'Celebration', say: 'Cool down now with an easy jog or a walk by the lake. There is wedding cake, apparently.', easyNudge: T_EASY },
+      { at: 1350, kind: 'quiz', who: 'pr-tash', say: 'Last question of River Town! What is the Dharug name for the river through Penrith?',
+        options: [{ key: 'A', label: 'Yandhai' }, { key: 'B', label: 'Wianamatta' }, { key: 'C', label: 'Nepean' }], answer: 'A',
+        right: line('pr-tash', 'Yandhai! You remembered. Wianamatta is South Creek. You are basically a local now.'),
+        wrong: line('pr-tash', 'It is Yandhai. Wianamatta is South Creek. Ask me again next season!') },
+      { at: 1410, kind: 'story', who: 'pr-sarge', say: 'Not bad, Runner. Five cases, five out of five. Same time next season? I will buy the coffee.' },
+      { at: 1460, kind: 'finale', say: 'River Town is complete. A watch, a whistle, a photo, a mob and a paddle. Nobody harmed, everyone home. Thank you, Runner.' },
+    ],
+  },
 ]
 
-export const CHAIN = ['penrith-emuhall', 'penrith-zigzag', 'penrith-duration', 'penrith-orphans']
+export const CHAIN = ['penrith-emuhall', 'penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'penrith-whitewater']
 
 export const CAST = {
   'penrith-narrator': { name: 'Narrator', voiceId: 'oKDz3nEzNfwKIVvUwPs0', pitch: 0.85, rate: 0.98 }, // Peter Michael
