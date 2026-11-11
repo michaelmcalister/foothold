@@ -207,6 +207,25 @@ export async function startMusic({ context = '', shuffle = true } = {}) {
   return done
 }
 
+/**
+ * The music button on the record screen. Pauses Spotify if it's playing,
+ * plays it again if not. Resolves 'paused' or 'playing'. On iPhone a paused
+ * Spotify in the background may refuse to start again: then it says to open
+ * Spotify.
+ */
+export async function toggleMusic() {
+  const st = await call('GET', '/me/player').catch(() => null)
+  if (st?.is_playing) {
+    await call('PUT', '/me/player/pause')
+    return 'paused'
+  }
+  const id = session.deviceId || st?.device?.id
+  await call('PUT', '/me/player/play' + (id ? `?device_id=${encodeURIComponent(id)}` : '')).catch(() => {})
+  await new Promise((r) => setTimeout(r, 600))
+  if (await playingOn(id)) return 'playing'
+  throw new Error('Spotify wouldn\u2019t start again from here. Open Spotify and press play, then come back.')
+}
+
 export async function pauseMusic() { await call('PUT', '/me/player/pause').catch(() => {}) }
 export async function resumeMusic() { await call('PUT', '/me/player/play' + (session.deviceId ? `?device_id=${encodeURIComponent(session.deviceId)}` : '')).catch(() => {}) }
 

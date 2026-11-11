@@ -26,7 +26,7 @@ import { saveResult } from '../../lib/missions/index.js'
 import MissionPicker from '../../components/MissionPicker.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
-import { isLinked as spotifyLinked } from '../../lib/audio/spotify.js'
+import { isLinked as spotifyLinked, toggleMusic } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
 import { offRouteM } from '../../lib/planner.js'
 import { createNavigator } from '../../lib/directions.js'
@@ -177,6 +177,16 @@ function ghostOutcome() {
   return { ...r, label: g.label, totalS: g.totalS, ghost: g.pts.filter((_, i) => i % Math.max(1, Math.ceil(g.pts.length / 1500)) === 0).map((q) => [q.lat, q.lng, Math.round(q.s)]) }
 }
 let pendingGhost = null
+
+// The music button: pause Spotify while a mission talks, or for a breather
+const musicPaused = ref(false)
+const musicBusy = ref(false)
+async function music() {
+  if (musicBusy.value) return
+  musicBusy.value = true
+  try { musicPaused.value = (await toggleMusic()) === 'paused' } catch (e) { toast(e.message) }
+  musicBusy.value = false
+}
 
 function begin() {
   error.value = null
@@ -418,10 +428,19 @@ onBeforeUnmount(() => {})
             <span class="label">{{ rec.mode === 'ride' ? 'km/h' : 'Pace /km' }}</span>
           </div>
         </div>
-        <button v-if="rec.status !== 'acquiring'" class="pocketbtn" type="button" @click="pocket = true">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
-          <span class="pk">Pocket mode</span> <span class="muted">keeps GPS going, unlike the lock button</span>
-        </button>
+        <div v-if="rec.status !== 'acquiring'" class="tools">
+          <button class="pocketbtn" type="button" @click="pocket = true">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            <span class="pk">Pocket mode</span> <span class="muted">keeps GPS going, unlike the lock button</span>
+          </button>
+          <button v-if="spotifyLinked()" class="pocketbtn musicbtn" type="button" :aria-pressed="musicPaused" :disabled="musicBusy" @click="music">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="M9 17V5l10-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><circle cx="6.5" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2" /><circle cx="16.5" cy="15" r="2.5" fill="none" stroke="currentColor" stroke-width="2" />
+              <path v-if="musicPaused" d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <span class="pk">{{ musicPaused ? 'Play music' : 'Pause music' }}</span>
+          </button>
+        </div>
         <div class="controls">
           <button v-if="rec.status === 'recording'" class="btn secondary" type="button" @click="pause">Pause</button>
           <button v-else-if="rec.status === 'paused'" class="btn secondary" type="button" @click="resume">Resume</button>
@@ -496,6 +515,9 @@ onBeforeUnmount(() => {})
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; border-radius: 12px;
   background: var(--soft); color: var(--ink); font: inherit; font-weight: 750; cursor: pointer; text-align: left;
 }
+.tools { display: flex; gap: 8px; }
+.tools .pocketbtn { flex: 1 1 auto; min-width: 0; }
+.tools .musicbtn { flex: 0 0 auto; width: auto; }
 .pocketbtn svg, .pocketbtn .pk { flex: none; white-space: nowrap; }
 .pocketbtn .muted { font-weight: 500; font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turnstrip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--on-ink); font-weight: 750; }
