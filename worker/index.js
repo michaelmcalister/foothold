@@ -55,6 +55,16 @@ const modeOf = (v, fallback = 'run') => {
 }
 
 // ---- CORS, for the app when it's served from somewhere else (GitHub Pages) ----
+// Add the CORS headers to a response. Responses from the cache, R2 or
+// fetch() have read-only headers (setting one throws), so copy it first.
+// The website itself never needs them; the iPhone and Android apps do.
+export function withCors(res, cors) {
+  if (!Object.keys(cors).length) return res
+  const out = new Response(res.body, res)
+  for (const [k, v] of Object.entries(cors)) out.headers.set(k, v)
+  return out
+}
+
 function corsHeaders(req, env) {
   const origin = req.headers.get('origin')
   if (!origin) return {}
@@ -822,35 +832,30 @@ export async function handleApi(req, env, ctx) {
     const ai = aiConfig(env) // AI built plans (Claude), when its key is set
     if (ai) out.ai = ai
     res = json(out)
-    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-    return res
+    return withCors(res, cors)
   }
   // Public, rate limited: the voice coach speaks on the practice map too
   if (url.pathname === '/api/tts' && req.method === 'POST') {
     res = await handleTts(req, env)
-    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-    return res
+    return withCors(res, cors)
   }
   // Public: recorded ambience and music (made once with ElevenLabs, then served from R2)
   {
     const m = /^\/api\/audio\/(ambience|track|sfx)\/([a-z0-9-]{1,40})$/.exec(url.pathname)
     if (m && req.method === 'GET') {
       res = await handleAudio(req, env, m[1], m[2])
-      for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-      return res
+      return withCors(res, cors)
     }
   }
   // Public, rate limited: heights for the elevation chart (grid corners only, never the route)
   // Public, rate limited: snap a drawn route to paths you can run
   if (url.pathname === '/api/route' && req.method === 'POST') {
     res = await handleRoute(req, env)
-    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-    return res
+    return withCors(res, cors)
   }
   if (url.pathname === '/api/elevation' && req.method === 'POST') {
     res = await handleElevation(req, env)
-    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-    return res
+    return withCors(res, cors)
   }
   // Public, rate limited and spend capped: AI built plans work on the practice map too.
   // A signed-in player is also limited per account.
@@ -865,8 +870,7 @@ export async function handleApi(req, env, ctx) {
       console.error('ai plan route', e?.message) // never the request body
       res = err('Something went wrong on our side. Try again in a moment.', 500)
     }
-    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-    return res
+    return withCors(res, cors)
   }
   try {
     const who = await userFor(req, env)
@@ -880,8 +884,7 @@ export async function handleApi(req, env, ctx) {
       res = err('Something went wrong on our side. Try again in a moment.', 500)
     }
   }
-  for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
-  return res
+  return withCors(res, cors)
 }
 
 export default {
