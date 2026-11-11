@@ -37,7 +37,7 @@ function fakeCtx() {
   }
 }
 
-const NEW = ['penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'penrith-whitewater', 'bondi-breakers', 'druitt-relay', 'sydney-stjames', 'sydney-sub', 'sydney-barracks', 'sydney-qstation', 'sydney-pinchgut']
+const NEW = ['penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'penrith-whitewater', 'bondi-breakers', 'bondi-bronte', 'bondi-coogee', 'bondi-lighthouse', 'bondi-duke', 'druitt-relay', 'sydney-stjames', 'sydney-sub', 'sydney-barracks', 'sydney-qstation', 'sydney-pinchgut']
 const ep = (id) => MISSIONS.find((m) => m.id === id)
 
 describe('the Sydney local stories', () => {
