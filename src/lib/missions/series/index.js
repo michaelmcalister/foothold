@@ -16,5 +16,6 @@ import * as catalpa from './catalpa.js'
 import * as minmin from './minmin.js'
 import * as opal from './opal.js'
 import * as tunnels from './tunnels.js'
+import * as canberra from './canberra.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra].filter((s) => s.EPISODES.length)
