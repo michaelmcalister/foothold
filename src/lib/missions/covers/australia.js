@@ -13,8 +13,8 @@ function scene(o) {
     if (o.stars) s += h.stars(rand, o.stars, { bottom: H * 0.5 })
     s += `<circle cx="${o.sun[0]}" cy="${o.sun[1]}" r="${o.sun[2]}" fill="url(#${u}g)"/>`
     for (const [y, amp, colour, bumps] of o.hills) s += h.hill(rand, y, amp, colour, bumps)
-    s += o.mark(rand, h)
     s += `<rect x="0" y="${o.ground[0]}" width="${W}" height="${H - o.ground[0]}" fill="${o.ground[1]}"/>`
+    s += o.mark(rand, h)
     s += h.runner(o.runner?.[0] ?? 112, o.runner?.[1] ?? 360, 62, '#05070C', !!o.runner?.[2], o.rim)
     return s
   }
@@ -25,8 +25,12 @@ const tiger = scene({
   sky: [[0, '#0E1A14'], [0.5, '#2E4A3A'], [0.8, '#C98A3A'], [1, '#F1C27A']], glow: '#F6D58E', sun: [210, 190, 60], stars: 30,
   hills: [[170, 40, '#30443A', 2], [230, 18, '#1C2C24', 3]], ground: [300, '#14211A'], rim: '#E8A33D',
   mark: (rand, h) => {
-    let s = '<path d="M60 238 q30 -12 70 -6 l14 -6 l6 4 l-8 8 q-10 10 -30 10 l-40 0 q-14 0 -26 10 l-4 -2 q8 -12 18 -18 Z" fill="#B87A3A"/>'
-    for (let i = 0; i < 6; i++) s += `<rect x="${78 + i * 9}" y="232" width="3" height="12" fill="#3A2412"/>`
+    // body, head with ears, stiff tail and four legs, side on
+    let s = '<ellipse cx="100" cy="236" rx="38" ry="11" fill="#B87A3A"/>'
+    s += '<ellipse cx="144" cy="230" rx="12" ry="8" fill="#B87A3A"/><path d="M138 223 l4 -8 l4 7 Z M146 222 l5 -7 l2 8 Z" fill="#B87A3A"/>'
+    s += '<path d="M63 234 q-22 2 -36 10" stroke="#B87A3A" stroke-width="5" fill="none" stroke-linecap="round"/>'
+    for (const x of [74, 84, 116, 126]) s += `<rect x="${x}" y="240" width="5" height="18" rx="2" fill="#B87A3A"/>`
+    for (let i = 0; i < 7; i++) s += `<rect x="${72 + i * 7}" y="227" width="3" height="13" fill="#3A2412"/>`
     return s + h.gum(rand, 250, 260, 70, '#0F1A14')
   },
 })
@@ -99,7 +103,7 @@ const hawkesbury = scene({
 const nugget = scene({
   sky: [[0, '#2A1A3A'], [0.5, '#8A5A6A'], [0.8, '#F2B05A'], [1, '#FFE6A8']], glow: '#FFE08A', sun: [200, 230, 60],
   hills: [[220, 20, '#6A5A3A', 3], [246, 10, '#5A4A2A', 4]], ground: [280, '#8A6A3A'], rim: '#FFD34E',
-  mark: () => '<path d="M60 278 q20 -14 40 0 Z" fill="#FFD34E"/><path d="M60 278 q20 -14 40 0" stroke="#FFF2A8" stroke-width="1"/>' +
+  mark: () => '<path d="M46 284 q8 -24 30 -22 q20 -10 34 6 q12 10 0 18 Z" fill="#FFD34E"/><path d="M58 272 q10 -6 18 -2 M88 268 q8 -2 12 4" stroke="#FFF6C8" stroke-width="2" fill="none"/>' +
     '<path d="M220 280 l30 -40 M236 236 q16 -2 24 8" stroke="#3A2A1A" stroke-width="4" fill="none"/>',
 })
 
