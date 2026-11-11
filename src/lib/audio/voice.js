@@ -5,9 +5,9 @@
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
 import { watch } from 'vue'
-import { context, speakerOut } from './sfx.js'
+import { context, speakerOut, resume } from './sfx.js'
 import { audio } from './settings.js'
-import { isAndroidApp } from '../native.js'
+import { isAndroidApp, isNativeApp } from '../native.js'
 
 let unlocked = false
 let player = null // one <audio> element, unlocked on a tap and reused (phones insist)
@@ -172,8 +172,19 @@ async function fetchVoice(text, voiceKey, timeoutMs = 6000, keep = true) {
   return r.blob()
 }
 
+// Inside the app a blob: address won't play in an <audio> element (the
+// iPhone's web view can't load it from the app's own address), so the clip
+// goes in as a data: address there instead.
+const asDataUrl = (blob) => new Promise((resolve, reject) => {
+  const r = new FileReader()
+  r.onload = () => resolve(r.result)
+  r.onerror = () => reject(r.error)
+  r.readAsDataURL(blob)
+})
+
 async function playBlob(blob, text) {
-  const url = URL.createObjectURL(blob)
+  const native = isNativeApp()
+  const url = native ? await asDataUrl(blob) : URL.createObjectURL(blob)
   if (!player) player = new Audio()
   try {
     await new Promise((resolve, reject) => {
@@ -185,12 +196,13 @@ async function playBlob(blob, text) {
       player.play().catch((e) => { clearTimeout(t); reject(e) })
     })
   } finally {
-    URL.revokeObjectURL(url)
+    if (!native) URL.revokeObjectURL(url)
   }
 }
 
 // The same clip through Web Audio (the context the sound effects use, woken by a tap)
 async function playWeb(blob, text) {
+  await resume() // the effects' audio may have gone to sleep since the last sound
   const ctx = context()
   if (!ctx || ctx.state !== 'running') throw new Error('no web audio')
   const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
@@ -211,8 +223,8 @@ async function playWeb(blob, text) {
  * caller fall back to the phone's own voice.
  */
 async function playVoice(blob, text) {
-  try { return await asAnnouncement(() => playBlob(blob, text)) } catch { /* next way */ }
-  try { return await asAnnouncement(() => playWeb(blob, text)) } catch { /* next way */ }
+  try { return await asAnnouncement(() => playBlob(blob, text)) } catch (e) { console.warn('voice element', e?.message || e) /* next way */ }
+  try { return await asAnnouncement(() => playWeb(blob, text)) } catch (e) { console.warn('voice web audio', e?.message || e) /* next way */ }
   return playBlob(blob, text)
 }
 

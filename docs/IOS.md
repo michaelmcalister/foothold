@@ -37,8 +37,8 @@ The app id is `au.net.mcalister.foothold`. It is also the app's link scheme.
 Needs Xcode 26 or later (App Store uploads require it), Node 22 or later, git.
 
 ```
-gh repo clone michaelmcalister/foothold ~/Code/foothold
-cd ~/Code/foothold
+gh repo clone michaelmcalister/foothold ~/Development/foothold
+cd ~/Development/foothold
 npm ci
 npm run ios:init      # first time: build, add the Xcode project, settings, icons
 npm run ios:open      # opens Xcode

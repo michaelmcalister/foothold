@@ -34,7 +34,7 @@ the app's link scheme, so the Auth0 callback is identical on both.
 Needs Android Studio (latest), Node 22 or later.
 
 ```
-cd ~/Code/foothold
+cd ~/Development/foothold
 git pull
 npm ci
 npm run android:sync     # build, copy into the Android project
