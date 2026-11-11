@@ -12,5 +12,6 @@ import * as druitt from './druitt.js'
 import * as sydney from './sydney.js'
 import * as tiger from './tiger.js'
 import * as mahogany from './mahogany.js'
+import * as catalpa from './catalpa.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa].filter((s) => s.EPISODES.length)
