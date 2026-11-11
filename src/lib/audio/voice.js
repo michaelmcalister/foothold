@@ -270,7 +270,7 @@ async function playBlob(blob, text) {
       player.onerror = () => { clearTimeout(t); reject(new Error('playback')) }
       player.src = url
       player.muted = audio.muted
-      player.play().catch((e) => { clearTimeout(t); reject(e) })
+      player.play().then(() => resume()).catch((e) => { clearTimeout(t); reject(e) }) // a playing line can wake stopped effects
     })
   } finally {
     if (!native) URL.revokeObjectURL(url)

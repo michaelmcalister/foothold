@@ -13,6 +13,7 @@ import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
 import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker } from './voice.js'
 import { enqueue, clear } from './queue.js'
+import { isIOSApp } from '../native.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
 import { api } from '../api/index.js'
@@ -202,8 +203,8 @@ export function answerMission(key) {
 // start the effects and the story's soundscape fresh, where it was.
 let scapeSaga = null
 let scapeScene = null
-async function afterListening() {
-  if (!(await reclaimSpeaker())) return
+async function afterListening({ force = false } = {}) {
+  if (!(await reclaimSpeaker()) && !force) return
   const had = !!scape
   scape?.stop(0)
   sfx.rebuildContext()
@@ -213,6 +214,16 @@ async function afterListening() {
     if (scapeScene) scape?.setScene(scapeScene)
     scape?.setIntensity(level)
   }
+}
+
+// During a run, any tap wakes the effects (iPhone may only let sound restart
+// from a touch), and coming back to the app starts them fresh if needed.
+const onTouch = () => sfx.resume()
+const onVisible = () => { if (document.visibilityState === 'visible' && sfx.sound.state !== 'running' && isIOSApp()) afterListening({ force: true }) }
+function wakeOnTouch(on) {
+  if (typeof document === 'undefined') return
+  document[on ? 'addEventListener' : 'removeEventListener']('pointerdown', onTouch, { capture: true, passive: true })
+  document[on ? 'addEventListener' : 'removeEventListener']('visibilitychange', onVisible)
 }
 
 function startScape(saga) {
@@ -350,7 +361,17 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   await session // the iPhone app sets its own mode first, then the run's sounds start
   // iPhone pauses web sound when the mic opens or a call comes in: wake it again
   clearInterval(keepAwake)
-  keepAwake = setInterval(() => { if (sfx.sound.state !== 'running') sfx.resume() }, 2000)
+  wakeOnTouch(false)
+  // If the phone stops the effects mid run (a notification, Siri, a call),
+  // wake them; if they stay stopped, start them fresh (iPhone app). A tap
+  // anywhere, or coming back to the app, wakes them too.
+  let quiet = 0
+  keepAwake = setInterval(() => {
+    if (sfx.sound.state === 'running' || sfx.sound.state === 'none') { quiet = 0; return }
+    sfx.resume()
+    if (++quiet >= 2 && isIOSApp()) { quiet = 0; afterListening({ force: true }) }
+  }, 2000)
+  wakeOnTouch(true)
   sfx.cue('start')
   if (audio.spotifyAutoplay && spotify.isLinked()) {
     musicWaiting.value = false
@@ -452,7 +473,7 @@ export function finishRun({ elapsedS, distanceM }) {
   const m = runMusic
   if (m) enqueue(() => m.stop(6))
   runMusic = null
-  enqueue(async () => { clearInterval(keepAwake); setRunSession(null) }) // after the last word
+  enqueue(async () => { clearInterval(keepAwake); wakeOnTouch(false); setRunSession(null) }) // after the last word
   stopListening()
   return summary
 }
@@ -472,6 +493,7 @@ function stopListening() {
 /** Leaving or discarding: stop talking straight away. */
 export function endRun() {
   clearInterval(keepAwake)
+  wakeOnTouch(false)
   setRunSession(null)
   stopMic()
   runMusic?.stop(0.6)
