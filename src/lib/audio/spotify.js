@@ -174,9 +174,15 @@ const playingOn = async (id) => {
 // app hasn't handed control over yet, so: skip what's already playing, then
 // try a plain play, then a hand over to this phone, and check what's
 // actually playing before calling it a failure.
-export async function startMusic({ context = '', shuffle = true } = {}) {
-  const dev = (await device()) || (onPhone() ? await wakePhoneSpotify() : null)
-  if (!dev) throw new Error('Spotify isn\u2019t awake on this phone. Open Spotify, then come back and try again. Foothold won\u2019t start it on another device.')
+// wake: open the Spotify app if it isn't awake on this phone. Only from the
+// music button, so starting a run never jumps over to Spotify by itself.
+export async function startMusic({ context = '', shuffle = true, wake = false } = {}) {
+  const dev = (await device()) || (wake && onPhone() ? await wakePhoneSpotify() : null)
+  if (!dev) {
+    const e = new Error('Spotify isn\u2019t awake on this phone. Tap Play music to open it, then come back. Foothold won\u2019t start it on another device.')
+    e.asleep = true
+    throw e
+  }
   session = { deviceId: dev.id, volume: dev.volume_percent ?? null, canVolume: !!dev.supports_volume && dev.volume_percent != null }
   const done = { device: dev.name, canVolume: session.canVolume, ios: isIOS() }
   if (dev.is_restricted) throw new Error(RESTRICTED)

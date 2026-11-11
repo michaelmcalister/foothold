@@ -17,7 +17,7 @@ import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
 import { loopTrack } from '../../lib/tracks.js'
 import { readImports } from '../../lib/importers/index.js'
 import { setLastResult } from '../../lib/lastResult.js'
-import { beginRun, finishRun, endRun, missionLive, missionOffer, coachSays, answerMission, answerOffer, setSurroundingsProbe } from '../../lib/audio/runAudio.js'
+import { musicWaiting, beginRun, finishRun, endRun, missionLive, missionOffer, coachSays, answerMission, answerOffer, setSurroundingsProbe } from '../../lib/audio/runAudio.js'
 import GhostPicker from '../../components/GhostPicker.vue'
 import { makeGhost, ghostAt, progressAlong, gapSeconds, gapLine, gapShort, raceResult } from '../../lib/ghost.js'
 import { saveGhostRace } from '../../lib/ghostRace.js'
@@ -26,7 +26,7 @@ import { saveResult } from '../../lib/missions/index.js'
 import MissionPicker from '../../components/MissionPicker.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
-import { isLinked as spotifyLinked, toggleMusic } from '../../lib/audio/spotify.js'
+import { isLinked as spotifyLinked, toggleMusic, startMusic } from '../../lib/audio/spotify.js'
 import { planned, setPlanned } from '../../lib/plannedRoute.js'
 import { offRouteM } from '../../lib/planner.js'
 import { createNavigator } from '../../lib/directions.js'
@@ -184,7 +184,14 @@ const musicBusy = ref(false)
 async function music() {
   if (musicBusy.value) return
   musicBusy.value = true
-  try { musicPaused.value = (await toggleMusic()) === 'paused' } catch (e) { toast(e.message) }
+  try {
+    if (musicWaiting.value) {
+      // Spotify was asleep when the run started: open it now, as asked
+      await startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle, wake: true })
+      musicWaiting.value = false
+      musicPaused.value = false
+    } else musicPaused.value = (await toggleMusic()) === 'paused'
+  } catch (e) { toast(e.message) }
   musicBusy.value = false
 }
 
@@ -433,12 +440,12 @@ onBeforeUnmount(() => {})
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M10 18.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
             <span class="pk">Pocket mode</span> <span class="muted">keeps GPS going, unlike the lock button</span>
           </button>
-          <button v-if="spotifyLinked()" class="pocketbtn musicbtn" type="button" :aria-pressed="musicPaused" :disabled="musicBusy" @click="music">
+          <button v-if="spotifyLinked()" class="pocketbtn musicbtn" type="button" :aria-pressed="musicPaused || musicWaiting" :disabled="musicBusy" @click="music">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path d="M9 17V5l10-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><circle cx="6.5" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2" /><circle cx="16.5" cy="15" r="2.5" fill="none" stroke="currentColor" stroke-width="2" />
-              <path v-if="musicPaused" d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path v-if="musicPaused || musicWaiting" d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
-            <span class="pk">{{ musicPaused ? 'Play music' : 'Pause music' }}</span>
+            <span class="pk">{{ musicPaused || musicWaiting ? 'Play music' : 'Pause music' }}</span>
           </button>
         </div>
         <div class="controls">

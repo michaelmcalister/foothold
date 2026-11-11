@@ -280,6 +280,7 @@ describe('Spotify start', () => {
     setFetch({ 'GET /me/player/devices': { body: { devices: [{ id: 'm1', name: 'MacBook', type: 'Computer', is_active: true }] } } })
     Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'iPhone' }, configurable: true })
     await expect(startMusic()).rejects.toThrow(/another device/)
+    await expect(startMusic()).rejects.toMatchObject({ asleep: true }) // the run doesn't open Spotify: the Play music button does
     expect(calls.filter((c) => c.startsWith('PUT'))).toEqual([])
   })
 

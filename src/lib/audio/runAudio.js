@@ -312,6 +312,9 @@ export function answerOffer(key, { quiet = false } = {}) {
 }
 
 /** Call from the Start button tap (phones only allow sound after a tap). */
+/** True when the run's music couldn't start because Spotify was asleep on this phone. */
+export const musicWaiting = ref(false)
+
 export async function beginRun(mode, { onError = () => {}, missionId = null } = {}) {
   endRun()
   unlock()
@@ -320,14 +323,19 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   if (asks && audio.answerByVoice && canListen()) primeListening()
   // One sound mode for the whole run: playback (ignores the silent switch) on
   // our own, or ambient alongside Spotify. Then the same tap wakes the sound.
-  setRunSession(audio.spotifyAutoplay && spotify.isLinked() ? 'ambient' : 'playback')
+  const session = setRunSession(audio.spotifyAutoplay && spotify.isLinked() ? 'ambient' : 'playback', { fresh: true })
   sfx.resume()
+  await session // the iPhone app sets its own mode first, then the run's sounds start
   // iPhone pauses web sound when the mic opens or a call comes in: wake it again
   clearInterval(keepAwake)
   keepAwake = setInterval(() => { if (sfx.sound.state !== 'running') sfx.resume() }, 2000)
   sfx.cue('start')
   if (audio.spotifyAutoplay && spotify.isLinked()) {
-    spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle }).catch((e) => onError(e.message))
+    musicWaiting.value = false
+    spotify.startMusic({ context: audio.spotifyContext, shuffle: audio.shuffle }).catch((e) => {
+      if (e.asleep) musicWaiting.value = true // the Play music button starts it, opening Spotify only then
+      else onError(e.message)
+    })
   }
   const { paces, target } = await todaysTarget()
   runPaces = paces

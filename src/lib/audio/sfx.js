@@ -408,6 +408,20 @@ export function context() {
   return ctx
 }
 
+/**
+ * Start the shared context again from scratch. The iPhone app calls this
+ * after setting its own sound mode for a run: a context made before that
+ * can say it's running yet play nothing. The next sound makes a new one.
+ */
+export function rebuildContext() {
+  if (!ctx) return
+  try { ctx.onstatechange = null; ctx.close() } catch { /* already gone */ }
+  ctx = null
+  limiter = sfxBus = musicBus = speaker = null
+  wasRunning = false
+  sound.state = 'none'
+}
+
 /** Straight to the speaker (past the limiter), still under the mute button. Voice clips use it. */
 export function speakerOut() {
   return context() ? speaker : null

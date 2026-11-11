@@ -5,7 +5,7 @@
 
 import { CAST, isCast, stripTags } from '../missions/cast.js'
 import { watch, reactive } from 'vue'
-import { context, speakerOut, resume } from './sfx.js'
+import { context, speakerOut, resume, rebuildContext } from './sfx.js'
 import { audio } from './settings.js'
 import { isAndroidApp, isNativeApp, isIOSApp, audioMix } from '../native.js'
 
@@ -120,10 +120,15 @@ function holdSpeaker(on) {
 // it keeps playing when the phone locks, which the web view's 'ambient'
 // mode doesn't, and still plays alongside Spotify.
 let nativeMix = false
-export function setRunSession(kind) {
+// Resolves once the sound mode is set, so the run's first sounds come after it.
+export async function setRunSession(kind, { fresh = false } = {}) {
   runSession = kind
   if (isIOSApp()) {
-    audioMix().then((ok) => { nativeMix = ok; if (!ok) webSession(kind) })
+    if (!kind) return // between runs: leave the app's mode as it is
+    const was = nativeMix
+    nativeMix = await audioMix()
+    if (!nativeMix) return webSession(kind)
+    if (fresh && !was) { rebuildContext(); await resume() } // effects made before the switch go quiet: start them fresh (runs only, before any sound)
     return
   }
   webSession(kind)
@@ -138,19 +143,10 @@ export const runSessionKind = () => runSession
 
 let announcing = 0 // nested announcements share one switch
 export async function asAnnouncement(fn) {
-  if (nativeMix) {
-    // lower Spotify under the line, then bring it back
-    if (announcing) return fn()
-    announcing++
-    await audioMix({ duck: true })
-    resume() // changing the sound mode can pause the effects: wake them
-    try { return await fn() } finally {
-      announcing--
-      await new Promise((r) => setTimeout(r, 450)) // let the last word ring out before Spotify comes back
-      await audioMix({ duck: false })
-      resume()
-    }
-  }
+  // The iPhone app's own mode already mixes with Spotify. Lowering Spotify
+  // under each line meant switching the sound off and on, which silenced the
+  // effects, so the line just plays (the Pause music button is there for that).
+  if (nativeMix) return fn()
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
   if (!s || !('type' in s) || runSession === 'playback' || announcing) return fn()
   const was = s.type
