@@ -1,10 +1,9 @@
 // Run Your Mouth: a trivia game show you play on the run. A cheeky host (Tex
 // Tilley), a sidekick (Milly) and an announcer. Questions are answered out
-// loud or with a tap, and quicker answers score more. (A clock ticks
-// through each ad break and beeps down the last ten seconds: runAudio.js.)
-// The ad breaks are
-// sprints that pay more the harder you push, and every metre you climb earns
-// a hill bonus (engine.js: points, climbPoints). Five shows, unlocking in
+// loud or with a tap, and quicker answers score more. The ad breaks are
+// sprints that pay more the harder you push (a clock ticks through each one
+// and beeps down the last ten seconds, runAudio.js), and every metre you
+// climb earns a hill bonus (engine.js: points, climbPoints). Five shows, unlocking in
 // order. Same beat format as thrillers.js.
 //
 // Every answer here is checked: the marathon is 42.195 km; the emu is on the
