@@ -39,7 +39,8 @@ function fakeCtx() {
 const eps = () => MISSIONS.filter((m) => m.saga === 'twocities')
 
 describe('Two Cities: the episodes', () => {
-  it('has two episodes in order, Kuala Lumpur then Manila', () => {
+  it('has five episodes in order: Kuala Lumpur, Manila, Penang, Cebu, Melaka', () => {
+    expect(CHAIN).toEqual(['twocities-kl', 'twocities-manila', 'twocities-penang', 'twocities-cebu', 'twocities-melaka'])
     expect(eps().map((m) => m.id)).toEqual(CHAIN)
     expect(EPISODES.map((m) => m.id)).toEqual(CHAIN)
     expect(CHAINS.twocities).toEqual(CHAIN)
@@ -48,6 +49,9 @@ describe('Two Cities: the episodes', () => {
     expect(sagaById('twocities')).toMatchObject({ title: 'Two Cities', narrator: 'twocities-narrator', score: 'twocities', isNew: true })
     expect(eps()[0].next).toMatch(/^Next time on Two Cities/)
     expect(eps()[1].previously).toMatch(/^Previously on Two Cities/)
+    for (const m of eps().slice(1)) expect(m.previously, m.id).toMatch(/^Previously on Two Cities/)
+    for (const m of eps().slice(0, 4)) expect(m.next, m.id).toMatch(/^Next time on Two Cities/)
+    for (const m of eps()) expect(m.place, m.id).toBeTruthy()
   })
 
   it('only uses sounds, scenes and speakers that exist', () => {

@@ -32,7 +32,7 @@ describe('where stories are set', () => {
     expect(list[0].mission.id).toBe('penrith-orphans')
     for (let i = 1; i < list.length; i++) expect(list[i].km).toBeGreaterThanOrEqual(list[i - 1].km)
     expect(new Set(list.map((n) => n.place.name)).size).toBe(list.length)
-    expect(list.at(-1).place.name).toMatch(/Manila|Kuala Lumpur/)
+    expect(list.at(-1).place.name).toMatch(/Manila|Kuala Lumpur|Penang|Cebu|Melaka/)
     expect(storiesNear(null).every((n) => n.km === null)).toBe(true)
   })
 

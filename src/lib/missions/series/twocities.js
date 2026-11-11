@@ -1,4 +1,5 @@
-// Two Cities: a two episode chase from Kuala Lumpur to Manila. A tin
+// Two Cities: a five episode chase from Kuala Lumpur to Manila, then
+// Penang, Cebu and Melaka. A tin
 // trader's silk map, the Lantern Map, is taken from a heritage night at
 // Central Market by Victor Kwan, a smooth collector. Mel, a KL night runner
 // with a food channel, and Uncle Raj from the mamak stall send you after him,
@@ -7,7 +8,8 @@
 // calesa in Intramuros, help you race Kwan to the other half. Joined, the map
 // shows Mel and Bea are cousins. Kwan gives in with good grace.
 //
-// Pure data (imports nothing): series/index.js hands it to thrillers.js,
+// Pure data (it only imports the compose.js layout helper, which episodes 3
+// to 5 use): series/index.js hands it to thrillers.js,
 // cast.js, covers.js and audio/library.js. Same beat format as signal.js.
 //
 // History and trivia were checked with a web search (November 2026):
@@ -40,11 +42,28 @@
 //   - nasi lemak rice is cooked in coconut milk; Rizal Park on Manila Bay
 //     holds the Rizal Monument
 //
+//   - George Town, Penang: founded by Francis Light in 1786, named after
+//     King George III; World Heritage in 2008 with Melaka; Ernest
+//     Zacharevic's murals, 2012; Penang Hill is 833 m; CNN called it the
+//     food capital of Malaysia (George Town, Penang, Wikipedia)
+//   - Magellan's Cross, Cebu: planted 21 April 1521; encased in tindalo
+//     wood in 1835 because people chipped pieces off; the Basilica del Santo
+//     Nino church and convent became a National Cultural Treasure in 2021
+//     (Magellan's Cross, Wikipedia)
+//   - Fort San Pedro: begun 1565 under Legazpi, triangular with three
+//     bastions; later a school, a hospital, a zoo and city offices, now a
+//     museum (Fort San Pedro, Wikipedia)
+//   - Melaka: the Portuguese took it in 1511 and built A Famosa; the Dutch
+//     took it in 1641; the British pulled it down in 1806 and 1807, but the
+//     Porta de Santiago gate was saved (who saved it is disputed); the
+//     Stadthuys was begun in 1650 as the Dutch governor's office and is now
+//     a history museum (A Famosa, Stadthuys, Wikipedia)
+//
 // Real people are only mentioned, never voiced; everyone with lines is made
 // up. House rules: tense, never cruel, nobody is hurt, and the collector is
 // only ever outrun, never caught.
 
-const line = (who, text) => ({ who, text })
+import { line, say, quiz, dash, steady, choice, compose } from './compose.js'
 
 const RESULTS = {
   'tc-mel': {
@@ -67,7 +86,7 @@ const surge = (at, seconds, who, say, recover, extra = {}) => ({ at, kind: 'surg
 export const SAGA = {
   id: 'twocities',
   title: 'Two Cities',
-  blurb: 'A stolen silk map, a riddle in old Spanish and a chase from Kuala Lumpur to Manila. Two episodes, two cities, one mystery.',
+  blurb: 'A stolen silk map, a riddle in old Spanish and a chase from Kuala Lumpur to Manila, then on to Penang, Cebu and Melaka. One family, five ports.',
   note: 'The places and the history are real. The map, the chase and everyone in it are made up. The trivia is all true.',
   narrator: 'twocities-narrator',
   score: 'twocities',
@@ -149,6 +168,7 @@ export const EPISODES = [
     id: 'twocities-manila',
     episode: 2,
     previously: 'Previously on Two Cities: a silk map taken in Kuala Lumpur, a riddle in old Spanish, and a collector racing you to Manila.',
+    next: 'Next time on Two Cities: a third lantern, a fort on an island of hawker stalls, and a message hidden in street art.',
     saga: 'twocities',
     title: 'The Walled City',
     series: 'thriller',
@@ -219,12 +239,142 @@ export const EPISODES = [
         wrong: line('tc-bea', 'It is Rizal Park. People call it Luneta too. Families picnic there every Sunday.') },
       { at: 1780, kind: 'story', who: 'tc-ramon', say: 'Next time you visit, the calesa ride is free. For family. And family’s fast friends.' },
       { at: 1805, kind: 'story', say: 'And in one corner of the map, a third little lantern glows over a port nobody can name. Not yet.' },
-      { at: 1835, kind: 'finale', say: 'Two Cities is complete. The Lantern Map is whole, two cousins have found each other, and a collector has a new hobby. Salamat, and terima kasih.' },
+      { at: 1835, kind: 'finale', say: 'The Walled City is solved. The Lantern Map is whole, two cousins have found each other, and a collector has a new hobby. Salamat, and terima kasih.' },
     ],
   },
+  compose({
+    id: 'twocities-penang',
+    episode: 3,
+    previously: 'Previously on Two Cities: two halves of a silk map, joined in a Manila tea shop, and two runners who turned out to be cousins.',
+    next: 'Next time on Two Cities: a wooden cross from 1521, a triangle fort by the sea, and a lantern with a ship inside it.',
+    saga: 'twocities',
+    title: 'The Third Lantern',
+    difficulty: 'Steady effort',
+    blurb: 'The map has a third lantern. Mel follows it to George Town in Penang, where street art, a sea fort and a clan jetty hide the next clue.',
+    place: { name: 'George Town, Penang', lat: 5.4194, lng: 100.3433 },
+    loop: line('tc-mel', 'A loop! Like a trishaw doing the heritage circuit. Steady, steady.'),
+    early: line('tc-mel', 'Stop there, no stress. Go and find a plate of char kway teow. The lantern will wait.'),
+    guide: 'tc-mel', results: RESULTS['tc-mel'], easy: EASY_MEL,
+    open: { scene: 'pasar', chapter: 'George Town', text: 'George Town, on the island of Penang. Hawker smoke, shophouses with wooden shutters, and a warm sea breeze. Start with an easy walk or jog.' },
+    steps: [
+      say('tc-mel', 'Mel here, live from Penang! The third lantern on the map sits right over this island. Bea is on a video call. Say hi, cousin!'),
+      say('tc-bea', '[excited] Hi, cousin! Hi, runner! Under the lantern there is a little drawing. A boy on a bicycle. That is all we have.'),
+      quiz('tc-mel', 'Warm up question. George Town was founded in 1786 by Francis Light. Who did he name it after?', ['King George III', 'His son George', 'Saint George'], 'The town and the fort went up first, the hawker stalls came soon after.'),
+      say(null, 'Down Armenian Street, the walls are painted. Children on a swing, a cat, a boy and a girl riding a real old bicycle fixed to the wall.', { spatial: 'motorbike' }),
+      say('tc-mel', '[curious] That is it! The boy on the bicycle! Look at the wall beside it. Someone painted a tiny lantern in the corner. And an arrow. North.'),
+      quiz('tc-mel', 'The famous bicycle murals here were painted by a Lithuanian artist. In which year?', ['2012', '1986', '1957'], 'Now people queue up to sit on that bicycle for a photo.'),
+      dash(30, 'Follow the arrow north to the sea! Pick it up for 30 seconds!', { chapter: 'To the fort', fx: 'whoosh' }),
+      say(null, 'The street opens onto a green field and the low stone walls of Fort Cornwallis. Old cannons point out to sea.'),
+      say('tc-kwan', 'Good evening. Yes, it is me. Victor Kwan, kind donor. I may have read about this lantern in an old shipping book. Shall we share notes?'),
+      say('tc-mel', '[sarcastic] Oh great. Kwan is helping now. Fine. But you jog behind us, uncle.'),
+      quiz('tc-kwan', 'A question from your new friend. In 2008, George Town became World Heritage, together with which other city?', ['Melaka', 'Kuala Lumpur', 'Singapore'], 'Two old port cities on the same strait. Remember that name, it may matter later.'),
+      choice('tc-mel', 'way', 'The book says the clue is on a jetty. Along the seafront, or through the shophouse lanes?',
+        { label: 'Along the seafront', line: 'Seafront! Sea breeze, sunset, the works.', dash: 'Along the seafront! Pick it up for 30 seconds!', after: 'Along the seafront, ferries hoot across the channel, and the sky over the mainland turns pink and gold.' },
+        { label: 'The shophouse lanes', line: 'Lanes! Mind the trishaws, they own these streets.', dash: 'Through the lanes! Pick it up for 30 seconds!', after: 'Through the lanes, past temples full of incense smoke and coffee shops with marble tables and clacking mahjong tiles.' },
+        'Seafront, then. Go!'),
+      say(null, 'The clan jetties. Wooden houses on stilts, built right out over the water. Each jetty belongs to one family name.', { scene: 'confluence' }),
+      steady('Settle into an easy pace along the jetty planks while Mel reads the family names on each gate.', { chapter: 'The jetties' }),
+      say('tc-mel', '[whispers] Runner. That gate. The family name on it is our great great grandma’s name. The same one from the map.'),
+      say('tc-raj', 'Mel, it is Uncle Raj, on the phone from KL. Penang men told me tin went out from George Town on the big ships. Your family must have sailed from there.'),
+      quiz('tc-mel', 'Penang Hill looks down over all of this. About how high is it?', ['833 metres', '95 metres', '2,000 metres'], 'There is a little train that climbs it. My legs say we take the train.'),
+      say(null, 'At the end of the jetty, an old woman shells prawns on her doorstep. She looks at the map. Then she points at a carved lantern above her door.', { fx: 'lanterns' }),
+      say('tc-bea', '[curious] There is writing inside the lantern. Mel, read it! It says, the sister went to the island of the cross. Cebu!'),
+      dash(45, 'The last ferry back leaves soon! Pick it up for 45 seconds back along the jetty!', { chapter: 'Last ferry', fx: 'gong' }),
+      say('tc-kwan', '[laughs] Cebu. The oldest Spanish city in the islands. I happen to have a cousin there. Everyone has a cousin, it seems.'),
+      steady('Cool down with an easy jog or a walk along the waterfront.', { scene: 'bayside', chapter: 'Waterfront' }),
+      quiz('tc-mel', 'Last one. CNN once called George Town the food capital of where?', ['Malaysia', 'The world', 'The moon'], 'And I am going to prove them right. Char kway teow for everyone.'),
+    ],
+    finale: 'The Third Lantern is found. One family name on a jetty, one new clue, and a collector who jogs at the back. Next stop, Cebu.',
+  }),
+  compose({
+    id: 'twocities-cebu',
+    episode: 4,
+    previously: 'Previously on Two Cities: bicycle murals, a jetty with a family name, and a lantern that said the sister went to the island of the cross.',
+    next: 'Next time on Two Cities: a red square, a gate that survived a fort, and the last lantern on the map.',
+    saga: 'twocities',
+    title: 'The Island of the Cross',
+    difficulty: 'Steady effort',
+    blurb: 'Bea takes over in Cebu, where a wooden cross from 1521 and a triangle fort by the sea hold the fourth lantern.',
+    place: { name: 'Magellan’s Cross, Cebu City', lat: 10.2935, lng: 123.9017 },
+    loop: line('tc-bea', 'A loop! Like a jeepney route. Round and round, always room for one more.'),
+    early: line('tc-bea', 'Stop there, okay lang. Go get some lechon. Cebu has the best in the country.'),
+    guide: 'tc-bea', results: RESULTS['tc-bea'], easy: EASY_BEA,
+    open: { scene: 'jeepneys', chapter: 'Cebu City', text: 'Cebu City in the Philippines. Jeepneys roar, candle sellers call out by the basilica, and the air smells of sea and sweet bread. Start with an easy walk or jog.' },
+    steps: [
+      say('tc-bea', 'Bea here! I flew down from Manila this morning. Mel is on video from Penang. And yes, Kwan is here too. Hello, Kwan.'),
+      say('tc-kwan', 'Good morning. I brought pastries. Ensaymada. It seemed the decent thing to do.'),
+      say(null, 'In a small stone pavilion stands a tall wooden cross. Above it, a painted ceiling shows ships, sailors and a crowd on the shore.'),
+      quiz('tc-bea', 'Warm up question. When was the first cross planted here by Magellan’s crew?', ['1521', '1771', '1945'], 'April 1521. The old cross is kept safe inside a newer wooden one.'),
+      say('tc-bea', '[whispers] Look at the floor tiles round the edge. One has a tiny lantern scratched into it. And the words, where the sea meets three walls.'),
+      quiz('tc-kwan', 'A question from the pastry man. People once chipped little pieces off the old cross. Why?', ['For good luck', 'For firewood', 'To make it lighter'], 'They believed the pieces held special powers. So it was covered with a new wooden case in 1835.'),
+      dash(30, 'Three walls by the sea. That is the fort! Pick it up for 30 seconds!', { chapter: 'To the fort', fx: 'whoosh' }),
+      say(null, 'Down by the port stands Fort San Pedro. A low stone triangle, with a bastion on each corner and trees growing on top.', { spatial: 'jeepney' }),
+      quiz('tc-bea', 'How many sides does Fort San Pedro have?', ['Three', 'Five', 'Eight'], 'A triangle. Two sides face the sea, one faces the land. Work started in 1565.'),
+      say('tc-mel', '[curious] Bea! Three walls. Three corners. Each corner has a saint’s name. Which one has a lantern?'),
+      choice('tc-bea', 'side', 'Which corner first? The sea side, or the land side?',
+        { label: 'The sea side', line: 'Sea side! Feel that breeze.', dash: 'Round the sea side! Pick it up for 30 seconds!', after: 'Along the sea wall, fishing boats bob in the harbour and a big ferry slides out towards the islands.' },
+        { label: 'The land side', line: 'Land side! Quick, before the tour bus.', dash: 'Round the land side! Pick it up for 30 seconds!', after: 'Along the land wall, under the acacia trees, a school group sits sketching the old gate.' },
+        'Sea side, then. Go!'),
+      say(null, 'Inside the fort, a garden, old cannons, and a little museum. On one bastion, a stone lamp holder with a lantern carved into its base.', { fx: 'lanterns' }),
+      steady('Settle into an easy pace while Bea reads the carving and Mel translates the old Malay words on video.', { chapter: 'The bastion' }),
+      say('tc-bea', 'It is a poem. Half Spanish, half Malay. My sister crossed the sea, I stayed by the cross. We will meet again by the red walls.'),
+      say('tc-ramon', 'Bea, it is Tito Ramon. Your lola’s lola came to Cebu first, before Manila. She sold silk by the basilica. Everyone knew her lanterns.'),
+      quiz('tc-kwan', 'Over its long life, Fort San Pedro was not just a fort. Which one of these was it also?', ['A zoo', 'A bowling alley', 'A cinema'], 'Also a school, a hospital, city offices, and now a museum. Busy walls.'),
+      say('tc-mel', '[excited] Red walls! Bea, the Stadthuys in Melaka is red! Melaka! The city Kwan said to remember!'),
+      dash(45, 'Back to the basilica before the candle sellers close! Pick it up for 45 seconds!', { chapter: 'The basilica', fx: 'gong' }),
+      say(null, 'The candle sellers by the basilica sway and sing as they work. One of them has a lantern stall. Her grandmother made them the same way.'),
+      steady('Cool down with an easy jog or a walk around the plaza.', { scene: 'intramuros', chapter: 'Plaza' }),
+      quiz('tc-bea', 'Last one. In 2021 the Basilica del Santo Niño’s church and convent were named what?', ['A cultural treasure', 'A shopping centre', 'A sports ground'], 'A National Cultural Treasure. Right next to the cross.'),
+    ],
+    finale: 'The Island of the Cross is solved. A triangle fort, a poem in two languages, and one last lantern waiting by the red walls of Melaka.',
+  }),
+  compose({
+    id: 'twocities-melaka',
+    episode: 5,
+    previously: 'Previously on Two Cities: a cross from 1521, a triangle fort, and a poem that said the sisters would meet by the red walls.',
+    saga: 'twocities',
+    title: 'The Red Walls',
+    difficulty: 'Push yourself',
+    blurb: 'Mel and Bea meet at last in Melaka, by the red Dutch square and the old Portuguese gate, to light the final lantern.',
+    place: { name: 'Dutch Square, Melaka', lat: 2.1944, lng: 102.2490 },
+    loop: line('tc-mel', 'A loop! Like the river cruise. Nice and steady.'),
+    early: line('tc-mel', 'Stop there, all good. The lanterns will still be lit tonight.'),
+    guide: 'tc-mel', results: RESULTS['tc-mel'], easy: EASY_MEL,
+    open: { scene: 'confluence', chapter: 'Melaka River', text: 'Melaka, on Malaysia’s west coast. A slow river, painted shophouses, and a square of red buildings glowing at dusk. Start with an easy walk or jog.' },
+    steps: [
+      say('tc-mel', '[excited] Bea is here! In person! After four episodes, I finally get to hug my cousin.'),
+      say('tc-bea', '[laughs] Mel! You are shorter than on video. Okay. Where is this last lantern?'),
+      say(null, 'Trishaws glide past, covered in plastic flowers and blasting pop songs. Tonight is the river lantern festival.', { spatial: 'calesa' }),
+      quiz('tc-bea', 'Quick one from me. Which country’s sailors took Melaka after the Portuguese, in 1641?', ['The Dutch', 'The Spanish', 'The French'], 'They painted the town red. Well, the buildings, later on.'),
+      quiz('tc-mel', 'Warm up question. The Stadthuys, the big red building on the square, was started by the Dutch in which year?', ['1650', '1911', '1786'], 'It was the Dutch governor’s office. Now it is a museum of Melaka’s history.'),
+      say('tc-kwan', 'Good evening, cousins. I brought a book, not pastries. It says the sisters planned to meet at the old gate on the hill.'),
+      dash(30, 'Up to the gate on the hill! Pick it up for 30 seconds!', { chapter: 'The hill', fx: 'whoosh' }),
+      say(null, 'On the hill stands a stone gateway, black with age. Porta de Santiago. All that is left of a great Portuguese fort.'),
+      quiz('tc-kwan', 'The fort here was built by the Portuguese after they arrived in which year?', ['1511', '1957', '1888'], 'The fort was called A Famosa. Later the Dutch took it, then the British pulled most of it down.'),
+      quiz('tc-bea', 'When the British pulled the fort down, why did one gate survive?', ['Someone stepped in', 'It was too heavy', 'Nobody found it'], 'Someone stepped in just in time. Books disagree about who. Historians love an argument.'),
+      say('tc-mel', '[whispers] On the gate. Low down. A lantern. And next to it, two little handprints carved in the stone. One big, one small.'),
+      choice('tc-bea', 'path', 'Kwan’s book says the box was hidden where both sisters could reach it. By the river, or in the square?',
+        { label: 'By the river', line: 'The river! Everyone meets by the river.', dash: 'Down to the river! Pick it up for 30 seconds!', after: 'Along the river, boats glide past glowing with paper lanterns, and the old shophouses lean over the water.' },
+        { label: 'In the red square', line: 'The square! The red walls, like the poem!', dash: 'Back to the red square! Pick it up for 30 seconds!', after: 'Through the red square, past the clock tower and the fountain, where crowds gather for the lantern lighting.' },
+        'The river, then. Go!'),
+      say(null, 'The lantern festival begins. Hundreds of paper lanterns rise along the river, red and gold, floating slow.', { fx: 'lanterns', scene: 'confluence' }),
+      steady('Settle into an easy pace while the cousins look for one lantern that matches the map.', { chapter: 'Lantern festival' }),
+      say('tc-raj', 'Mel! Uncle Raj, on the phone. The museum in the Stadthuys says a family once gave them a lantern box. They never knew whose it was.'),
+      say('tc-bea', '[excited] Whose it was! It is ours! Run, Mel, the museum shuts soon!'),
+      dash(45, 'The museum closes in minutes! Pick it up for 45 seconds to the red walls!', { chapter: 'The red walls', fx: 'gong' }),
+      say(null, 'In a glass case, in the red Stadthuys, sits a small lacquered box with a lantern painted on the lid. Two keyholes. One big, one small.'),
+      say('tc-kwan', '[sighs] The small key came with the map in Kuala Lumpur. The big one was in the tea shop in Manila. I have carried both for weeks. Here.'),
+      say(null, 'The keys turn. Inside are two letters, from two sisters, written the year they parted. Each one says the same thing. Come home when the lanterns are lit.', { fx: 'found' }),
+      say('tc-mel', '[sighs] They never met again. But we did. Bea, I think they would be happy with that.'),
+      steady('Cool down with an easy jog or a walk by the glowing river.', { scene: 'bayside', chapter: 'Home' }),
+      quiz('tc-bea', 'Last one, team. George Town and Melaka share a World Heritage listing. What joins them?', ['The Straits of Malacca', 'A railway', 'A bridge'], 'Two old port cities on the Straits of Malacca. Just like our family.'),
+      say('tc-kwan', '[laughs] A museum, two letters, two cousins. And me, the kind donor. I think I have been adopted.'),
+    ],
+    finale: 'Two Cities is complete. Five ports, one map, two letters, and a family together again. Terima kasih, salamat, and thank you, Runner.',
+  }),
 ]
 
-export const CHAIN = ['twocities-kl', 'twocities-manila']
+export const CHAIN = ['twocities-kl', 'twocities-manila', 'twocities-penang', 'twocities-cebu', 'twocities-melaka']
 
 export const CAST = {
   'twocities-narrator': { name: 'Narrator', voiceId: 'Y7xQSS5ZtS4xv4VJotWd', pitch: 1.0, rate: 0.98 }, // Christine
