@@ -24,6 +24,7 @@ export const router = createRouter({
         { path: 'you', name: 'you', component: () => import('./views/app/YouView.vue') },
         { path: 'fitness', name: 'fitness', component: () => import('./views/app/FitnessView.vue') },
         { path: 'week', name: 'week', component: () => import('./views/app/WeekView.vue') },
+        { path: 'admin', name: 'admin', component: () => import('./views/app/AdminView.vue') }, // the owner's admin page (worker/admin.js)
         { path: 'settings', name: 'settings', component: () => import('./views/app/SettingsView.vue') },
         { path: 'notifications', name: 'notifications', component: () => import('./views/app/NotificationsView.vue') },
         { path: 'hill/:id', name: 'hill', component: () => import('./views/app/HillView.vue') },

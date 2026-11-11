@@ -1126,6 +1126,14 @@ export const local = {
     throw e
   },
 
+  // The admin page needs the server, so the practice map has none
+  async admin() {
+    throw Object.assign(new Error('Not found.'), { status: 404 })
+  },
+  async adminAct() {
+    throw Object.assign(new Error('Not found.'), { status: 404 })
+  },
+
   async feedback({ kind, text }) {
     await state()
     S.feedback.push({ kind, text: String(text).slice(0, 2000), at: Date.now() })

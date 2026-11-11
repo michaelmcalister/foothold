@@ -236,6 +236,12 @@ async function startAgain() {
       <button class="btn" type="button" :disabled="fbText.trim().length < 5" @click="sendFeedback">Send</button>
     </section>
 
+    <section v-if="store.user.admin" class="panel stack" aria-labelledby="s-admin">
+      <h2 id="s-admin">Admin</h2>
+      <p class="small">Story ideas, feedback, reported comments and how the app is going.</p>
+      <RouterLink class="btn quiet" to="/app/admin">Open admin</RouterLink>
+    </section>
+
     <section class="panel stack" aria-labelledby="s-data">
       <h2 id="s-data">Your data</h2>
       <p v-if="isLocal" class="small muted">This is the practice map. Your runs are saved only on this device, and the rivals are made up so you can try the game.</p>

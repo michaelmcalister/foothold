@@ -29,6 +29,7 @@ import { streak } from './habits.js'
 import { divisionRoute } from './divisions.js'
 import { routeShareRoute } from './routeShares.js'
 import { yearInReview } from './wrapped.js'
+import { adminRoute, isAdmin } from './admin.js'
 import { cleanPlannedAt } from '../src/lib/routeShare.js'
 import { detectAfterSave, hillsForActivity, hillsAfterDelete, hillRoute } from './hills.js'
 
@@ -496,8 +497,12 @@ async function route(req, env, url, user, ctx) {
   const shared = await routeShareRoute({ env, user, m, path, body, now, limit })
   if (shared !== undefined) return json(shared)
 
+  // The owner's admin page (worker/admin.js)
+  const admin = await adminRoute({ env, user, url, m, path, body, now })
+  if (admin !== undefined) return admin.error ? err(admin.error, admin.status || 400) : json(admin)
+
   // Profile
-  if (path === '/api/me' && m === 'GET') return json({ user: userOut(user) })
+  if (path === '/api/me' && m === 'GET') return json({ user: isAdmin(env, user) ? { ...userOut(user), admin: true } : userOut(user) })
   if (path === '/api/me/export' && m === 'GET') return json(await exportAccount(env, user))
   if (path === '/api/me/year' && m === 'GET') return json(await yearInReview(env, user, url, now)) // Foothold Wrapped (worker/wrapped.js)
   if (path === '/api/me' && m === 'DELETE') return json(await deleteAccount(env, user))
