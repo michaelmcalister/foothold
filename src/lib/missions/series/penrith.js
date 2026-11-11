@@ -34,6 +34,23 @@
 //   lived in Duration Cottages; its rail line ran from 1942 to 1986, and the
 //   Ropes Creek platform survives. Lang Park has a memorial garden.
 //
+// Episode 4, The Orphan Mob: a brass tag found behind Jordan Springs leads to
+// the dusk kangaroo count in Wianamatta Regional Park, on the old ADI
+// munitions site, and Kev's dad's orphan joey, Duchess. The tag, Duchess
+// and the count are made up. Facts checked (web search, November 2026):
+// - Wianamatta is the Dharug name for South Creek, meaning mother place
+//   (dual named 2003). The Commonwealth resumed the farmland from 1941 to
+//   1943 for munitions; buildings were ringed with blast mounds (berms).
+//   The new factory (Project 590) opened in 1957; production stopped in
+//   1993. The Mine Filling building and berms still stand.
+// - From the late 1950s, orphaned eastern greys, red kangaroos and emus
+//   raised in Sydney were released on the site; the nearest natural red
+//   kangaroos are about 400 km west (Wianamatta Plan of Management).
+// - A green and golden bell frog was recorded there in 1966. The ADI
+//   Residents Action Group formed in 1993 to save the bush; about 900
+//   hectares became the regional park, one of the largest remnants of
+//   Cumberland Plain Woodland. The Luxfords trail runs through it.
+//
 // Facts in the story and the trivia were checked (web search, November 2026):
 // - Dharug (Darug) Country. The Dharug name for the river is Yandhai; the
 //   Yandhai Nepean Crossing's name means "walking in past and present". The
@@ -108,6 +125,7 @@ export const EPISODES = [
     minutes: 32,
     difficulty: 'Steady effort',
     blurb: 'A murder mystery night at Emu Hall goes off script. Follow the clues along the Nepean, past the Police Cottage and over the Yandhai crossing.',
+    place: { name: 'Emu Hall and the River Run, Penrith', lat: -33.7523, lng: 150.6712 },
     loop: line('pr-sarge', 'You ran a loop. Like the River Run. Over one bridge, back over the other. Very tidy.'),
     early: line('pr-dot', 'Stopping there is fine, dear. The mystery will keep. So will the supper.'),
     beats: [
@@ -185,6 +203,7 @@ export const EPISODES = [
     minutes: 25,
     difficulty: 'Steady effort',
     blurb: 'Lanterns are moving along the old Lapstone Zig Zag railway at night. The trains stopped in 1892. So who is up there?',
+    place: { name: 'Lennox Bridge, Glenbrook', lat: -33.7697, lng: 150.6339 },
     loop: line('pr-sarge', 'A loop! Up and back. The old trains would be proud. Well, they went forwards and backwards. Close enough.'),
     early: line('pr-dot', 'That is plenty for tonight, dear. The ghosts will still be there tomorrow.'),
     beats: [
@@ -243,6 +262,7 @@ export const EPISODES = [
     id: 'penrith-duration',
     episode: 3,
     previously: 'Previously on River Town: lanterns on the old Zig Zag, a whistle in the dark, and a hillside full of painters.',
+    next: 'Next time on River Town: an old brass tag in the bush behind Jordan Springs, a ranger’s dusk count, and a mob of kangaroos with a secret.',
     saga: 'penrith',
     title: 'The Duration',
     series: 'thriller',
@@ -250,6 +270,7 @@ export const EPISODES = [
     minutes: 25,
     difficulty: 'Steady effort',
     blurb: 'A tin box under a St Marys floor holds a letter from 1943 and a tiny key. Follow Nell’s clues from Queen Street to Ropes Creek.',
+    place: { name: 'South Creek Park, St Marys', lat: -33.7690, lng: 150.7700 },
     loop: line('pr-tash', 'You closed a loop! Nan says Pop used to run loops round the factory at lunch. Probably to show off.'),
     early: line('pr-dot', 'That will do for today, dear. The letter has waited this long. It can wait a little more.'),
     beats: [
@@ -306,9 +327,77 @@ export const EPISODES = [
       { at: 1540, kind: 'finale', say: 'The Duration is solved. A letter found, a photo home, and a love story that waited eighty years for a runner. Thank you, Runner.' },
     ],
   },
+  {
+    id: 'penrith-orphans',
+    episode: 4,
+    previously: 'Previously on River Town: a letter under a St Marys floor, a brass plate at Ropes Creek, and a wedding photo eighty years late.',
+    saga: 'penrith',
+    title: 'The Orphan Mob',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 26,
+    difficulty: 'Steady effort',
+    blurb: 'Behind Jordan Springs, the old munitions site is bush again. Tash finds a brass tag from 1959, and a ranger needs runners for the dusk kangaroo count.',
+    place: { name: 'Wianamatta Regional Park, Jordan Springs', lat: -33.7190, lng: 150.7420 },
+    loop: line('pr-ranger', 'You ran a loop. Very tidy. The roos do the same thing every evening, you know. Same track, every night.'),
+    early: line('pr-dot', 'That is plenty, dear. The mob will still be there tomorrow. They are not going anywhere.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Jordan Springs', scene: 'suburb', say: 'Jordan Springs, late on a summer afternoon. Past the last row of houses, the bush begins. Wianamatta Regional Park. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', spatial: 'kookaburra', say: 'Wianamatta is the Dharug name for South Creek. It means mother place. For fifty years, this bush sat behind a high wire fence.' },
+      { at: 105, kind: 'story', who: 'pr-tash', fx: 'squelch', say: 'Tash here! Guess what I found by the Luxfords trail. An old brass tag, all green. It says Red, number 7, 1959. Red what?' },
+      { at: 160, kind: 'story', who: 'pr-sarge', say: 'Kev here. Red kangaroo, I reckon. My dad worked at the munitions factory out there. He used to talk about the orphan roos.' },
+      { at: 215, kind: 'quiz', who: 'pr-dot', say: 'Here is the puzzle, dear. The nearest wild red kangaroos live a long way west of here. About how far?',
+        options: [{ key: 'A', label: 'About 400 km' }, { key: 'B', label: 'About 10 km' }, { key: 'C', label: 'About 4,000 km' }], answer: 'A',
+        right: line('pr-dot', 'About 400 km! So how did red kangaroos end up behind Jordan Springs? That is our mystery.'),
+        wrong: line('pr-dot', 'It is about 400 km. So how did red kangaroos end up behind Jordan Springs? That is our mystery.') },
+      { at: 280, kind: 'story', who: 'pr-ranger', say: 'G’day. Ranger Mick, National Parks. I am doing the dusk count of the roos tonight. Three count points before dark. Want to help?' },
+      dash(330, 30, 'pr-tash', 'Count point one is the old blast mounds! Pick it up for 30 seconds!', 110, { chapter: 'The mounds', fx: 'whoosh' }),
+      { at: 410, kind: 'story', scene: 'bush', say: 'Grassy hills rise out of the woodland in rows. They are not hills. They are blast mounds, piled round the old explosives buildings in the war.' },
+      { at: 465, kind: 'story', who: 'pr-ranger', say: 'The Commonwealth took this land from farmers in the early 1940s, for munitions. Every building got a wall of earth, so one accident could not spread.' },
+      { at: 520, kind: 'quiz', who: 'pr-ranger', say: 'After the war, a brand new factory went up out here. Which decade did it open?',
+        options: [{ key: 'A', label: 'The 1950s' }, { key: 'B', label: 'The 1920s' }, { key: 'C', label: 'The 1980s' }], answer: 'A',
+        right: line('pr-ranger', 'The 1950s! It opened in 1957 and made munitions for decades, until production stopped in 1993.'),
+        wrong: line('pr-ranger', 'It was the 1950s. It opened in 1957 and made munitions for decades, until production stopped in 1993.') },
+      { at: 585, kind: 'story', spatial: 'magpie', say: 'Through the trees, grey shapes lift their heads. A mob of eastern grey kangaroos, dozens of them, chewing and watching you.' },
+      { at: 635, kind: 'story', who: 'pr-ranger', say: '[whispers] Nice and easy. Stay on the track and give them room. Never run at a mob. We count from right here. Thirty two. Good.' },
+      { at: 690, kind: 'choice', id: 'route', who: 'pr-tash', say: 'Count point two! Past the old Mine Filling building, or along Ropes Creek?',
+        options: [
+          { key: 'A', label: 'The old building', flag: 'building', say: line('pr-tash', 'The old building! Spooky. Love it.') },
+          { key: 'B', label: 'Along the creek', flag: 'creek', say: line('pr-tash', 'The creek! Listen out for frogs.') },
+        ],
+        default: 'A', timeout: line('pr-tash', 'The old building, then. Come on!') },
+      dash(740, 30, 'pr-tash', 'To the old building! Pick it up for 30 seconds!', 110, { if: 'building', chapter: 'Count point two', fx: 'whoosh' }),
+      dash(741, 30, 'pr-tash', 'Along Ropes Creek! Pick it up for 30 seconds!', 110, { unless: 'building', chapter: 'Count point two', fx: 'whoosh' }),
+      { at: 820, kind: 'story', if: 'building', say: 'The old Mine Filling building stands in the bush, roof sagging, doorways empty. Swallows dart in and out where workers once clocked on.' },
+      { at: 821, kind: 'story', unless: 'building', say: 'Ropes Creek winds through the woodland. A frog chorus starts up. Back in 1966, someone recorded a rare green and golden bell frog out here.' },
+      { at: 875, kind: 'steady', seconds: 150, chapter: 'The orphans', say: 'Settle into an easy pace while Mick tells the story of the tag.', easyNudge: K_EASY },
+      { at: 905, kind: 'story', who: 'pr-ranger', say: 'Here is the strange part. From the late 1950s, people raised orphaned joeys from all over New South Wales. When they grew too big, they were let go here.' },
+      { at: 960, kind: 'story', who: 'pr-sarge', say: '[sighs] Dad did that. A little red joey called Duchess. Mum fed her from a bottle in the laundry. Then one day, Dad drove her out to the factory.' },
+      { at: 1015, kind: 'quiz', who: 'pr-dot', say: 'Big birds came too, dear. Which one was let go here, and still lives in the park?',
+        options: [{ key: 'A', label: 'Emus' }, { key: 'B', label: 'Ostriches' }, { key: 'C', label: 'Peacocks' }], answer: 'A',
+        right: line('pr-dot', 'Emus! Wild emus, right here in Sydney. People still spot them on the trails.'),
+        wrong: line('pr-dot', 'It was emus. Wild emus, right here in Sydney. People still spot them on the trails.') },
+      { at: 1080, kind: 'story', who: 'pr-tash', fx: 'found', say: '[excited] Mick! Up on the rise! A big one, rusty red, standing tall. Is that a red kangaroo?' },
+      { at: 1130, kind: 'story', who: 'pr-ranger', say: '[laughs] It is. Born long after 1959, mind you. But Duchess’s family could still be out here. Reds have lived in this bush ever since.' },
+      dash(1180, 45, 'pr-tash', 'Last count point before dark, the lookout! Pick it up for 45 seconds!', 120, { chapter: 'The count', fx: 'whoosh' }),
+      { at: 1265, kind: 'story', scene: 'ranges', say: 'At the lookout, the sun slips behind the Blue Mountains. The woodland turns gold, then grey. Shapes move everywhere below.' },
+      { at: 1315, kind: 'story', who: 'pr-ranger', say: 'Final count: plenty. Thanks, Runner. In 1993, locals started fighting to save this bush from houses. Without them, none of it would be here.' },
+      { at: 1370, kind: 'quiz', who: 'pr-ranger', say: 'The locals won a big chunk of it. Roughly how big is the protected bush here now?',
+        options: [{ key: 'A', label: 'About 900 hectares' }, { key: 'B', label: 'About 9 hectares' }, { key: 'C', label: 'About 90,000 hectares' }], answer: 'A',
+        right: line('pr-ranger', 'About 900 hectares. One of the biggest patches of Cumberland Plain Woodland left anywhere.'),
+        wrong: line('pr-ranger', 'It is about 900 hectares. One of the biggest patches of Cumberland Plain Woodland left anywhere.') },
+      { at: 1430, kind: 'steady', seconds: 180, chapter: 'Home', say: 'Cool down now with an easy jog or a walk back towards the lights of Jordan Springs.', easyNudge: T_EASY },
+      { at: 1460, kind: 'story', who: 'pr-sarge', say: 'Thanks, Tash. Dad would have loved tonight. Duchess was a real character. She used to steal his toast.' },
+      { at: 1500, kind: 'quiz', who: 'pr-tash', say: 'Last one! Wianamatta, the Dharug name for South Creek. What does it mean?',
+        options: [{ key: 'A', label: 'Mother place' }, { key: 'B', label: 'Big river' }, { key: 'C', label: 'Red hill' }], answer: 'A',
+        right: line('pr-tash', 'Mother place! For a mob of orphans, that is just about perfect.'),
+        wrong: line('pr-tash', 'It means mother place. For a mob of orphans, that is just about perfect.') },
+      { at: 1560, kind: 'finale', say: 'The Orphan Mob is solved. An old tag, a dusk count, and a bush full of families who found a home. Thank you, Runner.' },
+    ],
+  },
 ]
 
-export const CHAIN = ['penrith-emuhall', 'penrith-zigzag', 'penrith-duration']
+export const CHAIN = ['penrith-emuhall', 'penrith-zigzag', 'penrith-duration', 'penrith-orphans']
 
 export const CAST = {
   'penrith-narrator': { name: 'Narrator', voiceId: 'oKDz3nEzNfwKIVvUwPs0', pitch: 0.85, rate: 0.98 }, // Peter Michael
@@ -317,6 +406,7 @@ export const CAST = {
   'pr-sarge': { name: 'Kev Mallard', voiceId: 'YLbQE9U7P1K6rBNJWNSv', pitch: 0.8, rate: 0.98 }, // Jimbo
   'pr-gus': { name: 'Gus', voiceId: 'gZR4sGJmJaoBOVzKgZ8j', pitch: 0.95, rate: 1.06 }, // Scotty
   'pr-priya': { name: 'Priya', voiceId: 'nBoLwpO4PAjQaQwVKPI1', pitch: 1.1, rate: 1.06 }, // Amelia
+  'pr-ranger': { name: 'Ranger Mick', voiceId: 'abRFZIdN4pvo8ZPmGxHP', pitch: 0.9, rate: 0.98, radio: true }, // Lee
   'pr-col': { name: 'Col', voiceId: 'zcIk2xc7SGwlywr4TzZu', pitch: 0.85, rate: 0.98 }, // Simon
   'pr-lou': { name: 'Lou', voiceId: 'zMK1eWY5DTw3Jjb8efU8', pitch: 1.05, rate: 1.04 }, // Emily
 }

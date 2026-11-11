@@ -86,6 +86,7 @@ export const EPISODES = [
     minutes: 25,
     difficulty: 'Gentle',
     blurb: 'Episode 1. Kuala Lumpur at night. A silk map vanishes from Central Market, and a man in a white suit walks calmly towards the river.',
+    place: { name: 'Petaling Street, Kuala Lumpur', lat: 3.1440, lng: 101.6977 },
     loop: line('tc-mel', 'You ran a loop! Like the two rivers coming round to meet. Very poetic.'),
     early: line('tc-mel', 'Stopping there is okay lah. Go rest. I will save you some satay.'),
     beats: [
@@ -155,6 +156,7 @@ export const EPISODES = [
     minutes: 30,
     difficulty: 'Steady effort',
     blurb: 'Episode 2. Manila Bay at sunset, a calesa in Intramuros and a race to Binondo for the other half of the Lantern Map.',
+    place: { name: 'Intramuros, Manila', lat: 14.5896, lng: 120.9747 },
     loop: line('tc-bea', 'You closed a loop! Tito Ramon says his horse does that every day. He is very proud of you.'),
     early: line('tc-bea', 'Stopping there is okay. Go and eat something. The map can wait. Probably.'),
     beats: [

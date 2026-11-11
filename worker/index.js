@@ -809,7 +809,30 @@ async function route(req, env, url, user, ctx) {
     return json({ ok: true })
   }
 
+  // Asking for a story set somewhere near you (the mission browser). Kept with
+  // feedback, so export and delete already cover it. "Near" is rounded to
+  // about a kilometre, and only sent if they tick the box.
+  if (path === '/api/story-requests' && m === 'POST') {
+    const text = storyRequestText(body)
+    if (text.error) bad(text.error)
+    await limit('feedback', "Thanks, that's plenty for today. Send more tomorrow.")
+    await env.DB.prepare('INSERT INTO feedback (id, user_id, kind, text, at) VALUES (?, ?, ?, ?, ?)').bind(uid(), user.id, 'story', text.text, now).run()
+    return json({ ok: true })
+  }
+
   return err('Not found.', 404, 'not_found')
+}
+
+/** A story request as one line of feedback text, or { error } in plain words. */
+export function storyRequestText(body) {
+  const clean = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '')
+  const place = clean(body?.place, 120)
+  const story = clean(body?.story, 1000)
+  if (!place) return { error: 'Tell us the place first.' }
+  const lat = Number(body?.near?.lat)
+  const lng = Number(body?.near?.lng)
+  const near = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? ` | Near: ${lat.toFixed(2)}, ${lng.toFixed(2)}` : ''
+  return { text: `Place: ${place}${story ? ` | Story: ${story}` : ''}${near}` }
 }
 
 export async function handleApi(req, env, ctx) {

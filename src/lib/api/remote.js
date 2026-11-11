@@ -74,6 +74,7 @@ export const remote = {
   unlinkFormtrack: () => call('DELETE', '/api/integrations/formtrack'),
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
+  storyRequest: (body) => call('POST', '/api/story-requests', body),
   routes: () => call('GET', '/api/routes'),
   saveRoute: (body) => call('POST', '/api/routes', body),
   deleteRoute: (id) => call('DELETE', `/api/routes/${encodeURIComponent(id)}`),

@@ -37,13 +37,14 @@ function fakeCtx() {
   }
 }
 
-const NEW = ['penrith-zigzag', 'penrith-duration', 'bondi-breakers', 'druitt-relay']
+const NEW = ['penrith-zigzag', 'penrith-duration', 'penrith-orphans', 'bondi-breakers', 'druitt-relay']
 const ep = (id) => MISSIONS.find((m) => m.id === id)
 
 describe('the Sydney local stories', () => {
   it('are all listed and chained', () => {
     for (const id of NEW) expect(ep(id), id).toBeTruthy()
-    expect(CHAINS.penrith).toEqual(['penrith-emuhall', 'penrith-zigzag', 'penrith-duration'])
+    expect(CHAINS.penrith).toEqual(['penrith-emuhall', 'penrith-zigzag', 'penrith-duration', 'penrith-orphans'])
+    expect(unlockedBy('penrith-orphans').id).toBe('penrith-duration')
     expect(unlockedBy('penrith-zigzag').id).toBe('penrith-emuhall')
     expect(unlockedBy('penrith-duration').id).toBe('penrith-zigzag')
     expect(ep('penrith-emuhall').next).toMatch(/^Next time on River Town/)

@@ -61,6 +61,7 @@ export const EPISODES = [
     minutes: 25,
     difficulty: 'Steady effort',
     blurb: 'The heritage relay’s anchor runner has caught the wrong train, with the baton. Follow him from Mount Druitt to Rooty Hill and Minchinbury.',
+    place: { name: 'The Manse, Mount Druitt', lat: -33.7686, lng: 150.8170 },
     loop: line('md-mele', 'A loop! You basically ran the relay twice. Respect.'),
     early: line('md-mele', 'Stopping there is all good. Jayden will turn up. He always does. Eventually.'),
     beats: [

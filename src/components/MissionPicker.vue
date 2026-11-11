@@ -5,13 +5,18 @@
 // row of poster cards per series. Tap a card to preview it, then Run this
 // mission. Episodes unlock in order within a series on this device (any try
 // unlocks the next). Shows the coach's pick for today when today's planned
-// session suits one. Cover art comes from lib/missions/covers.js.
+// session suits one. Cover art comes from lib/missions/covers.js. "Stories
+// near you" finds where each story is set (lib/missions/places.js) and how far
+// that is from you, and "Know a local story?" asks for a new one
+// (StoryRequest.vue).
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
 import { coverSvg, lookFor } from '../lib/missions/covers.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
 import { play } from '../lib/audio/sfx.js'
+import { placeOf, storiesNear, distanceLabel, locateMe } from '../lib/missions/places.js'
+import StoryRequest from './StoryRequest.vue'
 
 const model = defineModel({ type: String, default: null })
 const open = ref(false)
@@ -104,6 +109,23 @@ onBeforeUnmount(() => {
   document.documentElement.classList.remove('mbrowse-open')
 })
 
+// Stories near you: asked for with a tap, worked out on this phone only
+const here = ref(null)
+const locating = ref(false)
+const locateFailed = ref(false)
+const asking = ref(false)
+const nearby = computed(() => storiesNear(here.value))
+const previewPlace = computed(() => placeOf(preview.value))
+const previewDistance = computed(() => (here.value && previewPlace.value ? distanceLabel(here.value, previewPlace.value) : null))
+async function findNearby() {
+  locating.value = true
+  locateFailed.value = false
+  here.value = await locateMe()
+  locating.value = false
+  locateFailed.value = !here.value
+  if (here.value) play('found', { wait: false })
+}
+
 const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionById('quiz-1')].filter(Boolean)
 </script>
 
@@ -163,6 +185,10 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
               </p>
               <h3 class="htitle2">{{ preview.title }}</h3>
               <p class="hmeta">{{ missionMeta(preview) }}</p>
+              <p v-if="previewPlace" class="hplace">
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" fill="currentColor" /></svg>
+                <span>Set at {{ previewPlace.name }}<template v-if="previewDistance">, {{ previewDistance }}</template></span>
+              </p>
               <p class="hblurb">{{ preview.blurb }}</p>
               <p v-if="previewNote" class="hnote">{{ previewNote }}</p>
               <div class="hact">
@@ -181,6 +207,32 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
           <button type="button" class="norun" :aria-pressed="!model" @click="pick(null)">
             {{ model ? 'No story this time, just the usual coach' : 'Just the run, with the usual coach (chosen)' }}
           </button>
+
+          <section class="mb-row mb-near" aria-labelledby="near-title">
+            <h3 id="near-title" class="rtitle"><span>Stories near you</span></h3>
+            <p class="rblurb">Real places and real history, from your suburb to the other side of the world.</p>
+            <div v-if="!here" class="near-ask">
+              <button type="button" class="near-btn" :disabled="locating" @click="findNearby">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" fill="currentColor" /></svg>
+                {{ locating ? 'Finding you…' : 'Find stories near me' }}
+              </button>
+              <p v-if="locateFailed" class="near-note" role="status">We couldn’t find you. Check Location is on for Foothold, then try again.</p>
+              <p v-else class="near-note">Your location stays on your phone. It’s only used to work out the distances.</p>
+            </div>
+            <ul v-else class="mb-cards" role="list">
+              <li v-for="n in nearby" :key="n.mission.id">
+                <button type="button" class="mb-card" :class="{ 'is-on': preview.id === n.mission.id, 'is-lock': !unlocked.has(n.mission.id) }" :style="{ '--ring': lookFor(sagaOf(n.mission)).accent }" :aria-label="`${sagaTitle(n.mission)}: ${n.mission.title}. Set at ${n.place.name}, ${n.label}`" @click="show(n.mission)">
+                  <span class="cart" v-html="cover(n.mission)" />
+                  <span class="cfade" />
+                  <span class="ctext">
+                    <span class="cep">{{ n.label }}</span>
+                    <span class="ctitle">{{ n.place.name }}</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+            <button type="button" class="near-req" @click="asking = true">Know a local story? Tell us where</button>
+          </section>
 
           <section v-if="upNext.length" class="mb-row">
             <h3 class="rtitle">Up next for you</h3>
@@ -223,6 +275,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
             </ul>
           </section>
           <p class="mb-foot">Full cast, scene sounds and music. Answer out loud or tap.</p>
+          <StoryRequest v-if="asking" :here="here" @close="asking = false" />
         </div>
       </Transition>
     </Teleport>
@@ -337,6 +390,20 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
   background: rgba(0, 0, 0, 0.6); color: #fff;
 }
 .cdone { background: var(--ring); color: #0B0D12; width: 22px; height: 22px; }
+.hplace { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.86rem; font-weight: 700; color: var(--accent); }
+.hplace svg { flex: none; }
+.near-ask { margin: 10px 16px 0; display: grid; gap: 6px; }
+.near-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 0; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-weight: 800; font-size: 1rem; cursor: pointer;
+}
+.near-btn:disabled { opacity: 0.7; }
+.near-note { margin: 0; font-size: 0.8rem; color: rgba(244, 246, 250, 0.7); }
+.near-req {
+  display: block; margin: 8px 16px 0; padding: 8px 0; border: 0; background: none; color: var(--accent);
+  font: inherit; font-size: 0.92rem; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.near-btn:focus-visible, .near-req:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .mb-foot { margin: 26px 16px 0; font-size: 0.82rem; color: rgba(244, 246, 250, 0.6); }
 
 /* Opening and changing the preview */

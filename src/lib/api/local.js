@@ -1119,6 +1119,13 @@ export const local = {
     return hillDetail(S, id, player, S.user.id)
   },
 
+  // On the practice map there's no server to send it to: the app asks you to sign in first
+  async storyRequest() {
+    const e = new Error('Sign in to send us a story idea.')
+    e.code = 'signin'
+    throw e
+  },
+
   async feedback({ kind, text }) {
     await state()
     S.feedback.push({ kind, text: String(text).slice(0, 2000), at: Date.now() })

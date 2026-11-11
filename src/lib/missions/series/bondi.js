@@ -59,6 +59,7 @@ export const EPISODES = [
     minutes: 25,
     difficulty: 'Steady effort',
     blurb: 'Sculpture by the Sea week at Bondi, and a 200 kilo bronze whale tail has gone walkabout. Follow the trolley tracks at dawn.',
+    place: { name: 'Bondi Beach', lat: -33.8915, lng: 151.2767 },
     loop: line('bd-nikki', 'You ran a loop! Like a lifesaver’s patrol. Up the beach, back again. Nice.'),
     early: line('bd-nikki', 'Calling it there is fine. Grab a coffee on the promenade. The whale tail can wait.'),
     beats: [

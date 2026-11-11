@@ -22,6 +22,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li><strong>Heart rate and cadence</strong>, only if your watch sends them, used to check activities are genuine.</li>
         <li><strong>FormTrack data</strong>, only if you link it: today's session, strength sessions and recovery numbers. You can unlink at any time. To show your readiness over time, the app keeps one readiness score a day on your device only, and clears it when you unlink.</li>
         <li><strong>Your times up hills</strong> (King of the hill): when an activity climbs a hill, we keep how long the climb took, which activity it was and when. Delete the activity and its times go.</li>
+        <li><strong>Story ideas you send</strong>, only if you use "Know a local story?": the place and story you type, and, only if you tick the box, roughly where you are (rounded to about a kilometre). They're kept with your feedback, so you can download them, and deleting your account deletes them.</li>
         <li><strong>How a run felt</strong>, only if you answer "How did that feel?" after a run: how hard it was, and where something hurt and how badly. It is saved with that activity, only you see it, and the coach uses it to ease your plan. Delete the activity and it goes too.</li>
       </ul>
 
@@ -57,6 +58,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Routes that follow paths</h2>
       <p>When the route planner follows paths, our server asks a routing service for the way between the points you drop: Openrouteservice or Google if we've set one up, otherwise the OpenStreetMap routing service run by FOSSGIS. They get the points and whether it's a run, walk or ride, never your name or account, and they see our server rather than your phone. Turn off Follow paths and nothing is sent.</p>
 
+      <h2>Stories near you</h2>
+      <p>When you tap Find stories near me, your phone asks for your location once and works out how far away each story is set. That all happens on your phone: your location isn't sent to us or kept.</p>
+
       <h2>Ghost runs</h2>
       <p>When you race a ghost, it's one of your own past runs, or a route at a pace you pick. The result and the ghost's line are kept on your phone so the recap can show both of you. Nothing about it is sent anywhere.</p>
 
@@ -75,7 +79,7 @@ import BrandMark from '../components/BrandMark.vue'
         <li>Delete an activity, or your whole account, at any time. Hills stay on the map for everyone without your name, and the next fastest person becomes King of the hill.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
-      <p class="small muted">Last updated 6 November 2026. This is a draft for review before launch.</p>
+      <p class="small muted">Last updated 11 November 2026. This is a draft for review before launch.</p>
     </main>
   </div>
 </template>
