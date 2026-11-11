@@ -11,6 +11,29 @@
 // It borrows sounds that already exist: the river, a party in the next room,
 // a gentle rain, and Deep Cover's noir score for the mystery.
 //
+// Episode 2, The Zig Zag Lanterns: "ghost" lanterns and a whistle on the old
+// Lapstone Zig Zag at Glenbrook turn out to be art students painting the
+// cutting by lantern light. Episode 3, The Duration: a 1943 letter under a
+// St Marys floor leads from the Bennett wagons to the old Ropes Creek
+// platform, and a wedding photo of Tash's great grandparents. Their sounds
+// come from audio/kits/locals.js. Facts checked (web search, November 2026):
+// - Lennox Bridge, 1833, built by convicts for the Scottish stonemason David
+//   Lennox; his name and AD 1833 are on the keystones; the oldest surviving
+//   stone arch bridge on the mainland; it carried the road for 93 years.
+// - The Lapstone Zig Zag (John Whitton), opened 1867, the first zig zag on
+//   any main line railway in the world; replaced in 1892. The Knapsack
+//   Viaduct later carried the highway until the M4 replaced it in 1993. The
+//   old Glenbrook tunnel was used to grow mushrooms. Arthur Streeton's
+//   Fire's On shows the tunnel being built.
+// - St Marys was first called South Creek; the name came from St Mary
+//   Magdalene church (1837 to 1840) and the post office of 1840. Mamre was
+//   built around 1830 for Samuel Marsden. The Bennett wagon works was near
+//   Queen Street, and three Bennett wagons are at South Creek Park.
+// - The munitions factory: over 3,500 workers at its peak, 850 buildings
+//   over almost five kilometres, the second largest in Australia; workers
+//   lived in Duration Cottages; its rail line ran from 1942 to 1986, and the
+//   Ropes Creek platform survives. Lang Park has a memorial garden.
+//
 // Facts in the story and the trivia were checked (web search, November 2026):
 // - Dharug (Darug) Country. The Dharug name for the river is Yandhai; the
 //   Yandhai Nepean Crossing's name means "walking in past and present". The
@@ -53,6 +76,7 @@ const T_WIN = line('pr-tash', '[excited] Yes! You are fast. Ease right back now.
 const T_OKAY = line('pr-tash', 'We made it. Catch your breath. Ease right back now.')
 const T_HALF = line('pr-tash', 'Halfway! Keep it up!')
 const K_EASY = line('pr-sarge', 'Easy now. Good detectives never rush. Save your legs.')
+const T_EASY = line('pr-tash', 'Slow down a bit! Even mysteries need a breather.')
 
 const dash = (at, seconds, who, say, recover, extra = {}) => ({
   at, kind: 'surge', seconds, who, say, recover,
@@ -76,6 +100,7 @@ export const EPISODES = [
   {
     id: 'penrith-emuhall',
     episode: 1,
+    next: 'Next time on River Town: ghostly lanterns on the old Zig Zag railway, and a whistle in the dark at Glenbrook.',
     saga: 'penrith',
     title: 'The Emu Hall Mystery',
     series: 'thriller',
@@ -148,9 +173,142 @@ export const EPISODES = [
       { at: 1910, kind: 'finale', say: 'The Emu Hall Mystery is solved. Nobody was harmed, the watch is home, and the river town has one more love story. Thank you, Runner.' },
     ],
   },
+  {
+    id: 'penrith-zigzag',
+    episode: 2,
+    previously: 'Previously on River Town: a vanished actor, a borrowed pocket watch, and a proposal on the Yandhai crossing.',
+    next: 'Next time on River Town: a tin box under a St Marys floor, a letter from 1943, and a love story that never got finished.',
+    saga: 'penrith',
+    title: 'The Zig Zag Lanterns',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 25,
+    difficulty: 'Steady effort',
+    blurb: 'Lanterns are moving along the old Lapstone Zig Zag railway at night. The trains stopped in 1892. So who is up there?',
+    loop: line('pr-sarge', 'A loop! Up and back. The old trains would be proud. Well, they went forwards and backwards. Close enough.'),
+    early: line('pr-dot', 'That is plenty for tonight, dear. The ghosts will still be there tomorrow.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Lennox Bridge', scene: 'cutting', say: 'Glenbrook, on a cool spring night. You start at the foot of Mitchell’s Pass, beside a small stone bridge over a creek. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', spatial: 'owl', say: 'This is Lennox Bridge. Convicts built it in 1833 for David Lennox, a Scottish stonemason. His name is still carved into the keystone.' },
+      { at: 105, kind: 'story', who: 'pr-dot', fx: 'squelch', say: 'Hello, dear, Dot again. The heritage group has a puzzle. Drivers on the M4 keep seeing lanterns moving along the old Zig Zag railway. At night.' },
+      { at: 160, kind: 'story', who: 'pr-dot', say: '[whispers] The trains stopped running up there in 1892. Kev says it is a ghost train. Kev says a lot of things.' },
+      { at: 215, kind: 'quiz', who: 'pr-sarge', say: 'Kev here. While you warm up. Lennox Bridge is the oldest one of its kind on the Australian mainland. What kind?',
+        options: [{ key: 'A', label: 'Stone arch bridge' }, { key: 'B', label: 'Iron bridge' }, { key: 'C', label: 'Timber bridge' }], answer: 'A',
+        right: line('pr-sarge', 'A stone arch bridge. It carried the road to the mountains for 93 years. Built to last. Like me.'),
+        wrong: line('pr-sarge', 'It is a stone arch bridge. It carried the road to the mountains for 93 years. Built to last. Like me.') },
+      dash(280, 30, 'pr-tash', 'Tash here! I can see the lanterns from up the hill! Pick it up for 30 seconds up the old road!', 110, { chapter: 'Lanterns', fx: 'whoosh' }),
+      { at: 360, kind: 'story', say: 'The road climbs through dark bush. A boobook calls. Then, up on the hillside, three small orange lights bob along in a line.' },
+      { at: 415, kind: 'story', who: 'pr-sarge', say: 'The Lapstone Zig Zag. Same engineer as Victoria Bridge, John Whitton. Trains went up this hill forwards, then backwards, then forwards again.' },
+      { at: 470, kind: 'puzzle', who: 'pr-sarge', say: 'It was the first zig zag on any main line railway in the world. What year did it open?',
+        options: [{ key: 'A', label: '1867' }, { key: 'B', label: '1901' }, { key: 'C', label: '1932' }], answer: 'A',
+        right: line('pr-sarge', '1867. Steam trains puffing back and forth up this hill. Must have been quite a sight.'),
+        wrong: line('pr-sarge', 'It opened in 1867. Steam trains puffing back and forth up this hill. Must have been quite a sight.') },
+      { at: 535, kind: 'story', fx: 'steamwhistle', say: 'Then, from the dark, a whistle. Long and lonely, echoing off the sandstone. Every hair on your neck stands up.' },
+      { at: 590, kind: 'story', who: 'pr-tash', say: '[whispers] Okay. That was not a car. Kev, I take back everything I said about the ghost train.' },
+      { at: 640, kind: 'choice', id: 'way', who: 'pr-tash', say: 'Two ways up. The old Zig Zag walking track, or across the Knapsack Viaduct?',
+        options: [
+          { key: 'A', label: 'The Zig Zag track', flag: 'zigzag', say: line('pr-tash', 'The Zig Zag! Like a real train. Forwards, backwards, forwards.') },
+          { key: 'B', label: 'The viaduct', flag: 'viaduct', say: line('pr-tash', 'The viaduct! Big old arches. Come on!') },
+        ],
+        default: 'A', timeout: line('pr-tash', 'The Zig Zag track, then. Go!') },
+      dash(690, 30, 'pr-tash', 'Up the Zig Zag! Pick it up for 30 seconds!', 110, { if: 'zigzag', chapter: 'The climb', fx: 'whoosh' }),
+      dash(691, 30, 'pr-tash', 'Over the viaduct! Pick it up for 30 seconds across the old arches!', 110, { unless: 'zigzag', chapter: 'The climb', fx: 'whoosh' }),
+      { at: 770, kind: 'story', if: 'zigzag', say: 'The track switches back and forth up the hill, just like the trains did. Old rusty spikes poke out of the dirt.' },
+      { at: 771, kind: 'story', unless: 'zigzag', say: 'The Knapsack Viaduct curves across the gully on tall sandstone arches. Later, cars drove over it, right up until the M4 opened in 1993.' },
+      { at: 830, kind: 'steady', seconds: 150, chapter: 'The cutting', say: 'Settle into an easy pace through a deep sandstone cutting while Kev gets his breath back.', easyNudge: K_EASY },
+      { at: 860, kind: 'story', who: 'pr-sarge', say: 'Fun fact. When the new line opened, the old Glenbrook tunnel was left empty. So someone grew mushrooms in it. True story.' },
+      { at: 910, kind: 'quiz', who: 'pr-dot', say: 'That one is true, dear. Here is another. Which famous painter painted the workers building a railway tunnel near here?',
+        options: [{ key: 'A', label: 'Arthur Streeton' }, { key: 'B', label: 'Pablo Picasso' }, { key: 'C', label: 'Claude Monet' }], answer: 'A',
+        right: line('pr-dot', 'Arthur Streeton! The painting is called Fire’s On. It shows the tunnel being built, right in these hills.'),
+        wrong: line('pr-dot', 'It was Arthur Streeton. The painting is called Fire’s On. It shows the tunnel being built, right in these hills.') },
+      { at: 980, kind: 'story', who: 'pr-tash', fx: 'found', say: '[excited] Found them! The lanterns! They are on little stands. And there are easels. Lots of easels. Hang on.' },
+      dash(1020, 45, 'pr-tash', 'Someone is running off with a lantern! Pick it up for 45 seconds and catch them!', 120, { chapter: 'The painters', fx: 'footsteps' }),
+      { at: 1100, kind: 'story', who: 'pr-priya', say: '[laughs] Wait, wait! Sorry! I am Priya, from the art school. We are painting the old cutting by lantern light. Like Streeton did, over a century ago.' },
+      { at: 1155, kind: 'story', who: 'pr-priya', say: 'The whistle? That was me, testing a steam whistle sound for our exhibition. I did not think it would echo all the way down the hill.' },
+      { at: 1210, kind: 'story', who: 'pr-sarge', say: '[laughs] A ghost train with a speaker. Forty years in the force and I have seen everything now. Dot, case closed.' },
+      { at: 1250, kind: 'quiz', who: 'pr-priya', say: 'Before you go. Trains stopped using the Zig Zag when a new line opened through the hill. Which year?',
+        options: [{ key: 'A', label: '1892' }, { key: 'B', label: '1867' }, { key: 'C', label: '1955' }], answer: 'A',
+        right: line('pr-priya', '1892. Since then it has been all walkers, owls and painters. And now, runners.'),
+        wrong: line('pr-priya', 'It was 1892. Since then it has been all walkers, owls and painters. And now, runners.') },
+      { at: 1310, kind: 'steady', seconds: 180, chapter: 'Downhill', say: 'The painters wave their brushes. Cool down now with an easy jog or a walk back down the hill to Lennox Bridge.', easyNudge: T_EASY },
+      { at: 1340, kind: 'story', who: 'pr-dot', say: 'Priya’s paintings will hang at the Penrith Regional Gallery next month, dear. You are invited. Bring your legs.' },
+      { at: 1380, kind: 'quiz', who: 'pr-tash', say: 'Last one! David Lennox carved his name on the bridge, with a year. Which year?',
+        options: [{ key: 'A', label: '1833' }, { key: 'B', label: '1788' }, { key: 'C', label: '1901' }], answer: 'A',
+        right: line('pr-tash', '1833! You can still read it on the keystone. Same time next week? Dot has found something in St Marys.'),
+        wrong: line('pr-tash', 'It says 1833. You can still read it on the keystone. Same time next week? Dot has found something in St Marys.') },
+      { at: 1450, kind: 'finale', say: 'The Zig Zag Lanterns is solved. No ghost, one whistle, and a hillside full of paintings. Thank you, Runner.' },
+    ],
+  },
+  {
+    id: 'penrith-duration',
+    episode: 3,
+    previously: 'Previously on River Town: lanterns on the old Zig Zag, a whistle in the dark, and a hillside full of painters.',
+    saga: 'penrith',
+    title: 'The Duration',
+    series: 'thriller',
+    type: 'surge',
+    minutes: 25,
+    difficulty: 'Steady effort',
+    blurb: 'A tin box under a St Marys floor holds a letter from 1943 and a tiny key. Follow Nell’s clues from Queen Street to Ropes Creek.',
+    loop: line('pr-tash', 'You closed a loop! Nan says Pop used to run loops round the factory at lunch. Probably to show off.'),
+    early: line('pr-dot', 'That will do for today, dear. The letter has waited this long. It can wait a little more.'),
+    beats: [
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Queen Street', scene: 'suburb', say: 'St Marys, on a warm Saturday afternoon. Lorikeets screech in the trees along Queen Street. Start with an easy walk or jog.' },
+      { at: 50, kind: 'story', spatial: 'lorikeets', say: 'Long before St Marys was a suburb, this was South Creek. Farms lined the water. The name St Marys came later, from a church built around 1840.' },
+      { at: 105, kind: 'story', who: 'pr-tash', fx: 'squelch', say: 'Tash here! Big news. My nan was fixing up her old cottage and found a tin box under the floor. Inside, a letter from 1943. And a tiny key.' },
+      { at: 160, kind: 'story', who: 'pr-dot', say: 'It is a Duration Cottage, dear. They were built for the munitions workers in the war. Thousands of people worked at the factory here.' },
+      { at: 215, kind: 'story', who: 'pr-tash', say: 'The letter is from a girl called Nell, to someone called Jack. It says, meet me where the wagons rest. I will leave the rest for you to find.' },
+      { at: 270, kind: 'quiz', who: 'pr-dot', say: 'So where do the wagons rest? Three old Bennett wagons are on show in St Marys. In which park?',
+        options: [{ key: 'A', label: 'South Creek Park' }, { key: 'B', label: 'Hyde Park' }, { key: 'C', label: 'Victoria Park' }], answer: 'A',
+        right: line('pr-dot', 'South Creek Park. The Bennett works built horse drawn wagons right here, near Queen Street.'),
+        wrong: line('pr-dot', 'It is South Creek Park. The Bennett works built horse drawn wagons right here, near Queen Street.') },
+      dash(330, 30, 'pr-tash', 'Pick it up for 30 seconds to South Creek Park!', 110, { chapter: 'Where the wagons rest', fx: 'whoosh' }),
+      { at: 410, kind: 'story', say: 'Under a shelter in South Creek Park sit the old Bennett wagons. Big wooden wheels and painted rails, built by hand in St Marys.' },
+      { at: 465, kind: 'story', who: 'pr-col', say: 'G’day. Col. I help look after these old wagons. Funny thing. My dad kept a note that was left on them in 1944. For a Jack. Never collected.' },
+      { at: 520, kind: 'story', who: 'pr-col', say: 'It says: if you are late again, Jack, I will wait where your train comes in. Ropes Creek. That was the munitions line.' },
+      { at: 575, kind: 'quiz', who: 'pr-col', say: 'The munitions factory was enormous. About how many buildings did it have?',
+        options: [{ key: 'A', label: '850' }, { key: 'B', label: '85' }, { key: 'C', label: '8' }], answer: 'A',
+        right: line('pr-col', '850 buildings, spread over almost five kilometres. The second biggest in Australia.'),
+        wrong: line('pr-col', 'It had 850 buildings, spread over almost five kilometres. The second biggest in Australia.') },
+      { at: 640, kind: 'story', who: 'pr-col', say: 'Over 3,500 people worked there at its peak. Men and women. A special train line carried them in, from 1942.' },
+      { at: 700, kind: 'choice', id: 'route', who: 'pr-tash', say: 'To Ropes Creek! Along the creek path, or past Lang Park and the munitions memorial?',
+        options: [
+          { key: 'A', label: 'The creek path', flag: 'creek', say: line('pr-tash', 'The creek path. Shady. Watch out for ducks.') },
+          { key: 'B', label: 'Past Lang Park', flag: 'park', say: line('pr-tash', 'Past Lang Park. I want to say hi to the memorial.') },
+        ],
+        default: 'B', timeout: line('pr-tash', 'Past Lang Park, then. Come on!') },
+      dash(750, 30, 'pr-tash', 'Along the creek! Pick it up for 30 seconds!', 110, { if: 'creek', chapter: 'Ropes Creek', fx: 'whoosh' }),
+      dash(751, 30, 'pr-tash', 'Through Lang Park! Pick it up for 30 seconds!', 110, { unless: 'creek', chapter: 'Ropes Creek', fx: 'whoosh' }),
+      { at: 830, kind: 'story', if: 'creek', spatial: 'sydneytrain', say: 'The path follows South Creek through the trees. Ducks paddle away. Somewhere nearby, a train rumbles past.' },
+      { at: 831, kind: 'story', unless: 'creek', say: 'In Lang Park, a memorial garden thanks the men and women who worked at the munitions factory. Someone has left fresh flowers.' },
+      { at: 885, kind: 'steady', seconds: 150, chapter: 'Nell and Jack', say: 'Settle into an easy pace while Tash reads the next part of the letter.', easyNudge: T_EASY },
+      { at: 915, kind: 'story', who: 'pr-tash', say: 'Nell writes: Jack drives the munitions train. He is always late. But he always waves. I might marry him, if he ever stops being late.' },
+      { at: 975, kind: 'quiz', who: 'pr-sarge', say: 'Kev here, listening in. The munitions train line kept running long after the war. Until which year?',
+        options: [{ key: 'A', label: '1986' }, { key: 'B', label: '1945' }, { key: 'C', label: '1960' }], answer: 'A',
+        right: line('pr-sarge', '1986. Only a couple of old platforms are left now. Ropes Creek is one of them.'),
+        wrong: line('pr-sarge', 'It ran until 1986. Only a couple of old platforms are left now. Ropes Creek is one of them.') },
+      { at: 1040, kind: 'story', fx: 'found', say: 'At the old Ropes Creek platform, now among new houses, a small brass plate is screwed to the edge. It reads: N and J, 1944. Always late.' },
+      { at: 1095, kind: 'story', who: 'pr-tash', say: '[excited] The key! There is a tiny lock on the plate! Hang on. [laughs] It opens! There is a photo inside. A wedding photo. Nell and Jack!' },
+      { at: 1150, kind: 'story', who: 'pr-tash', say: 'Dot. Nell is my great nan’s name. Jack is my great pop. They are my family. Nan has never seen this photo!' },
+      dash(1205, 45, 'pr-tash', 'Nan needs to see this right now! Pick it up for 45 seconds back towards Queen Street!', 120, { chapter: 'Home', fx: 'whoosh' }),
+      { at: 1290, kind: 'story', who: 'pr-dot', say: '[sighs] Oh, dear. That is the loveliest thing. Eighty years, that photo waited on a railway platform.' },
+      { at: 1345, kind: 'quiz', who: 'pr-col', say: 'One for the road. Before it was St Marys, this place was named after its water. What was it called?',
+        options: [{ key: 'A', label: 'South Creek' }, { key: 'B', label: 'Ropes Creek' }, { key: 'C', label: 'Nepean' }], answer: 'A',
+        right: line('pr-col', 'South Creek! The farms grew up along it because it never ran dry.'),
+        wrong: line('pr-col', 'It was South Creek. The farms grew up along it because it never ran dry.') },
+      { at: 1405, kind: 'steady', seconds: 180, chapter: 'Cuppa', say: 'Cool down now with an easy jog or a walk back to the cottage, where the kettle is already on.', easyNudge: T_EASY },
+      { at: 1430, kind: 'story', who: 'pr-tash', say: 'Nan cried. Then she laughed. Then she said Pop was late to the wedding too.' },
+      { at: 1460, kind: 'quiz', who: 'pr-dot', say: 'One more, dear. Samuel Marsden’s old farmhouse near St Marys, built around 1830, has a name. What is it?',
+        options: [{ key: 'A', label: 'Mamre' }, { key: 'B', label: 'Emu Hall' }, { key: 'C', label: 'Fernhill' }], answer: 'A',
+        right: line('pr-dot', 'Mamre! It is still standing, on Mamre Road. Lots of history around here, dear.'),
+        wrong: line('pr-dot', 'It is Mamre. It is still standing, on Mamre Road. Lots of history around here, dear.') },
+      { at: 1505, kind: 'story', who: 'pr-sarge', say: 'Some things never change, Runner. Good work. Lovely work.' },
+      { at: 1540, kind: 'finale', say: 'The Duration is solved. A letter found, a photo home, and a love story that waited eighty years for a runner. Thank you, Runner.' },
+    ],
+  },
 ]
 
-export const CHAIN = ['penrith-emuhall']
+export const CHAIN = ['penrith-emuhall', 'penrith-zigzag', 'penrith-duration']
 
 export const CAST = {
   'penrith-narrator': { name: 'Narrator', voiceId: 'oKDz3nEzNfwKIVvUwPs0', pitch: 0.85, rate: 0.98 }, // Peter Michael
@@ -158,10 +316,19 @@ export const CAST = {
   'pr-tash': { name: 'Tash', voiceId: 'BB9S0ZoOunfdUYSciL2X', pitch: 1.25, rate: 1.08 }, // Milly
   'pr-sarge': { name: 'Kev Mallard', voiceId: 'YLbQE9U7P1K6rBNJWNSv', pitch: 0.8, rate: 0.98 }, // Jimbo
   'pr-gus': { name: 'Gus', voiceId: 'gZR4sGJmJaoBOVzKgZ8j', pitch: 0.95, rate: 1.06 }, // Scotty
+  'pr-priya': { name: 'Priya', voiceId: 'nBoLwpO4PAjQaQwVKPI1', pitch: 1.1, rate: 1.06 }, // Amelia
+  'pr-col': { name: 'Col', voiceId: 'zcIk2xc7SGwlywr4TzZu', pitch: 0.85, rate: 0.98 }, // Simon
   'pr-lou': { name: 'Lou', voiceId: 'zMK1eWY5DTw3Jjb8efU8', pitch: 1.05, rate: 1.04 }, // Emily
 }
 
 export const LOOK = { accent: '#F2A65A', deep: '#0E1A1F', tag: 'Local mystery' }
 
-// No new recordings: it uses the river, the party and Deep Cover's score.
-export const LIBRARY = { ambience: {}, sfx: {}, tracks: {} }
+// Episode 1 uses the river and the party; the later ones add a railway
+// cutting at night and a suburb at dusk (audio/kits/locals.js).
+export const LIBRARY = {
+  ambience: {
+    cutting: 'A deep sandstone railway cutting in the Blue Mountains bush at night: a cool breeze through gum trees, crickets, water dripping on rock, a boobook owl far away, vast quiet, no music, no voices',
+  },
+  sfx: {},
+  tracks: {},
+}
