@@ -6,7 +6,7 @@
 // are rate limited per address so nobody can run up the bill. A line sent
 // with keep: false (it names a device) skips R2 and only sits in the cache.
 import { hit } from './db.js'
-import { userFor } from './auth.js'
+import { signedIn } from './auth.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
 import { MISSIONS } from '../src/lib/missions/scripts.js'
 
@@ -62,11 +62,6 @@ export function isScriptLine(text) {
   return scriptLines.has(text)
 }
 
-async function signedIn(req, env) {
-  if (!req.headers.get('authorization') && !req.headers.get('x-device-id')) return false
-  try { return !!(await userFor(req, env)).user } catch { return false }
-}
-
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 
 async function sha(text) {
@@ -99,7 +94,7 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   const scripted = story && isScriptLine(text)
   if (!scripted && !(await isSignedIn(req, env))) return json({ error: 'Sign in to use the coach voice.', code: 'signin' }, 401)
   const ip = req.headers.get('cf-connecting-ip') || 'unknown'
-  const r = scripted ? { ok: true } : await hit(env, 'tts', ip)
+  const r = await hit(env, scripted ? 'ttsScript' : 'tts', ip) // story lines get a bigger allowance
   if (!r.ok) return json({ error: 'The coach needs a breather. Updates will use the phone voice for a bit.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 600) })
 
   const ask = (model, words, settings) => fetcher(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {

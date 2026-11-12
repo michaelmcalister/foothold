@@ -59,6 +59,14 @@ export function cellsForLoops(loops) {
   return [...set]
 }
 
+// Hexes a loop's own line passes through, without its inside (for loops too
+// big to be believable as one claim).
+export function cellsOnLine(loops) {
+  const set = new Set()
+  for (const loop of loops) for (const [lng, lat] of loop.ring) set.add(latLngToCell(lat, lng, RES))
+  return [...set]
+}
+
 // Apply one activity's claim to the map.
 //   cells: Map of h3 -> { h3, owner, strength, visits, lastVisit, claimedAt,
 //          flips?, lastFlip?, recentFlips? } (flips: times it changed hands)
@@ -66,6 +74,7 @@ export function cellsForLoops(loops) {
 //   targets: h3 ids from cellsForLoops
 //   who: user id; gain: from effortGain
 //   isPrivate(h3): optional, true for hexes in the user's own privacy zone
+// Hexes in someone else's privacy zone are left alone (diff.skipped).
 // Returns the diff and the updated cells (new objects; input is not mutated).
 export function applyClaim(cells, targets, who, gain, { now = Date.now(), isPrivate = () => false } = {}) {
   const updated = new Map()
@@ -74,7 +83,10 @@ export function applyClaim(cells, targets, who, gain, { now = Date.now(), isPriv
     const prev = cells.get(h3)
     const cur = currentStrength(prev, now)
     const priv = isPrivate(h3)
-    if (!prev || cur === 0 || !prev.owner) {
+    if (prev?.private && prev.owner && prev.owner !== who && cur > 0) {
+      // Inside someone else's privacy zone: never touched, never named
+      diff.skipped.push(h3)
+    } else if (!prev || cur === 0 || !prev.owner) {
       // Wild ground: yours. Its history of changing hands stays with it.
       const hist = prev?.flips ? { flips: prev.flips, lastFlip: prev.lastFlip, recentFlips: prev.recentFlips || 0 } : {}
       updated.set(h3, { h3, owner: who, strength: gain, visits: 1, lastVisit: now, claimedAt: now, private: priv || undefined, ...hist })

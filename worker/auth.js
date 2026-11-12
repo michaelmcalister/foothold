@@ -91,3 +91,9 @@ export async function userFor(req, env) {
   }
   return { error: 'Sign in to keep playing.', status: 401 }
 }
+
+/** True when the request comes from a signed-in player (for paid endpoints outside the main router). */
+export async function signedIn(req, env) {
+  if (!req.headers.get('authorization') && !req.headers.get('x-device-id')) return false
+  try { return !!(await userFor(req, env)).user } catch { return false }
+}

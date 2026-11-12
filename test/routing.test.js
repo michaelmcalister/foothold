@@ -57,7 +57,10 @@ describe('path snapping', () => {
   it('uses Openrouteservice with the key in a header, and hides upstream errors', async () => {
     let seen
     const fetcher = async (url, init) => { seen = { url, init }; return new Response('quota secret', { status: 429 }) }
-    const res = await handleRoute(post({ mode: 'ride', points: [A, B] }), { DB: fakeDB(), ORS_API_KEY: 'k' }, { fetcher, cache: null })
+    const signedOut = await handleRoute(post({ mode: 'ride', points: [A, B] }), { DB: fakeDB(), ORS_API_KEY: 'k' }, { fetcher, cache: null, isSignedIn: async () => false })
+    expect(signedOut.status).toBe(401) // a paid router needs a signed-in player
+    expect(seen).toBeUndefined()
+    const res = await handleRoute(post({ mode: 'ride', points: [A, B] }), { DB: fakeDB(), ORS_API_KEY: 'k' }, { fetcher, cache: null, isSignedIn: async () => true })
     expect(seen.url).toContain('cycling-regular')
     expect(seen.init.headers.authorization).toBe('k')
     expect(seen.url).not.toContain('k=')

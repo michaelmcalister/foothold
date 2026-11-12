@@ -128,7 +128,9 @@ describe('reel ground and privacy zones', () => {
   it('trims the ends of the route inside a zone and leaves its hexes out', () => {
     const track = loop(4, 5)
     const open = reelGround(track)
-    expect(open.track.length).toBe(track.length)
+    // with no zone, the first and last 200 m still go (your front door never shows)
+    expect(open.track.length).toBeLessThan(track.length)
+    expect(open.track.length).toBeGreaterThan(track.length * 0.8)
     expect(open.hexRings.length).toBeGreaterThan(0)
     const zone = { lat: track[0].lat, lng: track[0].lng, radiusM: 300 }
     const g = reelGround(track, { zones: [zone] })

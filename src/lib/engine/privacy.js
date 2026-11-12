@@ -14,15 +14,31 @@ export function hexIsPrivate(h3, zones) {
   return zones?.length ? inZone(cellCentre(h3), zones) : false
 }
 
-// Trim the start and end of a track that sit inside a zone, for anything
-// other players see. The full track stays with the owner.
+// What other players see of a track: the start and end inside a zone go,
+// and so do the first and last END_TRIM_M metres either way, so a run
+// from your front door never shows the door, zone or no zone. The full
+// track stays with the owner.
+export const END_TRIM_M = 200
+
+export function trimEnds(points, metres = END_TRIM_M) {
+  if (!points?.length) return []
+  let a = 0
+  let gone = 0
+  while (a < points.length - 1 && gone < metres) { gone += distance(points[a], points[a + 1]); a++ }
+  let b = points.length - 1
+  gone = 0
+  while (b > a && gone < metres) { gone += distance(points[b - 1], points[b]); b-- }
+  return b > a ? points.slice(a, b + 1) : []
+}
+
 export function publicTrack(points, zones) {
-  if (!zones?.length) return points
   let a = 0
   let b = points.length - 1
-  while (a <= b && inZone(points[a], zones)) a++
-  while (b >= a && inZone(points[b], zones)) b--
-  return points.slice(a, b + 1)
+  if (zones?.length) {
+    while (a <= b && inZone(points[a], zones)) a++
+    while (b >= a && inZone(points[b], zones)) b--
+  }
+  return trimEnds(points.slice(a, b + 1))
 }
 
 // Where activities usually start: a likely home. Used to suggest a zone

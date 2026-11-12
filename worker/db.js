@@ -240,6 +240,7 @@ export const LIMITS = {
   elevation: { max: 60, sec: 3600 }, // fresh height lookups per address per hour (repeats come from the cache)
   audio: { max: 30, sec: 3600 }, // new recorded sounds made per address per hour (each is made once, ever)
   tts: { max: 150, sec: 3600 }, // new voice lines per address per hour (repeats come from the cache)
+  ttsScript: { max: 1500, sec: 3600 }, // story lines made for the first time (most are already kept in R2)
   feedback: { max: 10, sec: 86400 },
   club: { max: 5, sec: 86400 },
   formtrack: { max: 10, sec: 3600 },
@@ -255,24 +256,51 @@ export const LIMITS = {
 
 // Buckets that spend real money (voice lines, AI plans). If the limits
 // table can't be read, these say no rather than letting anyone run up a bill.
-export const PAID = new Set(['tts', 'audio', 'aiPlanHour', 'aiPlanDay', 'aiPlanUser'])
+export const PAID = new Set(['tts', 'ttsScript', 'audio', 'route', 'elevation', 'aiPlanHour', 'aiPlanDay', 'aiPlanUser'])
 
 /**
  * Count one use. Fails open if the table is missing so a hiccup can't lock
  * everyone out, except for the paid buckets, which fail closed.
  */
+// A ceiling for everyone together, per day, on the buckets that spend money:
+// however many addresses ask, the bill can't run away. A Cloudflare variable
+// CAP_<BUCKET> (say CAP_TTS=3000) changes one.
+export const GLOBAL_CAPS = {
+  tts: 2000, // free-form coach lines
+  ttsScript: 6000, // story lines made for the first time
+  audio: 300, // ambience and music made once each
+  route: 20000, // path lookups (the free router counts too: it has fair use rules)
+  elevation: 20000,
+  aiPlanDay: 300,
+}
+export const capFor = (env, bucket) => Number(env?.[`CAP_${bucket.replace(/[A-Z]/g, (c) => '_' + c).toUpperCase()}`]) || GLOBAL_CAPS[bucket]
+
+async function count(env, bucket, key, sec, now) {
+  const win = now - (now % sec)
+  const row = await env.DB.prepare(
+    `INSERT INTO rate_limits (bucket, key, win, count) VALUES (?, ?, ?, 1)
+     ON CONFLICT (bucket, key, win) DO UPDATE SET count = count + 1
+     RETURNING count`,
+  ).bind(bucket, String(key), win).first()
+  return { n: row?.count ?? 1, retryAfter: win + sec - now }
+}
+
 export async function hit(env, bucket, key) {
   const lim = LIMITS[bucket]
   if (!lim || !key) return { ok: true }
   const now = Math.floor(Date.now() / 1000)
-  const win = now - (now % lim.sec)
   try {
-    const row = await env.DB.prepare(
-      `INSERT INTO rate_limits (bucket, key, win, count) VALUES (?, ?, ?, 1)
-       ON CONFLICT (bucket, key, win) DO UPDATE SET count = count + 1
-       RETURNING count`,
-    ).bind(bucket, String(key), win).first()
-    return { ok: (row?.count ?? 1) <= lim.max, retryAfter: win + lim.sec - now }
+    const mine = await count(env, bucket, key, lim.sec, now)
+    if (mine.n > lim.max) return { ok: false, retryAfter: mine.retryAfter }
+    const cap = capFor(env, bucket)
+    if (cap) {
+      const all = await count(env, bucket, '*', 86400, now)
+      if (all.n > cap) {
+        if (all.n === cap + 1) console.error('spend cap reached', bucket) // once a day, so the owner hears of it
+        return { ok: false, retryAfter: all.retryAfter, capped: true }
+      }
+    }
+    return { ok: true, retryAfter: mine.retryAfter }
   } catch {
     return PAID.has(bucket) ? { ok: false, retryAfter: 300 } : { ok: true }
   }

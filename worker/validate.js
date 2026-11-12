@@ -59,3 +59,29 @@ export function parseBbox(v) {
   }
   return b
 }
+
+/**
+ * A fingerprint of a track's line: 24 points spaced evenly along its length,
+ * to about 10 m, hashed. The same file uploaded twice matches; two runs of
+ * the same loop on different days don't (GPS never lands twice in the same
+ * spots). Times aren't part of it, so shifting a copy in time still matches.
+ */
+export async function trackPrint(points) {
+  let total = 0
+  const at = [0]
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180)
+    total += Math.hypot(dLat, dLng)
+    at.push(total)
+  }
+  const marks = []
+  let j = 0
+  for (let k = 0; k <= 24; k++) {
+    const want = (total * k) / 24
+    while (j < at.length - 1 && at[j] < want) j++
+    marks.push(`${points[j].lat.toFixed(4)},${points[j].lng.toFixed(4)}`)
+  }
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(marks.join(';')))
+  return [...new Uint8Array(buf)].slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('')
+}

@@ -9,6 +9,7 @@
 // With { steps: true } the answer also has turn by turn steps, the same shape
 // from every provider: { turn, name, distanceM, at: [lng, lat] }.
 import { hit } from './db.js'
+import { signedIn } from './auth.js'
 import { decodePolyline } from '../src/lib/engine/strongholds.js'
 
 export const MAX_POINTS = 25
@@ -149,7 +150,7 @@ async function sha(text) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export async function handleRoute(req, env, { fetcher = fetch, cache = globalThis.caches?.default } = {}) {
+export async function handleRoute(req, env, { fetcher = fetch, cache = globalThis.caches?.default, isSignedIn = signedIn } = {}) {
   const parsed = readRouteBody(await req.json().catch(() => null))
   if (parsed.error) return json({ error: parsed.error, code: 'bad_request' }, 400)
   const { mode, points, steps } = parsed
@@ -158,6 +159,8 @@ export async function handleRoute(req, env, { fetcher = fetch, cache = globalThi
   const cached = cache ? await cache.match(key) : null
   if (cached) return json(await cached.json())
 
+  // A paid router (ORS or Google) needs a signed-in player; the free one doesn't
+  if (provider !== 'osrm' && !(await isSignedIn(req, env))) return json({ error: 'Sign in to snap routes to paths. Your route uses straight lines for now.', code: 'signin' }, 401)
   const r = await hit(env, 'route', req.headers.get('cf-connecting-ip') || 'unknown')
   if (!r.ok) return json({ error: 'Lots of route changes in a row. Give it a minute.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 60) })
   let out

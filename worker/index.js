@@ -1,10 +1,10 @@
 // The Foothold API worker: every /api route in docs/API.md, the hourly cron
 // (worker/cron.js), and the built app as static assets for everything else.
 
-import { processActivity, loadCheck, battleScore, hexIsPrivate, seasonById } from '../src/lib/engine/index.js'
+import { processActivity, loadCheck, battleScore, hexIsPrivate, seasonById, trimEnds } from '../src/lib/engine/index.js'
 import { isCrest } from '../src/lib/crests.js'
 import { DAY, WEEK, MAX_BODY, SOURCES, FEEDBACK_KINDS, VERB, json, err, bad, isNum, modeOf } from './http.js'
-import { cleanPoints, cleanZones, bboxOf, pad } from './validate.js'
+import { cleanPoints, cleanZones, bboxOf, pad, trackPrint } from './validate.js'
 import { territory, stats, leaderboard, season, feed } from './boards.js'
 import {
   uid, parse, userOut, players, packTrack, unpackTrack, activityOut, ACTIVITY_COLS, cellsIn, cellsByIds, upsertCell, batched, hexCount, rowToBattle, upsertBattle, notify, hit,
@@ -110,6 +110,14 @@ async function joinClub(env, user, clubId) {
   user.club_id = clubId
 }
 
+// What other players get of a track. Saved since the ends were trimmed on
+// the way in (privacy.js), it's ready; older ones get their ends trimmed now.
+const TRIMMED_FROM = Date.UTC(2026, 10, 13)
+function othersTrack(row) {
+  const t = unpackTrack(row.public_track)
+  return row.created_at >= TRIMMED_FROM ? t : trimEnds(t)
+}
+
 // ---- routes ----
 
 async function postActivity(env, user, body, ctx) {
@@ -120,6 +128,15 @@ async function postActivity(env, user, body, ctx) {
   const points = cleanPoints(body.points)
 
   const now = Date.now()
+  // The same line twice (worker/validate.js trackPrint): your own retry gets
+  // the saved one back; anyone else's track can't take ground again
+  const print = await trackPrint(points)
+  const twin = await env.DB.prepare(`SELECT ${ACTIVITY_COLS} FROM activities a WHERE a.print = ? LIMIT 1`).bind(print).first()
+  if (twin?.user_id === user.id) {
+    const n = await hexCount(env, user.id, mode, now)
+    return { activity: activityOut(twin, user.id), already: true, prs: [], strongholds: [], diff: { claimed: [], reinforced: [], taken: [], held: [] }, battles: [], hexesBefore: n, hexesAfter: n, load: null, loops: [] }
+  }
+  if (twin) bad('This exact track is already on Foothold, so it can’t be saved again.', 409)
   const zones = parse(user.zones, [])
   const area = pad(bboxOf(points), 2000)
   const cells = await cellsIn(env, mode, area, now)
@@ -136,12 +153,12 @@ async function postActivity(env, user, body, ctx) {
 
   const stmts = [env.DB.prepare(
     `INSERT INTO activities (id, user_id, mode, source, started_at, distance_m, duration_s, moving_s, pace_s_per_km, elev_gain_m,
-      loops, gain, claimed, reinforced, taken, held, trust, flags, rejected, reject_reason, start, bbox, lat, lng, track, public_track, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      loops, gain, claimed, reinforced, taken, held, trust, flags, rejected, reject_reason, start, bbox, lat, lng, track, public_track, created_at, print)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(id, user.id, mode, source, a.startedAt, a.distanceM, a.durationS, a.movingS, a.paceSPerKm, a.elevGainM,
     a.loops || 0, a.gain || 0, a.claimed || 0, a.reinforced || 0, a.taken || 0, a.held || 0, a.trust, JSON.stringify(a.flags), a.rejected ? 1 : 0, a.rejectReason,
     a.start ? JSON.stringify(a.start) : null, a.bbox ? JSON.stringify(a.bbox) : null, centre?.lat ?? null, centre?.lng ?? null,
-    packTrack(res.track), packTrack(res.publicTrack), now)]
+    packTrack(res.track), packTrack(res.publicTrack), now, print)]
 
   for (const c of res.updated.values()) stmts.push(upsertCell(env, mode, c))
   // Personal bests and stronghold efforts (worker/strongholds.js)
@@ -191,7 +208,8 @@ async function postActivity(env, user, body, ctx) {
     activity: activityOut(row, user.id),
     prs: extra.prs,
     strongholds: extra.strongholds,
-    diff,
+    // the player's own changes; others' hexes without who held them, and none from privacy zones
+    diff: { claimed: diff.claimed, reinforced: diff.reinforced, taken: diff.taken.map((t) => ({ h3: t.h3 })), held: diff.held.map((t) => ({ h3: t.h3 })) },
     battles: await decorateBattles(env, res.battles, now),
     hexesBefore,
     hexesAfter: await hexCount(env, user.id, mode, now),
@@ -383,13 +401,13 @@ async function route(req, env, url, user, ctx) {
   if (am) {
     const id = am[1]
     const sub = am[2] || ''
-    const row = await env.DB.prepare(`SELECT ${ACTIVITY_COLS}, a.track, a.public_track,
+    const row = await env.DB.prepare(`SELECT ${ACTIVITY_COLS}, a.track, a.public_track, a.created_at,
         EXISTS (SELECT 1 FROM kudos k WHERE k.activity_id = a.id AND k.user_id = ?) AS given
       FROM activities a WHERE a.id = ?`).bind(user.id, id).first()
     if (!row) return err('That activity is gone.', 404, 'not_found')
     const mine = row.user_id === user.id
     if (!sub && m === 'GET') {
-      return json({ activity: activityOut(row, user.id, row.given), track: unpackTrack(mine ? row.track : row.public_track), hills: await hillsForActivity(env, user.id, id) })
+      return json({ activity: activityOut(row, user.id, row.given), track: mine ? unpackTrack(row.track) : othersTrack(row), hills: await hillsForActivity(env, user.id, id) })
     }
     if (!sub && m === 'DELETE') {
       if (!mine) return err('You can only delete your own activities.', 403)
