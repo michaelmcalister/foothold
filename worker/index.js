@@ -15,6 +15,7 @@ import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { secure } from './headers.js'
+import { reportError } from './sentry.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleAudio } from './audioLibrary.js'
@@ -860,6 +861,7 @@ export async function handleApi(req, env, ctx) {
     if (tts) out.tts = tts
     const ai = aiConfig(env) // AI built plans (Claude), when its key is set
     if (ai) out.ai = ai
+    if (env.SENTRY_DSN) out.sentryDsn = String(env.SENTRY_DSN) // error reports (public; src/lib/monitoring.js)
     res = json(out)
     return withCors(res, cors)
   }
@@ -910,6 +912,7 @@ export async function handleApi(req, env, ctx) {
     } else {
       // Path and message only: never request bodies, tokens or locations
       console.error('API error', req.method, url.pathname, e?.message)
+      reportError(env, ctx, e, `${req.method} ${url.pathname.replace(/\/[0-9a-f-]{8,}/gi, '/:id')}`)
       res = err('Something went wrong on our side. Try again in a moment.', 500)
     }
   }
@@ -924,6 +927,6 @@ export default {
     return new Response('Not found', { status: 404 })
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runCron(env, Number(event?.scheduledTime) || Date.now()))
+    ctx.waitUntil(runCron(env, Number(event?.scheduledTime) || Date.now()).catch((e) => reportError(env, null, e, 'cron')))
   },
 }

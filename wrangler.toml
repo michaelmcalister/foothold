@@ -45,6 +45,8 @@ AUTH0_AUDIENCE = "https://api.formtrk.com"
 # https://localhost the Android app.
 ALLOWED_ORIGINS = "capacitor://localhost,https://localhost"
 # Who can open the admin page at /app/admin (user ids, comma separated; worker/admin.js)
+# Error reports (Sentry project "foothold"). A DSN is public: it only lets you send events.
+SENTRY_DSN = "https://34b2335cc58f419dce528ae16ce26d44@o4512309370486784.ingest.de.sentry.io/4512416830718032"
 ADMIN_USERS = "62cda1ba-f5bf-4b55-a2f6-54460ba530e2"
 
 # Secrets (set with `npx wrangler secret put NAME`):

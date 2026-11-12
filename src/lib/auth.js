@@ -22,10 +22,14 @@ const home = () => location.origin + import.meta.env.BASE_URL
 const nativeCallback = (domain) => `${APP_ID}://${domain}/capacitor/${APP_ID}/callback`
 let callbackUrl = null
 
+// What /api/config said (error reports read it once the app is up)
+export let serverConfig = {}
+
 export async function initAuth() {
   if (!RAW) { auth.ready = true; return } // practice map: no sign-in
   try {
     const conf = await fetch(API + '/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+    serverConfig = conf
     const cfg = conf.auth0
     // No sign-in set up: use the server only when it takes device ids (local development)
     if (!cfg) { useServer(!!conf.devices); return }

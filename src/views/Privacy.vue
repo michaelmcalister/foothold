@@ -73,13 +73,16 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Plans built with AI</h2>
       <p>If you choose "Build it with AI" in the coach, what you type and a summary of your recent running (weekly distances, longest run, run count, estimated paces, your current goal and whether FormTrack is linked) go to Anthropic's Claude to set up your plan. We never send your name, email, account, routes or where you run. We ask before the first time, and remember your answer on your device. We don't keep what you typed on our servers, and it isn't used for anything else. Anthropic's commercial terms cover how it handles that data. The plan and its explanation are saved with your plan, like any other plan, and you can download or delete them. Plans built this way are labelled as built with AI and aren't medical advice.</p>
 
+      <h2>Error reports</h2>
+      <p>When something breaks in the app or on our server, a short report goes to Sentry, an error tracking service, so we can fix it. It holds the error message, which part of the code it came from and which screen you were on. We take out anything that looks like a place, an email or a sign-in token before it is sent. It never includes your name, your account, your runs or where you are.</p>
+
       <h2>Your choices</h2>
       <ul>
         <li>Download everything we hold about you from Settings.</li>
         <li>Delete an activity, or your whole account, at any time. Hills stay on the map for everyone without your name, and the next fastest person becomes King of the hill.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
-      <p class="small muted">Last updated 11 November 2026. This is a draft for review before launch.</p>
+      <p class="small muted">Last updated 12 November 2026. This is a draft for review before launch.</p>
     </main>
   </div>
 </template>

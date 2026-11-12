@@ -2,7 +2,8 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import { router } from './router.js'
-import { initAuth } from './lib/auth.js'
+import { initAuth, serverConfig } from './lib/auth.js'
+import { initMonitoring } from './lib/monitoring.js'
 import { startTheme, markInApp } from './lib/theme.js'
 import { isNativeApp, routeApiToServer } from './lib/native.js'
 
@@ -19,7 +20,9 @@ router.afterEach((to) => markInApp(to.path.startsWith('/app')))
 // (back from Auth0 to #/app), so start the routes from where we are now.
 initAuth().finally(async () => {
   await router.replace(location.hash.slice(1) || '/').catch(() => {})
-  createApp(App).use(router).mount('#app')
+  const app = createApp(App).use(router)
+  initMonitoring(app, router, serverConfig) // error reports, when the server has a Sentry key
+  app.mount('#app')
 })
 
 // Offline support and home-screen install (production builds only)
