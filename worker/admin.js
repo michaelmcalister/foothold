@@ -45,6 +45,27 @@ function ideaOut(r) {
   return { id: r.id, place, story, near, status: status(r), note: r.note || '', mission: r.mission || null, at: r.at, reviewedAt: r.reviewed_at || null }
 }
 
+// Retention from Foothold's own records, no tracker: of the players who
+// joined in the last 90 days (and long enough ago to tell), the share who
+// came back for another outing in each window after joining.
+export const RETENTION = [
+  { key: 'week1', from: 1, to: 7 }, // came back in the first week
+  { key: 'week2', from: 7, to: 14 }, // still going in week two
+  { key: 'month2', from: 30, to: 60 }, // still going in month two
+]
+export async function retention(env, now) {
+  const out = {}
+  for (const w of RETENTION) {
+    const r = await env.DB.prepare(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(EXISTS (SELECT 1 FROM activities a WHERE a.user_id = u.id AND a.rejected = 0
+         AND a.started_at >= u.created_at + ? AND a.started_at < u.created_at + ?)), 0) AS back
+       FROM users u WHERE u.created_at >= ? AND u.created_at < ?`,
+    ).bind(w.from * DAY, w.to * DAY, now - (90 + w.to) * DAY, now - w.to * DAY).first()
+    out[w.key] = { players: r.n, back: r.back, pct: r.n ? Math.round((100 * r.back) / r.n) : null }
+  }
+  return out
+}
+
 async function overview(env, now) {
   const one = (sql, ...a) => env.DB.prepare(sql).bind(...a).first()
   const [users, newUsers, act7, act30, runners7, ideas, approved, reports, plus, ai7, ai30] = await Promise.all([
@@ -74,6 +95,7 @@ async function overview(env, now) {
     plusMembers: plus.n,
     aiCost7: Math.round(ai7.c * 100) / 100,
     aiCost30: Math.round(ai30.c * 100) / 100,
+    retention: await retention(env, now).catch(() => null),
   }
 }
 

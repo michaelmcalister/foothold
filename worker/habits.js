@@ -24,9 +24,21 @@ export async function streak(env, user, now = Date.now()) {
 export async function streakNotices(env, now = Date.now()) {
   const since = prevWeek(weekOf(now)).start
   const users = (await env.DB.prepare('SELECT DISTINCT user_id FROM activities WHERE rejected = 0 AND started_at >= ? LIMIT 5000').bind(since).all()).results
+  // start times for 90 players per query, not one query per player
+  const times = new Map()
+  const ids = users.map((u) => u.user_id)
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90)
+    const rows = (await env.DB.prepare(`SELECT user_id, started_at FROM activities WHERE rejected = 0 AND user_id IN (${part.map(() => '?').join(',')}) ORDER BY started_at`).bind(...part).all()).results
+    for (const r of rows) {
+      const list = times.get(r.user_id) || []
+      if (list.length < MAX_ACTS) list.push({ startedAt: r.started_at })
+      times.set(r.user_id, list)
+    }
+  }
   const stmts = []
-  for (const { user_id: id } of users) {
-    const note = streakMilestoneNote(weeklyStreak({ activities: await startTimes(env, id), now }))
+  for (const id of ids) {
+    const note = streakMilestoneNote(weeklyStreak({ activities: times.get(id) || [], now }))
     if (note) stmts.push(notify(env, id, 'streak', note.text, { at: now, dayKey: note.key }))
   }
   await batched(env, stmts)

@@ -9,7 +9,9 @@ keep_vars = true
 # Build the app before every deploy (Cloudflare's build step runs only `wrangler deploy`).
 # VITE_API_URL=self: this Worker serves the API too, so the app offers sign-in.
 [build]
-command = "VITE_API_URL=self npm run build"
+# On Cloudflare's own builds (WORKERS_CI=1) the tests run first, and a
+# failing test stops the deploy. Locally (wrangler dev) it just builds.
+command = "if [ -n \"$WORKERS_CI\" ]; then npx vitest run --dir test || exit 1; fi; VITE_API_URL=self npm run build"
 
 # The built Vue app is served as static assets. Anything that isn't a file
 # falls back to index.html so client-side routes work. /api goes to the Worker.

@@ -89,3 +89,21 @@ describe('reports and AI spend', () => {
     expect((await call(OWNER, 'GET', '/api/admin/overview')).body.aiCost7).toBe(0.12)
   })
 })
+
+describe('retention', () => {
+  it('counts the players who came back after joining', async () => {
+    const { retention } = await import('../worker/admin.js')
+    const db = env.DB.db
+    const now = Date.now()
+    const day = 86400000
+    const join = now - 20 * day
+    const runner = (await call(RUNNER, 'GET', '/api/me')).body.user.id
+    db.prepare('UPDATE users SET created_at = ?').run(join) // both players joined 20 days ago
+    db.prepare("INSERT INTO activities (id, user_id, mode, source, started_at, distance_m, duration_s, track, rejected, created_at) VALUES ('r1', ?, 'run', 'phone', ?, 3000, 900, '', 0, ?)").run(runner, join + 3 * day, join + 3 * day)
+    const r = await retention(env, now)
+    expect(r.week1).toEqual({ players: 2, back: 1, pct: 50 })
+    expect(r.week2).toEqual({ players: 2, back: 0, pct: 0 })
+    expect(r.month2.players).toBe(0) // nobody joined long enough ago to tell
+    expect((await call(OWNER, 'GET', '/api/admin/overview')).body.retention.week1.pct).toBe(50)
+  })
+})

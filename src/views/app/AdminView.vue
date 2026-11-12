@@ -109,6 +109,8 @@ onMounted(() => {
         <div><dt>AI spend</dt><dd>{{ money(stats.aiCost7) }}</dd><span>{{ money(stats.aiCost30) }} in 30 days</span></div>
         <div><dt>Stories</dt><dd>{{ catalogue.stories }}</dd><span>{{ catalogue.series }} series, {{ catalogue.places }} real places</span></div>
         <div v-if="stats.plusMembers"><dt>Plus</dt><dd>{{ stats.plusMembers }}</dd><span>members</span></div>
+        <div v-if="stats.retention?.week1?.players"><dt>Came back</dt><dd>{{ stats.retention.week1.pct }}%</dd><span>in their first week ({{ stats.retention.week1.players }} joined)</span></div>
+        <div v-if="stats.retention?.week2?.players"><dt>Week two</dt><dd>{{ stats.retention.week2.pct }}%</dd><span>still going<template v-if="stats.retention.month2?.players">, {{ stats.retention.month2.pct }}% in month two</template></span></div>
         <div><dt>To do</dt><dd>{{ stats.ideasWaiting + stats.reportsOpen }}</dd><span>{{ stats.ideasWaiting }} ideas, {{ stats.reportsOpen }} reports</span></div>
       </dl>
     </section>
