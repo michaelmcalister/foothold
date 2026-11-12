@@ -12,6 +12,7 @@
 import { reactive } from 'vue'
 import { distance, summarise } from './engine/geo.js'
 import { isNativeApp, isAndroidApp, keepScreenOn, allowRecordingNotice } from './native.js'
+import { saveRun, clearRun, parkRun, waitingRun, clearSlot } from './runStore.js'
 
 export const rec = reactive({
   status: 'idle', // idle | acquiring | recording | paused | error
@@ -27,9 +28,11 @@ export const rec = reactive({
   wakeLock: false,
   lastFixAt: null, // when the last usable GPS point arrived
   notice: null, // a plain explanation after GPS went quiet
+  rough: false, // started on weak GPS (startAnyway)
+  acquiringSince: null,
+  waitingS: 0, // seconds spent finding GPS
 })
 
-const SAVE_KEY = 'fh-recording'
 const GAP_MS = 15000 // quiet for this long counts as a gap worth mentioning
 let hiddenAt = null
 
@@ -64,24 +67,30 @@ if (typeof document !== 'undefined') document.addEventListener('visibilitychange
 const gapText = (ms) => (ms < 90000 ? `${Math.round(ms / 1000)} seconds` : `${Math.round(ms / 60000)} minutes`)
 
 // The recording so far, kept on the device in case the page is closed
+// (runStore.js writes only the newest chunk, so long runs stay quick)
+let storageFull = false
 function persist() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ mode: rec.mode, startedAt: rec.startedAt, points: rec.points, savedAt: Date.now() }))
-  } catch { /* storage full or private mode */ }
+    saveRun(localStorage, { mode: rec.mode, startedAt: rec.startedAt, points: rec.points })
+    storageFull = false
+  } catch {
+    if (!storageFull) rec.notice = "This phone's storage is full, so the run is only kept while Foothold is open. Keep it open until you've saved."
+    storageFull = true
+  }
 }
 function forget() {
-  try { localStorage.removeItem(SAVE_KEY) } catch { /* nothing to remove */ }
+  try { clearRun(localStorage) } catch { /* nothing to remove */ }
 }
 
-/** A recording that was never finished (the page closed mid-run), or null. */
+/** A recording that was never saved (the page closed mid-run, or saving failed), or null. */
 export function unfinished() {
   if (rec.status !== 'idle') return null
-  try {
-    const u = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null')
-    return u?.points?.length > 1 ? u : null
-  } catch { return null }
+  try { return waitingRun(localStorage) } catch { return null }
 }
-export const forgetUnfinished = forget
+/** Forget a kept recording once it's saved or discarded (slot from unfinished(), else the latest). */
+export function forgetUnfinished(slot) {
+  try { clearSlot(localStorage, slot) } catch { /* nothing to remove */ }
+}
 
 /**
  * Joins gaps in a track with straight lines, a point every `stepM` metres,
@@ -124,7 +133,7 @@ function onPosition(pos) {
   if (rec.status !== 'recording') return
   const now = Date.now()
   // Prefer sharp fixes, but after 15 s with none, take a rougher one rather than lose the stretch
-  if (accuracy > 100 || (accuracy > 50 && rec.lastFixAt && now - rec.lastFixAt < GAP_MS)) return
+  if (accuracy > (rec.rough ? 150 : 100) || (accuracy > 50 && rec.lastFixAt && now - rec.lastFixAt < GAP_MS)) return
   if (rec.lastFixAt && now - rec.lastFixAt > GAP_MS && !rec.notice) {
     rec.notice = `No GPS for ${gapText(now - rec.lastFixAt)}. We'll join the gap with a straight line.`
   }
@@ -184,14 +193,20 @@ async function stopNative() {
   } catch { /* already stopped */ }
 }
 
+// An unsaved recording moves aside, never wiped by starting again
+function park() {
+  try { parkRun(localStorage) } catch { /* storage unavailable */ }
+}
+
 export function start(mode = 'run') {
   if (isNativeApp()) {
-    Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null })
-    forget()
+    Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null, rough: false, acquiringSince: Date.now() })
+    park()
     pausedTotal = 0
     startNative().catch(() => { rec.status = 'error'; rec.error = "Foothold couldn't start GPS. Check Location is allowed for Foothold in Settings." })
     timer = setInterval(() => {
       if (rec.status === 'recording' && rec.startedAt) rec.elapsedS = Math.round((Date.now() - rec.startedAt - pausedTotal) / 1000)
+      else if (rec.status === 'acquiring') rec.waitingS = Math.round((Date.now() - rec.acquiringSince) / 1000)
     }, 1000)
     keepAwake()
     return
@@ -201,14 +216,26 @@ export function start(mode = 'run') {
     rec.error = "This browser can't share your location, so it can't record."
     return
   }
-  Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null })
-  forget()
+  Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null, rough: false, acquiringSince: Date.now() })
+  park()
   pausedTotal = 0
   watchId = navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 })
   timer = setInterval(() => {
     if (rec.status === 'recording' && rec.startedAt) rec.elapsedS = Math.round((Date.now() - rec.startedAt - pausedTotal) / 1000)
+    else if (rec.status === 'acquiring') rec.waitingS = Math.round((Date.now() - rec.acquiringSince) / 1000)
   }, 1000)
   keepAwake()
+}
+
+/**
+ * Weak GPS (indoors, tall buildings): start the clock now and take rougher
+ * fixes until sharper ones come. Points still need 150 m or better.
+ */
+export function startAnyway() {
+  if (rec.status !== 'acquiring') return
+  rec.rough = true
+  rec.status = 'recording'
+  rec.startedAt = Date.now()
 }
 
 export function pause() {

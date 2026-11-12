@@ -8,7 +8,7 @@
 // journey in place of the nudge, and the strip shows the weekly streak.
 // Hills show as lines with a small crown; tap one for its King of the hill page.
 // Suggest a loop asks how far, then builds loops on real streets (LoopFinder).
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import QuestList from '../../components/QuestList.vue'
@@ -211,10 +211,22 @@ function closeFinder() {
   loopCompact.value = false
   suggestion.value = null
 }
+
+// The map's buttons sit just above the bottom card, however tall it grows
+// (the first week card is taller than the usual one), so it never covers them.
+const sheetEl = ref(null)
+const sheetH = ref(140)
+let sheetObs = null
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !sheetEl.value) return
+  sheetObs = new ResizeObserver(([e]) => { sheetH.value = Math.round(e.target.offsetHeight) })
+  sheetObs.observe(sheetEl.value)
+})
+onBeforeUnmount(() => sheetObs?.disconnect())
 </script>
 
 <template>
-  <div class="mapview">
+  <div class="mapview" :style="{ '--sheet-h': `${sheetH}px` }">
     <TerritoryMap
       ref="tmap"
       class="map"
@@ -256,7 +268,7 @@ function closeFinder() {
       </div>
 
       <ContinueStory :progress="storyProgress" />
-      <SeasonCard />
+      <SeasonCard v-if="!showJourney" /><!-- new players: the first week card first, the season after -->
 
       <div v-if="quests.length" class="questcard" :class="{ open: questsOpen }">
         <button class="qhead" type="button" :aria-expanded="questsOpen" aria-controls="map-quests" @click="toggleQuests">
@@ -286,7 +298,7 @@ function closeFinder() {
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
 
-    <div class="sheet" :class="{ tall: shPicked, glass: finder && suggestion }">
+    <div ref="sheetEl" class="sheet" :class="{ tall: shPicked, glass: finder && suggestion }">
       <template v-if="shPicked">
         <div class="shtop">
           <RouterLink class="small" :to="{ name: 'strongholds', params: { id: shPicked.id } }">All strongholds</RouterLink>
@@ -401,7 +413,7 @@ function closeFinder() {
 .tok { display: inline-flex; gap: 2px; }
 .tok i { width: 9px; height: 8px; background: var(--you); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
 .locate {
-  position: absolute; right: 12px; bottom: 150px; z-index: 2;
+  position: absolute; right: 12px; bottom: calc(var(--sheet-h, 140px) + 20px); z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); color: var(--you-ink);
   display: grid; place-items: center; box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45); cursor: pointer;
 }
@@ -443,16 +455,16 @@ function closeFinder() {
 .more { color: var(--you-ink); font-weight: 650; justify-self: start; }
 .explored { padding: 9px 12px; display: grid; gap: 2px; }
 .fogbtn {
-  position: absolute; right: 12px; bottom: 204px; z-index: 2;
+  position: absolute; right: 12px; bottom: calc(var(--sheet-h, 140px) + 74px); z-index: 2;
   height: 40px; padding: 0 14px; border-radius: 20px; border: 0; background: var(--card); color: var(--ink);
   font: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45);
 }
-.fogbtn.terrbtn { bottom: 254px; }
+.fogbtn.terrbtn { bottom: calc(var(--sheet-h, 140px) + 124px); }
 .fogbtn[aria-pressed='true'] { background: var(--ink); color: var(--on-ink, #F3F5EF); }
 .pick > .crest { margin-top: 1px; }
 .hot-toggle {
-  position: absolute; left: 12px; bottom: 150px; z-index: 2;
+  position: absolute; left: 12px; bottom: calc(var(--sheet-h, 140px) + 20px); z-index: 2;
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px;
   border: 0; border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; font-size: 0.9rem;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.45); cursor: pointer;

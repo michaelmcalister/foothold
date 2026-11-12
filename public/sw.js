@@ -8,6 +8,20 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest'])).then(() => self.skipWaiting()))
 })
 
+// Every screen's files, so the app opens offline even on screens not yet
+// visited. The page asks for this once each start (main.js): the list comes
+// from the build (precache.json), missing files are fetched, and files from
+// older versions are dropped, so the cache doesn't grow with every deploy.
+async function precache() {
+  const list = await fetch('./precache.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+  if (!Array.isArray(list)) return
+  const c = await caches.open(SHELL)
+  const want = new Set(list.map((f) => new URL(f, self.registration.scope).href))
+  for (const req of await c.keys()) if (req.url.includes('/assets/') && !want.has(req.url)) await c.delete(req)
+  for (const url of want) if (!(await c.match(url))) await c.add(url).catch(() => {})
+}
+self.addEventListener('message', (e) => { if (e.data === 'precache') e.waitUntil(precache()) })
+
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
@@ -46,7 +60,7 @@ self.addEventListener('fetch', (e) => {
           }
           return r
         })
-        .catch(() => caches.match(e.request).then((m) => m || caches.match('./index.html'))),
+        .catch(() => caches.match(e.request).then((m) => m || (e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
     )
   }
 })

@@ -28,16 +28,21 @@ export let serverConfig = {}
 export async function initAuth() {
   if (!RAW) { auth.ready = true; return } // practice map: no sign-in
   try {
-    const conf = await fetch(API + '/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+    // offline: the last config this phone saw, so a signed-in player stays signed in
+    const kept = () => { try { return JSON.parse(localStorage.getItem('fh-config') || '{}') } catch { return {} } }
+    const conf = await fetch(API + '/api/config', { signal: AbortSignal.timeout?.(10000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => { if (c) { try { localStorage.setItem('fh-config', JSON.stringify(c)) } catch { /* full */ } } return c || kept() })
+      .catch(kept)
     serverConfig = conf
     const cfg = conf.auth0
     // No sign-in set up: use the server only when it takes device ids (local development)
     if (!cfg) { useServer(!!conf.devices); return }
     auth.enabled = true
-    const { createAuth0Client } = await import('@auth0/auth0-spa-js')
+    const { Auth0Client } = await import('@auth0/auth0-spa-js')
     const native = isNativeApp()
     if (native) callbackUrl = nativeCallback(cfg.domain)
-    client = await createAuth0Client({
+    client = new Auth0Client({
       domain: cfg.domain,
       clientId: cfg.clientId,
       cacheLocation: 'localstorage', // Safari blocks Auth0's cookies; this keeps people signed in
@@ -45,6 +50,9 @@ export async function initAuth() {
       authorizationParams: { redirect_uri: native ? callbackUrl : home(), audience: cfg.audience, scope: 'openid profile email offline_access' },
     })
     if (native) onAppLink(finishInApp)
+    // what createAuth0Client does, except a failure offline doesn't stop the
+    // app: the cached sign-in still counts, and tokens refresh when back online
+    await client.checkSession().catch(() => {})
     const q = new URLSearchParams(location.search)
     if (q.has('error') && q.has('state')) {
       // Auth0 sent the visitor back with a refusal instead of a sign-in
@@ -62,7 +70,8 @@ export async function initAuth() {
     }
     auth.loggedIn = await client.isAuthenticated()
     if (auth.loggedIn) auth.user = await client.getUser()
-    setTokenGetter(async () => (auth.loggedIn ? client.getTokenSilently().catch(() => null) : null))
+    // signed in but the token can't be had (offline): fail the call, never fall back to this phone's practice id
+    setTokenGetter(async () => (auth.loggedIn ? client.getTokenSilently().catch(() => { throw new Error("Can't reach Foothold right now. Check your connection.") }) : null))
     useServer(auth.loggedIn)
   } finally {
     auth.ready = true

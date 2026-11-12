@@ -5,7 +5,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import './app.css'
-import { store, boot, setMode, toast } from '../lib/store.js'
+import { store, boot, refresh, setMode, toast } from '../lib/store.js'
 import BrandMark from '../components/BrandMark.vue'
 import { auth, login } from '../lib/auth.js'
 import { api } from '../lib/api/index.js'
@@ -29,9 +29,20 @@ watch(() => route.query.signin, (v) => {
   if (v === '1' && auth.enabled && !auth.loggedIn) login({ signup: route.query.signup === '1', returnTo: '#/app' })
 }, { immediate: true })
 
+async function retryBoot() {
+  await boot()
+  if (store.ready && !store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
+}
+// Back online after opening offline: catch up quietly
+window.addEventListener('online', () => {
+  if (store.bootError) retryBoot()
+  else if (store.offline) refresh().catch(() => {})
+})
+
 onMounted(async () => {
   if (auth.error) toast(auth.error, 7000)
   await boot()
+  if (!store.ready) return // offline on the first open: the screen says so, with Try again
   if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
   // Push: keep this device's subscription fresh, and open the screen a tapped push points to
   if (auth.loggedIn) refreshPush(serverConfig?.push)
@@ -106,6 +117,10 @@ function switchMode(m) {
       <RouterView v-if="store.ready" v-slot="{ Component }">
         <component :is="Component" />
       </RouterView>
+      <div v-else-if="store.bootError" class="loading" role="alert">
+        <p>{{ store.bootError }}</p>
+        <button class="btn small" type="button" @click="retryBoot">Try again</button>
+      </div>
       <div v-else class="loading" aria-live="polite">Loading your map</div>
     </main>
 

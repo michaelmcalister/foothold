@@ -10,7 +10,7 @@
 import { ref, computed, watch, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
-import { rec, start, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
+import { rec, start, startAnyway, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -81,6 +81,11 @@ onBeforeUnmount(() => setSurroundingsProbe(null))
 
 // Pocket mode: a black screen that keeps recording (locking the phone stops GPS)
 const pocket = ref(false)
+// off screen (another app in front, or the screen off): the map needn't draw
+const screenOff = ref(typeof document !== 'undefined' && document.visibilityState === 'hidden')
+const onVis = () => { screenOff.value = document.visibilityState === 'hidden' }
+document.addEventListener('visibilitychange', onVis)
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVis))
 watch(() => rec.status, (st) => { if (st !== 'recording' && st !== 'paused') pocket.value = false })
 
 // ---- turn by turn directions, when the planned route came with them ----
@@ -225,14 +230,16 @@ async function save(payload, label = 'Saving', missionSummary = null) {
   try {
     res = await api.postActivity(payload)
   } catch (e) {
-    error.value = e.message
+    error.value = `${e.message} Your ${payload.mode || 'run'} is kept on this phone. Save it below when you're back online.`
     saving.value = false
+    if (payload.source === 'phone') leftover.value = unfinished() // offer Save it again, and never lose it
     return
   }
   // Saved. Nothing from here on may keep the summary from showing.
   const id = res?.activity?.id
   const quietly = (fn) => { try { fn() } catch { /* a nice extra, not worth losing the summary over */ } }
-  if (payload.source === 'phone' && !payload.simulated) quietly(forgetUnfinished)
+  if (payload.source === 'phone' && !payload.simulated) quietly(() => forgetUnfinished(savingSlot))
+  savingSlot = undefined
   quietly(() => setLastResult(res))
   if (missionSummary && id) quietly(() => saveResult(id, missionSummary))
   // Capture the story: finishing an episode at its real place plants your flag there
@@ -257,6 +264,26 @@ function tooShort(gpsPoints, elapsedS) {
   return 'That was too short to save. Nothing was recorded.'
 }
 
+// Finish waits a few seconds with a Keep going button, so a stray tap in a
+// pocket or a bump on a sweaty screen doesn't end the run. GPS keeps going
+// until the count ends.
+const finishing = ref(0)
+let finishTimer = null
+function askFinish() {
+  if (finishing.value) return
+  finishing.value = 4
+  finishTimer = setInterval(() => {
+    if (--finishing.value > 0) return
+    clearInterval(finishTimer)
+    finish()
+  }, 1000)
+}
+function keepGoing() {
+  clearInterval(finishTimer)
+  finishing.value = 0
+}
+onBeforeUnmount(() => clearInterval(finishTimer))
+
 async function finish() {
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   pendingGhost = ghostOutcome()
@@ -269,7 +296,7 @@ async function saveRecording(out, elapsedS, missionSummary = null) {
   // Join any stretch where GPS went quiet, so it still counts and a loop can close
   const points = bridgeGaps(out.points, { mode: out.mode })
   if (points.length < 10 || (out.distanceM ?? 1e9) < 30) {
-    forgetUnfinished()
+    forgetUnfinished(savingSlot)
     error.value = tooShort(out.points.length, elapsedS)
     return
   }
@@ -286,14 +313,16 @@ const leftoverText = computed(() => {
   for (let i = 1; i < u.points.length; i++) m += Math.hypot((u.points[i].lat - u.points[i - 1].lat) * 111320, (u.points[i].lng - u.points[i - 1].lng) * 111320 * Math.cos((u.points[i].lat * Math.PI) / 180))
   return `You have an unsaved ${u.mode} from ${when}, ${km(m)} km so far.`
 })
+let savingSlot // which kept recording is being saved (recorder.unfinished)
 async function saveLeftover() {
   const u = leftover.value
   leftover.value = null
+  savingSlot = u.slot
   const t0 = u.startedAt || u.points[0].t
   await saveRecording({ ...u, distanceM: null }, Math.round((u.points[u.points.length - 1].t - t0) / 1000))
 }
 function dropLeftover() {
-  forgetUnfinished()
+  forgetUnfinished(leftover.value?.slot)
   leftover.value = null
 }
 
@@ -373,7 +402,7 @@ onBeforeUnmount(() => {})
   <div class="rec">
     <PocketMode v-if="pocket" :next-turn="nextTurn" :ask="missionLive?.ask || missionOffer || null" @answer="(k) => (missionLive?.ask ? answerMission(k) : answerOffer(k))" @close="pocket = false" />
     <div class="maparea">
-      <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="routeRing" :fit="!!routeRing" :ghost="ghostLive?.pos || null" />
+      <TerritoryMap ref="tmap" :centre="store.centre" :zoom="15.5" :track="rec.points" :me="me" :follow="live" :suggestion="routeRing" :fit="!!routeRing" :ghost="ghostLive?.pos || null" :asleep="pocket || screenOff" />
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
@@ -429,6 +458,10 @@ onBeforeUnmount(() => {})
           <div class="spinner" aria-hidden="true"></div>
           <span>Finding GPS<template v-if="rec.accuracy"> (±{{ rec.accuracy }} m)</template></span>
         </div>
+        <div v-if="rec.status === 'acquiring' && rec.waitingS >= 25" class="notice weakgps">
+          <p>GPS is weak here{{ rec.accuracy ? `, about ${rec.accuracy} m out` : '' }}. A clear view of the sky helps, away from tall buildings and trees. You can start now and the route sharpens as the signal improves.</p>
+          <button class="btn small" type="button" @click="startAnyway">Start anyway</button>
+        </div>
         <MissionStrip v-if="missionLive && rec.status !== 'acquiring'" :view="missionLive" />
         <AskCard v-if="missionLive?.ask && rec.status === 'recording'" :ask="missionLive.ask" @answer="answerMission" />
         <AskCard v-else-if="missionOffer && rec.status === 'recording'" :ask="missionOffer" @answer="(k) => answerOffer(k)" />
@@ -464,8 +497,10 @@ onBeforeUnmount(() => {})
           <button v-if="rec.status === 'recording'" class="btn secondary" type="button" @click="pause">Pause</button>
           <button v-else-if="rec.status === 'paused'" class="btn secondary" type="button" @click="resume">Resume</button>
           <button v-else class="btn secondary" type="button" @click="cancel">Cancel</button>
-          <button class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="finish">Finish</button>
+          <button v-if="finishing" class="btn" type="button" @click="keepGoing">Keep going</button>
+          <button v-else class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="askFinish">Finish</button>
         </div>
+        <p v-if="finishing" class="finishing small" aria-live="assertive">Finishing in {{ finishing }}. Tap Keep going if you're not done.</p>
         <button v-if="rec.status !== 'acquiring'" class="discard" type="button" @click="cancel">Discard</button>
       </template>
     </section>
@@ -476,6 +511,7 @@ onBeforeUnmount(() => {})
 .rec { display: grid; grid-template-rows: minmax(36dvh, 1fr) auto; grid-template-columns: minmax(0, 1fr); height: 100dvh; overflow: hidden; }
 .maparea { position: relative; min-height: 0; }
 .maparea > :first-child { position: absolute; inset: 0; }
+.finishing { text-align: center; margin: 6px 0 0; font-weight: 700; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);

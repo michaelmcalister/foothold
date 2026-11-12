@@ -41,6 +41,7 @@ const props = defineProps({
   strongholdRoute: { type: Array, default: null }, // [{lat,lng}] of the picked stronghold
   hills: { type: Array, default: () => [] }, // [{ id, name, line: [[lng,lat]], top: {lat,lng}, holder: { colour, me, name } | null }]
   terrain: { type: Boolean, default: false }, // shade the hills
+  asleep: { type: Boolean, default: false }, // nobody is looking (Pocket mode, screen off): skip live redraws
 })
 const emit = defineEmits(['cell', 'moved', 'ready', 'restyled', 'stronghold', 'hill'])
 
@@ -343,10 +344,33 @@ watch(() => [props.cells, props.highlight], () => {
 })
 watch(() => props.explored, (ids) => setData('fog', ids ? fogMask(ids, props.centre) : empty))
 watch(() => props.heat, applyPaint)
-watch(() => props.track, () => {
+// The live track: redrawn at most every 2 seconds, and not at all while
+// asleep (Pocket mode's black screen). Drawing the whole line on every GPS
+// fix was the run's biggest battery cost.
+let trackTimer = null
+let trackDirty = false
+function drawTrack() {
+  trackTimer = null
+  if (props.asleep) { trackDirty = true; return }
+  trackDirty = false
   setData('track', props.track.length > 1 ? line(props.track) : empty)
-}, { deep: false })
-watch(() => props.track.length, () => setData('track', props.track.length > 1 ? line(props.track) : empty))
+}
+function trackSoon() {
+  if (props.asleep) { trackDirty = true; return }
+  if (!trackTimer) trackTimer = setTimeout(drawTrack, props.track.length < 3 ? 0 : 2000)
+}
+watch(() => props.track, () => { clearTimeout(trackTimer); drawTrack() }, { deep: false }) // a new track: straight away
+watch(() => props.track.length, trackSoon)
+watch(() => props.asleep, (a) => {
+  if (a) return
+  if (trackDirty) drawTrack()
+  const p = props.me
+  if (p) {
+    setData('me', { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } })
+    if (props.follow) map.value?.jumpTo({ center: [p.lng, p.lat] })
+  }
+})
+onBeforeUnmount(() => clearTimeout(trackTimer))
 watch(() => props.loops, () => { setData('loops', rings(props.loops)); if (props.fit) fitTo() })
 watch(() => props.suggestion, () => { setData('suggest', props.suggestion ? rings([props.suggestion]) : empty); if (props.suggestion) fitTo() })
 watch(() => props.strongholds, syncStrongholds)
@@ -354,6 +378,7 @@ watch(() => props.hills, syncHills)
 watch(() => props.strongholdRoute, () => setData('shroute', props.strongholdRoute?.length > 1 ? line(props.strongholdRoute) : empty))
 watch(() => props.zones, () => setData('zones', rings(props.zones.map(circle))), { deep: true })
 watch(() => props.me, (p) => {
+  if (props.asleep) return
   setData('me', p ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } } : empty)
   if (p && props.follow) map.value?.easeTo({ center: [p.lng, p.lat], duration: 400 })
 })
@@ -362,7 +387,7 @@ watch(() => props.centre, (c) => {
 })
 
 defineExpose({ map, fitTo })
-watch(() => props.ghost, (g) => setData('ghost', g ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [g.lng, g.lat] } } : empty))
+watch(() => props.ghost, (g) => !props.asleep && setData('ghost', g ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [g.lng, g.lat] } } : empty))
 </script>
 
 <template>

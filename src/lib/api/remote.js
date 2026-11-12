@@ -29,7 +29,14 @@ async function call(method, path, body) {
   const token = await tokenGetter()
   if (token) headers.Authorization = `Bearer ${token}`
   else headers['X-Device-Id'] = deviceId()
-  const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+  // a dead connection fails after 20 s (an upload gets a minute) rather than hanging forever
+  const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(path === '/api/activities' && method === 'POST' ? 60000 : 20000) : undefined
+  let res
+  try {
+    res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal })
+  } catch (e) {
+    throw new Error(e?.name === 'TimeoutError' || navigator.onLine === false ? "Can't reach Foothold right now. Check your connection." : "Can't reach Foothold right now. Try again in a moment.")
+  }
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `Something went wrong (${res.status}). Try again in a moment.`)
   return data

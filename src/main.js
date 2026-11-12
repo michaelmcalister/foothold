@@ -8,6 +8,17 @@ import { initMonitoring } from './lib/monitoring.js'
 import { startTheme, markInApp } from './lib/theme.js'
 import { isNativeApp, routeApiToServer } from './lib/native.js'
 
+// After a deploy, a page left open asks for screens by their old file names,
+// which are gone: load the new version once instead of showing a broken screen
+window.addEventListener('vite:preloadError', (e) => {
+  try {
+    if (sessionStorage.getItem('fh-reloaded') === location.hash) return // once only
+    sessionStorage.setItem('fh-reloaded', location.hash)
+  } catch { /* storage off: reload anyway */ }
+  e.preventDefault()
+  location.reload()
+})
+
 // In the iPhone app the screens are bundled: send /api calls to the server
 routeApiToServer()
 
@@ -29,5 +40,8 @@ initAuth().finally(async () => {
 // Offline support and home-screen install (production builds only)
 // (not in the iPhone app, which has its screens built in)
 if ('serviceWorker' in navigator && import.meta.env.PROD && !isNativeApp()) {
-  window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}))
+  window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js')
+    .then(() => navigator.serviceWorker.ready)
+    .then((reg) => reg.active?.postMessage('precache')) // keep every screen for offline
+    .catch(() => {}))
 }
