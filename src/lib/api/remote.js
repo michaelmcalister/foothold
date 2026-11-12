@@ -93,6 +93,14 @@ export const remote = {
   // Capture the story (worker/storyflags.js)
   storyFlag: (body) => call('POST', '/api/stories/flag', body),
   storyFlags: (mission) => call('GET', '/api/stories/flags' + q({ mission })),
+  // Group runs (worker/groups.js)
+  groupCreate: (missionId) => call('POST', '/api/groups', { missionId }),
+  groupJoin: (code) => call('POST', '/api/groups/join', { code }),
+  group: (id) => call('GET', `/api/groups/${encodeURIComponent(id)}`),
+  groupStart: (id) => call('POST', `/api/groups/${encodeURIComponent(id)}/start`),
+  groupProgress: (id, body) => call('POST', `/api/groups/${encodeURIComponent(id)}/progress`, body),
+  groupVote: (id, choiceId, pick) => call('POST', `/api/groups/${encodeURIComponent(id)}/vote`, { choiceId, pick }),
+  groupLeave: (id) => call('POST', `/api/groups/${encodeURIComponent(id)}/leave`),
   // Foothold Plus (worker/billing.js)
   plusStatus: () => call('GET', '/api/billing/status'),
   plusCheckout: () => call('POST', '/api/billing/checkout'),

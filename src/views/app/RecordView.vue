@@ -26,6 +26,7 @@ import { saveResult, missionById } from '../../lib/missions/index.js'
 import { playable } from '../../lib/plus.js'
 import { placeOf } from '../../lib/missions/places.js'
 import MissionPicker from '../../components/MissionPicker.vue'
+import GroupRun from '../../components/GroupRun.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
 import { isLinked as spotifyLinked, toggleMusic, startMusic } from '../../lib/audio/spotify.js'
@@ -46,6 +47,7 @@ const error = ref(null)
 const fileInput = ref(null)
 const progress = ref(null)
 // ?mission= from the run summary's "next episode" or Continue your story (only if it's playable: Foothold Plus)
+const groupCode = here.query.group ? String(here.query.group).slice(0, 12) : '' // from a /g/CODE invite
 const missionId = ref(here.query.mission && playable(missionById(String(here.query.mission))) ? String(here.query.mission) : null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
@@ -408,6 +410,7 @@ onBeforeUnmount(() => {})
           </div>
         </div>
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
+        <GroupRun v-if="mode !== 'ride' && !isLocal && (missionId || groupCode)" v-model:mission-id="missionId" :join-code="groupCode" @go="begin" />
         <GhostPicker v-model="ghostPick" :mode="mode" :here="store.located ? store.centre : null" :route="plannedRing ? planned.route : null" :usual-pace="usual" />
         <div v-if="error" class="notice bad">{{ error }}</div>
         <div v-else-if="rec.error" class="notice bad">{{ rec.error }}</div>

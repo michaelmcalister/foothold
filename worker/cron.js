@@ -7,6 +7,7 @@
 
 import { storyNudges } from './missions.js'
 import { seasonGoalNotices } from './storySeason.js'
+import { clearOldGroups } from './groups.js'
 import { sydneyHour } from './push.js'
 import { battleScore, seasonFor, softenCell, needsReset } from '../src/lib/engine/index.js'
 import { batched, cellsByIds, notify, players, rowToBattle, rowToCell, wildAt } from './db.js'
@@ -118,6 +119,7 @@ export async function runCron(env, now = Date.now()) {
   const finale = await seasonGoalNotices(env, now).catch((e) => (console.error('cron season goal', e?.message), 0))
   const stories = sydneyHour(now) === 17 ? await storyNudges(env, now).catch((e) => (console.error('cron stories', e?.message), 0)) : 0
   const divisions = await divisionCron(env, now).catch((e) => (console.error('cron divisions', e?.message), null))
+  await clearOldGroups(env, now).catch((e) => console.error('cron groups', e?.message))
   // Old rate limit windows are no use to anyone
   await env.DB.prepare('DELETE FROM rate_limits WHERE win < ?').bind(Math.floor(now / 1000) - 2 * 86400).run().catch(() => {})
   return { ended, fading, weekly, softened, streaks, divisions, stories, finale }

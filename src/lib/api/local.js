@@ -1143,6 +1143,14 @@ export const local = {
   // Story flags need the server: the practice map has none
   async storyFlag() { return { planted: false, count: 0, recent: [] } },
   async storyFlags() { return { count: 0, recent: [], first: null, mine: null } },
+  // Group runs need an account and the server
+  async groupCreate() { throw new Error('Sign in to run with friends.') },
+  async groupJoin() { throw new Error('Sign in to run with friends.') },
+  async group() { return null },
+  async groupStart() { return null },
+  async groupProgress() { return null },
+  async groupVote() { return null },
+  async groupLeave() { return { ok: true } },
 
   // Plus needs the server; on the practice map everything is free
   async plusStatus() { return { plan: 'free' } },

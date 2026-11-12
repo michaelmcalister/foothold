@@ -462,3 +462,25 @@ describe('the microphone keeps the phone while it listens', () => {
     expect(shouldWake({ mic: false, state: 'none', hidden: false })).toBe(false)
   })
 })
+
+describe('group runs can change a choice', () => {
+  it('swaps the branch when the crew votes the other way, until the branch has started', async () => {
+    const { createMission } = await import('../src/lib/missions/engine.js')
+    const { MISSIONS } = await import('../src/lib/missions/scripts.js')
+    const script = MISSIONS.find((m) => m.id === 'tiger-photo')
+    const choice = script.beats.find((b) => b.kind === 'choice')
+    const m = createMission(script)
+    let t = 0
+    const tick = (to) => { const out = []; while (t < to) { t += 1; const o = m.update({ elapsedS: t, distanceM: t * 3 }); out.push(...o.events) } return out }
+    tick(choice.at + 2)
+    expect(m.view().ask || m.view()).toBeTruthy()
+    m.answer('B')
+    tick(choice.at + 10)
+    const changed = m.overrideChoice(choice.id, 'A')
+    expect(changed.key).toBe('A')
+    const events = tick(choice.at + 60)
+    expect(events.some((e) => e.type === 'surge-start' || e.type === 'surge')).toBe(true)
+    expect(m.summary().choices.find((c) => c.id === choice.id).key).toBe('A')
+    expect(m.overrideChoice(choice.id, 'B')).toBe(null) // the branch has started: too late
+  })
+})

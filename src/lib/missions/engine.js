@@ -73,6 +73,7 @@ export function createMission(script, { paces = null } = {}) {
     closing: null,
     ask: null, // a question waiting for an answer: { beat, at }
     flags: new Set(), // choices made, for the beats that depend on them
+    fired: new Set(), // beats that have played (group runs check this before changing a choice)
     choices: [], // [{ id, key, label, timedOut }]
     quizRight: 0,
     quizTotal: 0,
@@ -311,6 +312,7 @@ export function createMission(script, { paces = null } = {}) {
     if (beat.say && !canSpeak()) return
     if (beat.kind === 'surge' && st.seg?.kind === 'recover' && !st.seg.beat.say) return // a surge's own recovery always runs in full
     st.next++
+    st.fired.add(beat)
     release(beat, out)
   }
 
@@ -352,6 +354,31 @@ export function createMission(script, { paces = null } = {}) {
       st.lastLineAt = -Infinity // an answer is always heard straight away
       resolve(out, key)
       return out
+    },
+
+    /**
+     * Group runs: the crew voted another way. Swap this choice's flag for the
+     * other option's, so the branch that follows is the crew's. Returns the
+     * new option, or null if it's too late or nothing changed.
+     */
+    overrideChoice(choiceId, key) {
+      const beat = script.beats.find((b) => b.kind === 'choice' && (b.id || String(b.at)) === choiceId)
+      const made = st.choices.find((c) => c.id === choiceId)
+      const opt = beat?.options.find((o) => o.key === key)
+      if (!beat || !made || !opt || made.key === key) return null
+      // too late if a beat that depends on this choice has already played
+      const flags = beat.options.map((o) => o.flag).filter(Boolean)
+      const depends = (b) => flags.includes(b.if) || flags.includes(b.unless)
+      if (script.beats.some((b) => depends(b) && st.fired.has(b))) return null
+      const first = script.beats.findIndex(depends)
+      if (first >= 0 && script.beats.slice(first).some((b) => st.fired.has(b))) return null // the story has moved on
+      for (const f of flags) st.flags.delete(f)
+      if (opt.flag) st.flags.add(opt.flag)
+      // beats skipped for the old choice may now apply: look again from the first that depends on it
+      if (first >= 0 && first < st.next) st.next = first
+      made.key = opt.key
+      made.label = opt.label
+      return opt
     },
 
     pause({ elapsedS, distanceM } = {}) {

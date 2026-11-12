@@ -11,6 +11,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
+import { inCrew, voteAndWait, sendProgress, crewLine, crew } from '../groupRun.js'
 import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker, setPrivateLines } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import { isIOSApp } from '../native.js'
@@ -185,11 +186,36 @@ function answered(events) {
   for (const e of events) {
     // game show: the till rings for points from sprints and hills
     if (show && scape && (e.type === 'climb' || (e.type === 'surge-end' && e.points))) { enqueue(() => scape?.sting('cash')); continue }
+    if (e.type === 'surge-end' && inCrew()) crewSurge()
     if (e.type !== 'answer') continue
-    if (e.kind === 'choice') { if (scape) enqueue(() => scape?.sting('impact')); continue }
+    if (e.kind === 'choice') { if (scape) enqueue(() => scape?.sting('impact')); if (inCrew()) crewChoice(e.key); continue }
     if (scape) enqueue(() => scape?.sting(e.right ? (show ? 'cash' : 'correct') : (show ? 'bonk' : 'downer')))
     if (scape && show && e.right) enqueue(() => scape?.sting('applause')) // the crowd only claps when it's earned
     else sfx.cue(e.right ? 'surgeDone' : 'chapter')
+  }
+}
+
+// ---- group runs: the crew votes on each choice, and the most votes wins ----
+function crewChoice(mine) {
+  const m = mission
+  const made = m?.summary().choices.at(-1)
+  if (!made) return
+  voteAndWait(made.id, mine).then((pick) => {
+    if (!pick || mission !== m) return
+    const opt = m.overrideChoice(made.id, pick)
+    if (!opt) return
+    sayLine(`Your crew voted. The story goes with ${opt.label}.`)
+    missionLive.value = m.view()
+  })
+}
+
+function crewSurge() {
+  const done = mission?.summary().surgesDone || 0
+  sendProgress({ surges: done })
+  // now and then, how the crew is going
+  if (done % 2 === 0) {
+    const line = crewLine(crew.group, done)
+    if (line) sayLine(line)
   }
 }
 
@@ -530,6 +556,7 @@ export function finishRun({ elapsedS, distanceM }) {
     summary = out.summary
     for (const line of out.lines) sayLine(line)
     if (summary.clockS >= 60) recordTry(summary) // any real try unlocks the next mission
+    if (inCrew()) sendProgress({ surges: summary.surgesDone, done: !!summary.completed, final: true })
   }
   if (announcer && distanceM > 50) say(announcer.finish({ elapsedS, distanceM }))
   const s = scape
