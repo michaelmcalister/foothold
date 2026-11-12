@@ -1,6 +1,7 @@
 // Foothold Plus in the app (worker/billing.js, lib/plans.js). While Plus is
 // switched off on the server, everything here says yes and shows nothing.
 // The iPhone and Android apps never sell: no price, no link (store rules).
+import { track } from './analytics.js'
 import { serverConfig } from './auth.js'
 import { store } from './store.js'
 import { api } from './api/index.js'
@@ -18,6 +19,7 @@ export const canSell = () => !!premium()?.web && !isNativeApp()
 
 /** Off to Stripe's checkout page. */
 export async function startCheckout() {
+  track('plus_checkout')
   const { url } = await api.plusCheckout()
   if (url) location.href = url
 }

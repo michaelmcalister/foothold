@@ -47,6 +47,10 @@ AUTH0_AUDIENCE = "https://api.formtrk.com"
 # https://localhost the Android app.
 ALLOWED_ORIGINS = "capacitor://localhost,https://localhost"
 # Error reports (Sentry project "foothold"). A DSN is public: it only lets you send events.
+# Usage analytics (src/lib/analytics.js): the project key is public. The PostHog
+# project is shared with FormTrack; every Foothold event carries app = foothold.
+POSTHOG_KEY = "phc_tvT3MiGWTANBMTDD9X6YMZSLjpZAH9qKc5gKocM9g7TX"
+POSTHOG_HOST = "https://eu.i.posthog.com"
 SENTRY_DSN = "https://34b2335cc58f419dce528ae16ce26d44@o4512309370486784.ingest.de.sentry.io/4512416830718032"
 # Who can open the admin page at /app/admin (user ids, comma separated; worker/admin.js)
 ADMIN_USERS = "62cda1ba-f5bf-4b55-a2f6-54460ba530e2"

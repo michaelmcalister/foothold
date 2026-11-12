@@ -1,6 +1,7 @@
 <script setup>
 // First run: name, how you move, location, and a privacy zone around
 // home. Four short steps, every one explained in plain words.
+import { track } from '../../lib/analytics.js'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../lib/api/index.js'
@@ -28,6 +29,7 @@ async function allowLocation() {
 async function finish() {
   const zones = zone.value && store.located ? [{ lat: store.centre.lat, lng: store.centre.lng, radiusM: 400, label: 'Home' }] : []
   await api.updateMe({ name: name.value.trim() || 'Runner', mode: mode.value, zones, onboarded: true })
+  track('onboarded', { mode: mode.value, zone: zones.length > 0 })
   store.mode = mode.value
   await refresh()
   router.replace('/app')

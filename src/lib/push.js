@@ -4,6 +4,7 @@
 // (@capacitor-firebase/messaging), which needs the Firebase files added to
 // the native projects (docs/PUSH.md); until then it quietly says no.
 // Nothing here runs unless the player switches push on, or already has.
+import { track } from './analytics.js'
 import { api } from './api/index.js'
 import { isNativeApp, isIOSApp } from './native.js'
 
@@ -47,6 +48,7 @@ export async function enablePush(config) {
       await api.pushSubscribe({ kind: 'web', endpoint: j.endpoint, keys: j.keys })
     }
     mark(true)
+    track('push_on', { native: isNativeApp() })
     return 'on'
   } catch (e) {
     console.warn('push', e?.message)

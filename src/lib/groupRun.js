@@ -4,6 +4,7 @@
 // you vote, works out which way the crew went (most votes; your own pick
 // when nobody else has voted yet). runAudio.js calls voteAndWait at a
 // choice and swaps the story's branch when the crew went the other way.
+import { track } from './analytics.js'
 import { reactive } from 'vue'
 import { api } from './api/index.js'
 
@@ -63,8 +64,8 @@ async function act(fn) {
   try { take(await fn()); watch() } catch (e) { crew.error = e.message } finally { crew.busy = false }
 }
 
-export const createGroup = (missionId) => act(() => api.groupCreate(missionId))
-export const joinGroup = (code) => act(() => api.groupJoin(code))
+export const createGroup = (missionId) => { track('group_made', { mission: missionId }); return act(() => api.groupCreate(missionId)) }
+export const joinGroup = (code) => { track('group_joined'); return act(() => api.groupJoin(code)) }
 export const startGroup = () => crew.group && act(() => api.groupStart(crew.group.id))
 
 export async function leave({ quiet = false } = {}) {

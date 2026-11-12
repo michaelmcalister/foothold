@@ -7,6 +7,7 @@
 // The thriller series (Ember Run, The Night Job) also bring a cast of voices,
 // made ahead of the run, and a soundscape: scene sounds, a score that follows
 // the surges, and effects before some lines.
+import { track } from '../analytics.js'
 import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
@@ -345,6 +346,7 @@ function startMission(script) {
   if (script?.local) script = personalise(script, localWords || wordsFrom({}))
   setPrivateLines(!!script?.local) // lines naming places near you aren't kept on the server
   mission = script ? createMission(script, { paces: runPaces }) : null
+  if (script) track('story_started', { mission: script.id, saga: script.saga || '', crew: inCrew() })
   const saga = script ? sagaById(script.saga) : null
   narrator = saga?.narrator || null
   level = 0
@@ -556,6 +558,7 @@ export function finishRun({ elapsedS, distanceM }) {
     summary = out.summary
     for (const line of out.lines) sayLine(line)
     if (summary.clockS >= 60) recordTry(summary) // any real try unlocks the next mission
+    track('story_finished', { mission: summary.id || '', completed: !!summary.completed, minutes: Math.round(summary.clockS / 60) })
     if (inCrew()) sendProgress({ surges: summary.surgesDone, done: !!summary.completed, final: true })
   }
   if (announcer && distanceM > 50) say(announcer.finish({ elapsedS, distanceM }))

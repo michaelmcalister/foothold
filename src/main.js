@@ -5,6 +5,8 @@ import App from './App.vue'
 import { router } from './router.js'
 import { initAuth, serverConfig } from './lib/auth.js'
 import { initMonitoring } from './lib/monitoring.js'
+import { initAnalytics } from './lib/analytics.js'
+import { isLocal } from './lib/api/index.js'
 import { startTheme, markInApp } from './lib/theme.js'
 import { isNativeApp, routeApiToServer } from './lib/native.js'
 
@@ -34,6 +36,7 @@ initAuth().finally(async () => {
   await router.replace(location.hash.slice(1) || '/').catch(() => {})
   const app = createApp(App).use(router)
   initMonitoring(app, router, serverConfig) // error reports, when the server has a Sentry key
+  initAnalytics(router, serverConfig, { practice: isLocal }) // usage analytics, when the server has a PostHog key
   app.mount('#app')
 })
 

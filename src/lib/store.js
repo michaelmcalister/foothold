@@ -3,6 +3,7 @@
 // refresh() after anything that changes the game.
 
 import { reactive } from 'vue'
+import { identify } from './analytics.js'
 import { api } from './api/index.js'
 import { whereAmI } from './recorder.js'
 
@@ -48,6 +49,7 @@ export async function boot() {
     toast("You're offline. You can still record, and it saves when you're back online.", 6000)
   }
   store.user = user
+  identify(user?.id)
   store.mode = user.mode || 'run'
   const here = user.homeCentre || null
   store.centre = here || SYDNEY
@@ -70,6 +72,7 @@ export async function locate() {
 export async function refresh() {
   const [{ user }, stats, notes] = await Promise.all([api.me(), api.stats({ mode: store.mode }), api.notifications()])
   store.user = user
+  identify(user?.id)
   keepMe(user)
   store.offline = false
   store.stats = stats

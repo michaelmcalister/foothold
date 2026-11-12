@@ -10,10 +10,12 @@ import PushSettings from '../../components/PushSettings.vue'
 import PlusSettings from '../../components/PlusSettings.vue'
 import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
-import { auth, login, logout } from '../../lib/auth.js'
+import { auth, login, logout, serverConfig } from '../../lib/auth.js'
+import { analyticsOn, setAnalytics } from '../../lib/analytics.js'
 import { recordReadiness, clearReadiness } from '../../lib/readiness.js'
 import { theme, setTheme } from '../../lib/theme.js'
 
+const usageOn = ref(analyticsOn())
 const router = useRouter()
 const name = ref(store.user.name)
 const colour = ref(store.user.colour)
@@ -201,6 +203,15 @@ async function startAgain() {
       <button class="btn secondary" type="button" @click="addZoneHere">Add a zone where I am</button>
     </section>
 
+    <section v-if="!isLocal && serverConfig.posthogKey" class="panel stack" aria-labelledby="s-usage">
+      <h2 id="s-usage">Usage stats</h2>
+      <label class="usage">
+        <input v-model="usageOn" type="checkbox" @change="setAnalytics(usageOn)" />
+        <span>Help improve Foothold by sharing which screens and features you use</span>
+      </label>
+      <p class="small muted">Never where you run, your routes, your name or anything you type. <RouterLink to="/privacy">How it works</RouterLink></p>
+    </section>
+
     <MusicVoiceSettings />
 
     <section class="panel stack" aria-labelledby="s-ft">
@@ -278,4 +289,6 @@ html.night .sw:not([aria-pressed='true']) { box-shadow: 0 0 0 1px var(--ink-40);
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .looks { justify-self: start; }
 .looks button { min-width: 72px; min-height: 40px; }
+.usage { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.usage input { width: 22px; height: 22px; margin-top: 2px; flex: none; accent-color: var(--brand, #2E55E6); }
 </style>

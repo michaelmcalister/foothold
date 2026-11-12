@@ -7,6 +7,8 @@
 // a strip shows its chapter and surge timer during the run. Or race a
 // ghost: a past run of yours from here, or the planned route at a pace. The
 // ghost moves on the map and the voice coach calls the gap.
+import { track } from '../../lib/analytics.js'
+import { crew } from '../../lib/groupRun.js'
 import { ref, computed, watch, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
@@ -237,6 +239,7 @@ async function save(payload, label = 'Saving', missionSummary = null) {
   }
   // Saved. Nothing from here on may keep the summary from showing.
   const id = res?.activity?.id
+  try { track('run_saved', { mode: payload.mode || 'run', source: payload.source || 'phone', km: Math.round((res?.activity?.distanceM || 0) / 100) / 10, hexes: res?.activity?.claimed || 0, story: !!missionSummary, crew: !!crew.group, again: !!res?.already }) } catch { /* never in the way */ }
   const quietly = (fn) => { try { fn() } catch { /* a nice extra, not worth losing the summary over */ } }
   if (payload.source === 'phone' && !payload.simulated) quietly(() => forgetUnfinished(savingSlot))
   savingSlot = undefined

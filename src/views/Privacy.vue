@@ -88,13 +88,16 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Error reports</h2>
       <p>When something breaks in the app or on our server, a short report goes to Sentry, an error tracking service, so we can fix it. It holds the error message, which part of the code it came from and which screen you were on. We take out anything that looks like a place, an email or a sign-in token before it is sent. It never includes your name, your account, your runs or where you are.</p>
 
+      <h2>Usage stats</h2>
+      <p>To learn which parts of Foothold people use and whether they come back, the app sends short notes to PostHog, an analytics service, on its servers in the EU. A note says which screen you opened (with any ids taken out) or that something happened, such as a run saved or a story finished, with a few small numbers like the distance. It is tied to your random account number, not your name or email. It never includes where you are, your routes, what you type or what is on your screen, and there are no recordings of your screen. Switch it off any time in Settings, under Usage stats. It is also off if your browser asks sites not to track you, and in the practice map.</p>
+
       <h2>Your choices</h2>
       <ul>
         <li>Download everything we hold about you from Settings.</li>
         <li>Delete an activity, or your whole account, at any time. Hills stay on the map for everyone without your name, and the next fastest person becomes King of the hill.</li>
         <li>Questions or a complaint: email privacy@formtrack.com.au. If you're not happy with our answer you can contact the OAIC.</li>
       </ul>
-      <p class="small muted">Last updated 12 November 2026. This is a draft for review before launch.</p>
+      <p class="small muted">Last updated 13 November 2026. This is a draft for review before launch.</p>
     </main>
   </div>
 </template>

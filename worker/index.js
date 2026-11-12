@@ -682,6 +682,7 @@ export async function handleApi(req, env, ctx) {
     const push = pushConfig(env) // push notifications, when their keys are set
     if (push) out.push = push
     if (env.SENTRY_DSN) out.sentryDsn = String(env.SENTRY_DSN) // error reports (public; src/lib/monitoring.js)
+    if (env.POSTHOG_KEY) { out.posthogKey = String(env.POSTHOG_KEY); out.posthogHost = env.POSTHOG_HOST || null } // usage analytics (public; src/lib/analytics.js)
     res = json(out)
     return withCors(res, cors)
   }
