@@ -142,6 +142,24 @@ const asking = ref(false)
 const nearby = computed(() => storiesNear(here.value))
 const previewPlace = computed(() => placeOf(preview.value))
 const previewDistance = computed(() => (here.value && previewPlace.value ? distanceLabel(here.value, previewPlace.value) : null))
+
+// Capture the story: who has planted a flag where the previewed story is set
+const flags = ref(null)
+let flagsFor = null
+watch(() => (open.value && previewPlace.value ? preview.value.id : null), async (id) => {
+  flagsFor = id
+  flags.value = null
+  if (!id) return
+  const f = await api.storyFlags(id).catch(() => null)
+  if (flagsFor === id) flags.value = f
+}, { immediate: true })
+const flagLine = computed(() => {
+  const f = flags.value
+  if (!f) return null
+  if (f.mine) return f.count === 1 ? 'Your flag is planted here. You were first.' : `Your flag is planted here, with ${f.count - 1} other ${f.count === 2 ? 'runner' : 'runners'}.`
+  if (!f.count) return 'Nobody has solved this one on the spot yet. Finish it there to plant the first flag.'
+  return `${f.count} ${f.count === 1 ? 'runner has' : 'runners have'} solved this on the spot. ${f.first ? `${f.first.name} was first.` : ''} Finish it there to plant yours.`
+})
 async function findNearby() {
   locating.value = true
   locateFailed.value = false
@@ -213,6 +231,10 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
               <p v-if="previewPlace" class="hplace">
                 <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1112 6a2.5 2.5 0 010 5.5z" fill="currentColor" /></svg>
                 <span>Set at {{ previewPlace.name }}<template v-if="previewDistance">, {{ previewDistance }}</template></span>
+              </p>
+              <p v-if="flagLine" class="hflag">
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 21V4h11l-1.5 3.5L16 11H7v10z" fill="currentColor" /></svg>
+                <span>{{ flagLine }}</span>
               </p>
               <p class="hblurb">{{ preview.blurb }}</p>
               <p v-if="previewNote" class="hnote">{{ previewNote }}</p>
@@ -324,6 +346,8 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 .mb-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--deep); }
 .mb-chip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .cplus { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--ring, #fff); color: #10131C; font-size: 0.72rem; font-weight: 850; }
+.hflag { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0 0; font-size: 0.85rem; font-weight: 650; color: var(--accent); }
+.hflag svg { flex: none; margin-top: 2px; }
 .mb-empty-row { padding: 8px 16px; opacity: 0.8; }
 .mpick { display: grid; gap: 8px; }
 .suggest { display: flex; align-items: center; gap: 10px; background: var(--tint); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }

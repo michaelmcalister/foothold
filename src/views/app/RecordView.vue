@@ -24,6 +24,7 @@ import { saveGhostRace } from '../../lib/ghostRace.js'
 import { usualPace } from '../../lib/planner.js'
 import { saveResult, missionById } from '../../lib/missions/index.js'
 import { playable } from '../../lib/plus.js'
+import { placeOf } from '../../lib/missions/places.js'
 import MissionPicker from '../../components/MissionPicker.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
@@ -232,6 +233,12 @@ async function save(payload, label = 'Saving', missionSummary = null) {
   if (payload.source === 'phone' && !payload.simulated) quietly(forgetUnfinished)
   quietly(() => setLastResult(res))
   if (missionSummary && id) quietly(() => saveResult(id, missionSummary))
+  // Capture the story: finishing an episode at its real place plants your flag there
+  if (missionSummary?.completed && id && placeOf(missionById(missionSummary.id))) {
+    api.storyFlag({ activityId: id, missionId: missionSummary.id }).then((f) => {
+      if (f?.planted) toast(`Flag planted at ${f.place}. ${f.count === 1 ? 'You’re the first to solve it there!' : `Runner number ${f.count} to solve it there.`}`, 6000)
+    }).catch(() => {})
+  }
   if (pendingGhost && id) quietly(() => saveGhostRace(id, pendingGhost))
   pendingGhost = null
   await Promise.race([refresh().catch(() => {}), new Promise((r) => setTimeout(r, 4000))]) // fresh numbers, but never a long wait

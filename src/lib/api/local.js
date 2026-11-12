@@ -1130,6 +1130,10 @@ export const local = {
   async missionProgress() { return { progress: {} } },
   async missionTry() { return { progress: {} } },
 
+  // Story flags need the server: the practice map has none
+  async storyFlag() { return { planted: false, count: 0, recent: [] } },
+  async storyFlags() { return { count: 0, recent: [], first: null, mine: null } },
+
   // Plus needs the server; on the practice map everything is free
   async plusStatus() { return { plan: 'free' } },
   async plusCheckout() { throw new Error('Sign in to get Foothold Plus.') },
