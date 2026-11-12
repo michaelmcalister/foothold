@@ -5,7 +5,7 @@
 // small file, so the full scripts (about half a megabyte) only load when a
 // run starts. Run by `npm run build`; test/catalogue.test.js checks it is
 // up to date.
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { MISSIONS, SAGAS, CHAINS } from '../src/lib/missions/scripts.js'
 import { surgeCount } from '../src/lib/missions/engine.js'
 import { SERIES } from '../src/lib/missions/series/index.js'
@@ -17,6 +17,8 @@ export function catalogue() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  writeFileSync(new URL('../src/lib/missions/catalogue.json', import.meta.url), JSON.stringify(catalogue()) + '\n')
-  console.log('catalogue written')
+  // only write when it changed, so `wrangler dev` (which rebuilds on changes) doesn't loop
+  const file = new URL('../src/lib/missions/catalogue.json', import.meta.url)
+  const next = JSON.stringify(catalogue()) + '\n'
+  if (!existsSync(file) || readFileSync(file, 'utf8') !== next) { writeFileSync(file, next); console.log('catalogue written') }
 }
