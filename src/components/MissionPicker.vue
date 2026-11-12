@@ -19,11 +19,24 @@ import { placeOf, storiesNear, distanceLabel, locateMe } from '../lib/missions/p
 import StoryRequest from './StoryRequest.vue'
 import { playable, plusBadge, canSell, startCheckout } from '../lib/plus.js'
 import { toast } from '../lib/store.js'
+import { STORY_SEASON } from '../lib/storySeason.js'
 
 const model = defineModel({ type: String, default: null })
 const open = ref(false)
 const progress = ref(loadProgress())
-const unlocked = computed(() => unlockedIds(progress.value))
+// The season finale opens for everyone together (lib/storySeason.js)
+const seasonInfo = ref(null)
+api.storySeason?.().then((x) => { seasonInfo.value = x }).catch(() => {})
+const unlocked = computed(() => {
+  const ids = unlockedIds(progress.value)
+  if (!seasonInfo.value?.finaleOpen) ids.delete(STORY_SEASON.finaleMission)
+  return ids
+})
+const finaleNote = computed(() => {
+  const x = seasonInfo.value
+  if (!x) return 'Opens for everyone at the end of the season.'
+  return `Opens when everyone together reaches ${x.goalKm.toLocaleString('en-AU')} km (${x.km.toLocaleString('en-AU')} so far), or on finale weekend.`
+})
 const todayType = ref(null)
 const chosen = computed(() => (model.value ? missionById(model.value) : null))
 const suggestion = computed(() => {
@@ -249,7 +262,8 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
                 </button>
                 <p v-else class="mb-locked">
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
-                  Play {{ lockedBy(preview) }} to unlock
+                  <template v-if="preview.id === STORY_SEASON.finaleMission">{{ finaleNote }}</template>
+                  <template v-else>Play {{ lockedBy(preview) }} to unlock</template>
                 </p>
               </div>
             </div>

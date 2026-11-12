@@ -1,4 +1,5 @@
-// Cover art for the ten Australia wide series (missions/series/tiger.js,
+// Cover art for the ten Australia wide series and the season finale
+// (gathering.js) (missions/series/tiger.js,
 // mahogany.js, catalpa.js, minmin.js, opal.js, tunnels.js, canberra.js,
 // panther.js, hawkesbury.js and nugget.js). They share one layout: a sky,
 // a glow, layered hills, the series' own landmark, and the runner in
@@ -107,6 +108,14 @@ const nugget = scene({
     '<path d="M220 280 l30 -40 M236 236 q16 -2 24 8" stroke="#3A2A1A" stroke-width="4" fill="none"/>',
 })
 
+// the season finale: a map of Australia with ten glowing pins
+const gathering = scene({
+  sky: [[0, '#140A26'], [0.5, '#3A2156'], [0.85, '#E07A3A'], [1, '#FFC46B']], glow: '#FFD58A', sun: [150, 250, 70], stars: 60,
+  hills: [[250, 10, '#2A1A3A', 4]], ground: [290, '#1B1030'], rim: '#FFB347',
+  mark: () => '<path d="M70 150 q30 -40 80 -30 q20 -30 50 -10 q40 0 50 40 q10 40 -20 70 q-30 20 -60 10 q-30 20 -60 0 q-40 -10 -40 -40 q-10 -20 0 -40 Z" fill="#E8A35A" opacity="0.85"/>'
+    + [[95, 175], [120, 150], [150, 135], [175, 125], [205, 140], [225, 170], [215, 200], [185, 215], [150, 210], [210, 228]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#FFF3C4"/><circle cx="${x}" cy="${y}" r="8" fill="#FFF3C4" opacity="0.25"/>`).join(''),
+})
+
 export const COVERS = [
   { saga: 'tiger', draw: tiger },
   { saga: 'mahogany', draw: mahogany },
@@ -118,4 +127,5 @@ export const COVERS = [
   { saga: 'panther', draw: panther },
   { saga: 'hawkesbury', draw: hawkesbury },
   { saga: 'nugget', draw: nugget },
+  { saga: 'gathering', draw: gathering },
 ]

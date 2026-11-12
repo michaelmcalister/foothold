@@ -17,6 +17,7 @@ import StrongholdCard from '../../components/StrongholdCard.vue'
 import FirstWeekCard from '../../components/FirstWeekCard.vue'
 import LoopFinder from '../../components/LoopFinder.vue'
 import ContinueStory from '../../components/ContinueStory.vue'
+import SeasonCard from '../../components/SeasonCard.vue'
 import { syncProgress, loadProgress } from '../../lib/missions/progress.js'
 import { LngLatBounds } from 'maplibre-gl'
 import { loadJourney, freshSteps } from '../../lib/journey.js'
@@ -255,6 +256,7 @@ function closeFinder() {
       </div>
 
       <ContinueStory :progress="storyProgress" />
+      <SeasonCard />
 
       <div v-if="quests.length" class="questcard" :class="{ open: questsOpen }">
         <button class="qhead" type="button" :aria-expanded="questsOpen" aria-controls="map-quests" @click="toggleQuests">

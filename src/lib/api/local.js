@@ -1130,6 +1130,13 @@ export const local = {
   async missionProgress() { return { progress: {} } },
   async missionTry() { return { progress: {} } },
 
+  // The story season on the practice map: its dates, with no community total
+  async storySeason() {
+    const { STORY_SEASON, seasonState } = await import('../storySeason.js')
+    const st = seasonState(Date.now())
+    return { id: STORY_SEASON.id, title: STORY_SEASON.title, ...st, goalKm: STORY_SEASON.goalKm, km: 0, people: 0, reached: false, finaleOpen: st.finaleByDate, finaleMission: STORY_SEASON.finaleMission }
+  },
+
   // Story flags need the server: the practice map has none
   async storyFlag() { return { planted: false, count: 0, recent: [] } },
   async storyFlags() { return { count: 0, recent: [], first: null, mine: null } },

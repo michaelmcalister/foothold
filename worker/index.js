@@ -18,6 +18,7 @@ import { handleShortLink } from './links.js'
 import { reportError } from './sentry.js'
 import { missionsRoute } from './missions.js'
 import { storyFlagRoute } from './storyflags.js'
+import { storySeason } from './storySeason.js'
 import { billingRoute, handleStripeWebhook, premiumConfig, premiumOn, planOf, cancelForDelete } from './billing.js'
 import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
@@ -245,6 +246,9 @@ async function route(req, env, url, user, ctx) {
     const out = await missionsRoute({ env, user, path, m, body, now })
     if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
   }
+
+  // The story season: featured series, the community goal, the finale (worker/storySeason.js)
+  if (path === '/api/story-season' && m === 'GET') return json(await storySeason(env, now))
 
   // Capture the story: flags planted where stories are set (worker/storyflags.js)
   {

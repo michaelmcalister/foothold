@@ -86,6 +86,8 @@ export const remote = {
   // Story progress with the account (worker/missions.js)
   missionProgress: () => call('GET', '/api/missions/progress'),
   missionTry: (body) => call('POST', '/api/missions/progress', body),
+  // The story season (worker/storySeason.js)
+  storySeason: () => call('GET', '/api/story-season'),
   // Capture the story (worker/storyflags.js)
   storyFlag: (body) => call('POST', '/api/stories/flag', body),
   storyFlags: (mission) => call('GET', '/api/stories/flags' + q({ mission })),
