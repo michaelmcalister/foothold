@@ -8,6 +8,7 @@ import { continueList } from '../lib/missions/progress.js'
 import { coverSvg, lookFor } from '../lib/missions/covers.js'
 import { missionMeta } from '../lib/missions/index.js'
 import { play } from '../lib/audio/sfx.js'
+import { playable } from '../lib/plus.js'
 
 const props = defineProps({ progress: { type: Object, default: null } })
 const router = useRouter()
@@ -31,7 +32,8 @@ function run() {
       <h2 id="cs-title" class="title">{{ next.title }}, episode {{ next.mission.episode }}</h2>
       <p class="ep">{{ next.mission.title }} · {{ missionMeta(next.mission) }}</p>
     </div>
-    <button type="button" class="go" @click="run">
+    <p v-if="!playable(next.mission)" class="locked">Part of Foothold Plus</p>
+    <button v-else type="button" class="go" @click="run">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
       Run it
     </button>
@@ -44,7 +46,8 @@ function run() {
 .art { position: absolute; inset: 0; opacity: 0.85; }
 .art :deep(svg) { width: 100%; height: 100%; display: block; object-fit: cover; }
 .shade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--deep) 30%, transparent 85%); }
-.text, .go, .more { position: relative; }
+.text, .go, .locked { position: relative; margin: 0; font-size: 0.82rem; font-weight: 750; }
+.more { position: relative; }
 .kicker { margin: 0; font-size: 0.78rem; font-weight: 750; color: var(--accent); }
 .title { margin: 2px 0 0; font-size: 1.12rem; font-weight: 850; line-height: 1.2; }
 .ep { margin: 2px 0 0; font-size: 0.85rem; opacity: 0.85; }

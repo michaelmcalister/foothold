@@ -17,6 +17,8 @@ import { nextSession, toISO } from '../lib/coach/index.js'
 import { play } from '../lib/audio/sfx.js'
 import { placeOf, storiesNear, distanceLabel, locateMe } from '../lib/missions/places.js'
 import StoryRequest from './StoryRequest.vue'
+import { playable, plusBadge, canSell, startCheckout } from '../lib/plus.js'
+import { toast } from '../lib/store.js'
 
 const model = defineModel({ type: String, default: null })
 const open = ref(false)
@@ -31,6 +33,10 @@ const suggestion = computed(() => {
 
 const sagaOf = (m) => m.saga || 'trailkeepers'
 const lockedBy = (m) => unlockedBy(m.id)?.title || null
+const selling = canSell()
+async function buyPlus() {
+  try { await startCheckout() } catch (e) { toast(e?.message || 'That didn’t open. Try again in a moment.') }
+}
 const played = (m) => !!progress.value[m.id]?.tries
 const allGroups = SAGAS.map((g) => ({ ...g, look: lookFor(g.id), missions: MISSIONS.filter((m) => sagaOf(m) === g.id) }))
 
@@ -211,7 +217,11 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
               <p class="hblurb">{{ preview.blurb }}</p>
               <p v-if="previewNote" class="hnote">{{ previewNote }}</p>
               <div class="hact">
-                <button v-if="unlocked.has(preview.id)" type="button" class="mb-play" @click="pick(preview.id)">
+                <template v-if="unlocked.has(preview.id) && !playable(preview)">
+                  <button v-if="selling" type="button" class="mb-play" @click="buyPlus">Get Foothold Plus to play</button>
+                  <p v-else class="mb-locked">Part of Foothold Plus. Episode 1 of every series is free.</p>
+                </template>
+                <button v-else-if="unlocked.has(preview.id)" type="button" class="mb-play" @click="pick(preview.id)">
                   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
                   {{ model === preview.id ? 'Keep this mission' : 'Run this mission' }}
                 </button>
@@ -288,6 +298,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
                   <span v-if="!unlocked.has(m.id)" class="clock" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
                   </span>
+                  <span v-else-if="plusBadge(m)" class="cplus" aria-hidden="true">Plus</span>
                   <span v-else-if="played(m)" class="cdone" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>
                   </span>
@@ -312,6 +323,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 .mb-chip { flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, 0.35); background: transparent; color: inherit; font: inherit; font-weight: 700; font-size: 0.88rem; }
 .mb-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--deep); }
 .mb-chip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.cplus { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--ring, #fff); color: #10131C; font-size: 0.72rem; font-weight: 850; }
 .mb-empty-row { padding: 8px 16px; opacity: 0.8; }
 .mpick { display: grid; gap: 8px; }
 .suggest { display: flex; align-items: center; gap: 10px; background: var(--tint); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }

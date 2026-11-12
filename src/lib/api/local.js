@@ -1130,6 +1130,12 @@ export const local = {
   async missionProgress() { return { progress: {} } },
   async missionTry() { return { progress: {} } },
 
+  // Plus needs the server; on the practice map everything is free
+  async plusStatus() { return { plan: 'free' } },
+  async plusCheckout() { throw new Error('Sign in to get Foothold Plus.') },
+  async plusPortal() { throw new Error('Sign in to manage Foothold Plus.') },
+  async adminPlus() { throw Object.assign(new Error('Not found.'), { status: 404 }) },
+
   // Push needs the server, so the practice map has none
   async pushSubscribe() { throw Object.assign(new Error('Sign in to get notifications on your phone.'), { code: 'signin' }) },
   async pushUnsubscribe() { return { ok: true } },

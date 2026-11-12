@@ -22,6 +22,14 @@ const reports = ref([])
 const ai = ref([])
 const problem = ref('')
 const busy = ref('')
+const giftId = ref('')
+async function gift(on) {
+  await guard(async () => {
+    const r = await api.adminPlus(giftId.value.trim(), on)
+    toast(r.plan === 'plus' ? 'Plus given. Enjoy.' : 'Gift taken back.')
+    loadStats()
+  })
+}
 
 const catalogue = computed(() => {
   const sagas = new Set(MISSIONS.map((m) => m.saga))
@@ -100,6 +108,7 @@ onMounted(() => {
         <div><dt>Last 30 days</dt><dd>{{ stats.activities30 }}</dd><span>{{ stats.km30 }} km</span></div>
         <div><dt>AI spend</dt><dd>{{ money(stats.aiCost7) }}</dd><span>{{ money(stats.aiCost30) }} in 30 days</span></div>
         <div><dt>Stories</dt><dd>{{ catalogue.stories }}</dd><span>{{ catalogue.series }} series, {{ catalogue.places }} real places</span></div>
+        <div v-if="stats.plusMembers"><dt>Plus</dt><dd>{{ stats.plusMembers }}</dd><span>members</span></div>
         <div><dt>To do</dt><dd>{{ stats.ideasWaiting + stats.reportsOpen }}</dd><span>{{ stats.ideasWaiting }} ideas, {{ stats.reportsOpen }} reports</span></div>
       </dl>
     </section>
@@ -159,6 +168,16 @@ onMounted(() => {
         <p class="small muted">{{ f.kind === 'bug' ? 'Something’s wrong' : f.kind === 'idea' ? 'An idea' : f.kind }} · {{ when(f.at) }}</p>
         <p>{{ f.text }}</p>
       </article>
+    </section>
+
+    <section v-if="tab === 'ai'" class="panel stack" aria-labelledby="a-gift">
+      <h2 id="a-gift">Give someone Plus</h2>
+      <p class="small muted">Only works once Plus is switched on. Paste their player id (from your data export or the database).</p>
+      <label class="field"><span class="small">Player id</span><input v-model="giftId" type="text" autocomplete="off"></label>
+      <div class="row">
+        <button class="btn" type="button" :disabled="giftId.trim().length < 8" @click="gift(true)">Give Plus</button>
+        <button class="btn quiet" type="button" :disabled="giftId.trim().length < 8" @click="gift(false)">Take it back</button>
+      </div>
     </section>
 
     <section v-if="tab === 'ai'" class="panel stack" aria-labelledby="a-ai">

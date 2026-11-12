@@ -11,7 +11,8 @@ export const USER_TABLES = [
   { table: 'kudos', col: 'user_id' },
   { table: 'notifications', col: 'user_id' },
   { table: 'push_subs', col: 'user_id' },
-  { table: 'mission_progress', col: 'user_id' }, // where you're up to in each story series // phones and browsers that get push notifications
+  { table: 'mission_progress', col: 'user_id' },
+  { table: 'subscriptions', col: 'user_id' }, // Foothold Plus (worker/billing.js) // where you're up to in each story series // phones and browsers that get push notifications
   { table: 'plans', col: 'user_id' },
   { table: 'feedback', col: 'user_id' },
   { table: 'routes', col: 'user_id' }, // planned routes

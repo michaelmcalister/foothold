@@ -8,6 +8,8 @@
 // who sent an idea or where they are: the "Near" part is kept for the writer
 // only, as a rough area.
 
+import { grantPlus } from './billing.js'
+
 const DAY = 86400000
 
 /** Is this signed-in user an admin? */
@@ -45,7 +47,7 @@ function ideaOut(r) {
 
 async function overview(env, now) {
   const one = (sql, ...a) => env.DB.prepare(sql).bind(...a).first()
-  const [users, newUsers, act7, act30, runners7, ideas, approved, reports, ai7, ai30] = await Promise.all([
+  const [users, newUsers, act7, act30, runners7, ideas, approved, reports, plus, ai7, ai30] = await Promise.all([
     one('SELECT COUNT(*) AS n FROM users'),
     one('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', now - 7 * DAY),
     one('SELECT COUNT(*) AS n, COALESCE(SUM(distance_m), 0) AS m FROM activities WHERE started_at >= ?', now - 7 * DAY),
@@ -54,6 +56,7 @@ async function overview(env, now) {
     one("SELECT COUNT(*) AS n FROM feedback WHERE kind = 'story' AND status IS NULL"),
     one("SELECT COUNT(*) AS n FROM feedback WHERE kind = 'story' AND status = 'approved'"),
     one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
+    one("SELECT COUNT(*) AS n FROM subscriptions WHERE status IN ('active', 'trialing', 'past_due', 'granted')").catch(() => ({ n: 0 })),
     one('SELECT COALESCE(SUM(cost_aud), 0) AS c FROM ai_usage WHERE at >= ?', now - 7 * DAY),
     one('SELECT COALESCE(SUM(cost_aud), 0) AS c FROM ai_usage WHERE at >= ?', now - 30 * DAY),
   ])
@@ -68,6 +71,7 @@ async function overview(env, now) {
     ideasWaiting: ideas.n,
     ideasApproved: approved.n,
     reportsOpen: reports.n,
+    plusMembers: plus.n,
     aiCost7: Math.round(ai7.c * 100) / 100,
     aiCost30: Math.round(ai30.c * 100) / 100,
   }
@@ -142,5 +146,9 @@ export async function adminRoute({ env, user, url, m, path, body, now }) {
   hit = path.match(/^\/api\/admin\/reports\/([\w-]+)$/)
   if (hit && m === 'POST') return settleReport(env, hit[1], body)
   if (path === '/api/admin/ai' && m === 'GET') return aiSpend(env, now)
+  if (path === '/api/admin/plus' && m === 'POST') {
+    if (typeof body?.userId !== 'string' || !/^[\w-]{8,64}$/.test(body.userId)) return { status: 400, error: 'Paste a player id.' }
+    return grantPlus(env, body.userId, !!body.on, now)
+  }
   return { status: 404, error: 'Not found.' }
 }

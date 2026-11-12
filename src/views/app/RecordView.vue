@@ -22,7 +22,8 @@ import GhostPicker from '../../components/GhostPicker.vue'
 import { makeGhost, ghostAt, progressAlong, gapSeconds, gapLine, gapShort, raceResult } from '../../lib/ghost.js'
 import { saveGhostRace } from '../../lib/ghostRace.js'
 import { usualPace } from '../../lib/planner.js'
-import { saveResult } from '../../lib/missions/index.js'
+import { saveResult, missionById } from '../../lib/missions/index.js'
+import { playable } from '../../lib/plus.js'
 import MissionPicker from '../../components/MissionPicker.vue'
 import MissionStrip from '../../components/MissionStrip.vue'
 import { audio } from '../../lib/audio/settings.js'
@@ -43,7 +44,8 @@ const saving = ref(false)
 const error = ref(null)
 const fileInput = ref(null)
 const progress = ref(null)
-const missionId = ref(here.query.mission ? String(here.query.mission) : null) // ?mission= from the run summary's "next episode"
+// ?mission= from the run summary's "next episode" or Continue your story (only if it's playable: Foothold Plus)
+const missionId = ref(here.query.mission && playable(missionById(String(here.query.mission))) ? String(here.query.mission) : null)
 
 const live = computed(() => rec.status === 'recording' || rec.status === 'paused' || rec.status === 'acquiring')
 const me = computed(() => rec.points.length ? rec.points[rec.points.length - 1] : store.located ? store.centre : null)

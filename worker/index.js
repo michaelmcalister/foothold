@@ -17,6 +17,7 @@ import { runCron } from './cron.js'
 import { secure } from './headers.js'
 import { reportError } from './sentry.js'
 import { missionsRoute } from './missions.js'
+import { billingRoute, handleStripeWebhook, premiumConfig, premiumOn, planOf, cancelForDelete } from './billing.js'
 import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
@@ -507,6 +508,12 @@ async function route(req, env, url, user, ctx) {
     if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
   }
 
+  // Foothold Plus (worker/billing.js), switched off until PREMIUM_ON = "1"
+  {
+    const out = await billingRoute({ env, user, path, m, now })
+    if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
+  }
+
   // Push notifications: subscribe, unsubscribe, test (worker/push.js)
   if (path.startsWith('/api/push')) {
     const out = await pushRoute({ env, user, path, m, body, now })
@@ -518,10 +525,17 @@ async function route(req, env, url, user, ctx) {
   if (admin !== undefined) return admin.error ? err(admin.error, admin.status || 400) : json(admin)
 
   // Profile
-  if (path === '/api/me' && m === 'GET') return json({ user: isAdmin(env, user) ? { ...userOut(user), admin: true } : userOut(user) })
+  if (path === '/api/me' && m === 'GET') {
+    const me = isAdmin(env, user) ? { ...userOut(user), admin: true } : userOut(user)
+    if (premiumOn(env)) me.plan = await planOf(env, user.id, now) // Foothold Plus, when it's switched on
+    return json({ user: me })
+  }
   if (path === '/api/me/export' && m === 'GET') return json(await exportAccount(env, user))
   if (path === '/api/me/year' && m === 'GET') return json(await yearInReview(env, user, url, now)) // Foothold Wrapped (worker/wrapped.js)
-  if (path === '/api/me' && m === 'DELETE') return json(await deleteAccount(env, user))
+  if (path === '/api/me' && m === 'DELETE') {
+    await cancelForDelete(env, user.id) // no more Plus charges once the account is gone
+    return json(await deleteAccount(env, user))
+  }
   if (path === '/api/me' && m === 'PUT') {
     const sets = []
     const args = []
@@ -882,6 +896,8 @@ export async function handleApi(req, env, ctx) {
     if (tts) out.tts = tts
     const ai = aiConfig(env) // AI built plans (Claude), when its key is set
     if (ai) out.ai = ai
+    const premium = premiumConfig(env) // Foothold Plus, only once it's switched on
+    if (premium) out.premium = premium
     const push = pushConfig(env) // push notifications, when their keys are set
     if (push) out.push = push
     if (env.SENTRY_DSN) out.sentryDsn = String(env.SENTRY_DSN) // error reports (public; src/lib/monitoring.js)
@@ -889,6 +905,8 @@ export async function handleApi(req, env, ctx) {
     return withCors(res, cors)
   }
   // Public, rate limited: the voice coach speaks on the practice map too
+  // Stripe tells us about Plus payments here (signed, no sign-in; worker/billing.js)
+  if (url.pathname === '/api/billing/webhook' && req.method === 'POST') return handleStripeWebhook(req, env)
   if (url.pathname === '/api/tts' && req.method === 'POST') {
     res = await handleTts(req, env)
     return withCors(res, cors)

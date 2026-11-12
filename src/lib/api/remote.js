@@ -86,6 +86,11 @@ export const remote = {
   // Story progress with the account (worker/missions.js)
   missionProgress: () => call('GET', '/api/missions/progress'),
   missionTry: (body) => call('POST', '/api/missions/progress', body),
+  // Foothold Plus (worker/billing.js)
+  plusStatus: () => call('GET', '/api/billing/status'),
+  plusCheckout: () => call('POST', '/api/billing/checkout'),
+  plusPortal: () => call('POST', '/api/billing/portal'),
+  adminPlus: (userId, on) => call('POST', '/api/admin/plus', { userId, on }),
   // Push notifications (worker/push.js)
   pushSubscribe: (body) => call('POST', '/api/push', body),
   pushUnsubscribe: (body) => call('DELETE', '/api/push', body),

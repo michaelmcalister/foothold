@@ -73,6 +73,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Plans built with AI</h2>
       <p>If you choose "Build it with AI" in the coach, what you type and a summary of your recent running (weekly distances, longest run, run count, estimated paces, your current goal and whether FormTrack is linked) go to Anthropic's Claude to set up your plan. We never send your name, email, account, routes or where you run. We ask before the first time, and remember your answer on your device. We don't keep what you typed on our servers, and it isn't used for anything else. Anthropic's commercial terms cover how it handles that data. The plan and its explanation are saved with your plan, like any other plan, and you can download or delete them. Plans built this way are labelled as built with AI and aren't medical advice.</p>
 
+      <h2>Foothold Plus payments</h2>
+      <p>If you buy Foothold Plus on the website, Stripe handles the payment. Your card details go straight to Stripe and never reach us. We keep only whether you have Plus, Stripe’s customer and subscription numbers, and when it renews. Deleting your account cancels your subscription.</p>
+
       <h2>Push notifications</h2>
       <p>If you switch on push in Settings, we keep an address for your phone or browser so we can send you notices, like a rival taking your ground. In a browser the address comes from your browser’s maker (Google, Apple, Mozilla or Microsoft); in the Foothold app it comes from Google’s Firebase. They pass on the notice text and nothing else. Switch push off, or delete your account, and the address is deleted.</p>
 

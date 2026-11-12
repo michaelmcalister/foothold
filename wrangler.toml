@@ -55,6 +55,8 @@ ADMIN_USERS = "62cda1ba-f5bf-4b55-a2f6-54460ba530e2"
 #   OPEN_METEO_KEY  optional, a paid Open-Meteo key for elevation charts once Foothold is commercial
 #   ANTHROPIC_API_KEY  AI built plans (worker/aiplan.js); optional vars PLAN_MODEL, AI_DAILY_CAP_AUD (default 10)
 #   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  web push (worker/push.js); make a pair with `npm run vapid`
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET  Foothold Plus payments (docs/PAYMENTS.md); with vars
+#     STRIPE_PRICE_PLUS, PLUS_PRICE_LABEL and the switch PREMIUM_ON = "1" (off until set)
 #   FCM_SERVICE_ACCOUNT  the Firebase service account JSON, for push to the iPhone and Android apps
 
 [triggers]
