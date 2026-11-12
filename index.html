@@ -6,35 +6,31 @@
     <title>Foothold: take ground, hold it</title>
     <meta name="description" content="Foothold turns your runs, walks and rides into a game for your suburb. Close a loop and the streets inside are yours." />
     <meta name="theme-color" content="#16302A" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Foothold" />
+    <meta property="og:title" content="Foothold: take ground, hold it" />
+    <meta property="og:description" content="Run, walk or ride to claim your streets, and step inside a story while you do it." />
+    <meta property="og:image" content="https://foothold.com.au/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/foothold/favicon.svg" />
     <link rel="apple-touch-icon" href="/foothold/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/foothold/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Foothold" />
-    <script>
-      // Night mode before first paint (the same rule as src/lib/theme.js):
-      // Night, or Auto with the phone set to dark. Night colours only show in the app.
-      try {
-        var fhRoot = document.documentElement
-        var fhTheme = localStorage.getItem('fh-theme')
-        var fhNight = fhTheme === 'night' || (fhTheme !== 'day' && matchMedia('(prefers-color-scheme: dark)').matches)
-        fhRoot.dataset.theme = fhNight ? 'night' : 'day'
-        if (fhNight) {
-          fhRoot.classList.add('night')
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0F1916')
-        }
-        if (/^#\/app/.test(location.hash)) fhRoot.classList.add('in-app')
-      } catch (e) { /* storage blocked: the app sets it when it starts */ }
-    </script>
+    <script src="/foothold/theme-boot.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/foothold/assets/index-BI2YuLq-.js"></script>
-    <link rel="modulepreload" crossorigin href="/foothold/assets/rolldown-runtime-DK3Fl9T5.js">
+    <script type="module" crossorigin src="/foothold/assets/index-B-5KC2Mc.js"></script>
     <link rel="modulepreload" crossorigin href="/foothold/assets/reactivity.esm-bundler-B6OWRSK7.js">
     <link rel="modulepreload" crossorigin href="/foothold/assets/preload-helper-BGDvBy5Y.js">
-    <link rel="stylesheet" crossorigin href="/foothold/assets/index-BYxboc4b.css">
+    <link rel="modulepreload" crossorigin href="/foothold/assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="/foothold/assets/h3-js.es-BNjYS1Bx.js">
+    <link rel="modulepreload" crossorigin href="/foothold/assets/engine-DgAxJNIa.js">
+    <link rel="stylesheet" crossorigin href="/foothold/assets/index-BW-RrcIk.css">
   </head>
   <body>
     <div id="app"></div>
