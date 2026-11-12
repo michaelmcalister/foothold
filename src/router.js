@@ -1,12 +1,11 @@
 // Routes. Hash history so deep links work on GitHub Pages without server rewrites.
 import { createRouter, createWebHashHistory } from 'vue-router'
-import Landing from './views/Landing.vue'
 
 export const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
-    { path: '/', name: 'landing', component: Landing },
+    { path: '/', name: 'landing', component: () => import('./views/Landing.vue') },
     { path: '/privacy', name: 'privacy', component: () => import('./views/Privacy.vue') },
     {
       path: '/app',
@@ -19,6 +18,7 @@ export const router = createRouter({
         { path: 'wrapped', name: 'wrapped', component: () => import('./views/app/WrappedView.vue'), meta: { full: true } }, // Foothold Wrapped, your year in review
         { path: 'recap/:id', name: 'recap', component: () => import('./views/app/RecapView.vue'), meta: { full: true } },
         { path: 'activity/:id', name: 'activity', component: () => import('./views/app/ActivityView.vue') },
+        { path: 'compete', redirect: { name: 'battles' } }, // the Compete tab is the battles screen
         { path: 'battles', name: 'battles', component: () => import('./views/app/BattlesView.vue') },
         { path: 'coach', name: 'coach', component: () => import('./views/app/CoachView.vue') },
         { path: 'you', name: 'you', component: () => import('./views/app/YouView.vue') },

@@ -3,7 +3,7 @@
 // stories do); otherwise its series' place below is used. Stories set in
 // made up places (Wattle Creek, the game show) have none. Your position is
 // only ever used on your phone to work out distances; it isn't sent.
-import { MISSIONS } from './scripts.js'
+import { CATALOGUE as MISSIONS } from './catalogue.js'
 
 // The series set in one real place
 export const SAGA_PLACES = {

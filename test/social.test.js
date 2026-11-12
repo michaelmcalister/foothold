@@ -40,7 +40,9 @@ describe('league helpers', () => {
     expect(code).toMatch(new RegExp(`^[${CODE_ALPHABET}]{6}$`))
     expect(normaliseCode(code.toLowerCase())).toBe(code)
     expect(normaliseCode(inviteLink('https://foothold.com.au/app/', code))).toBe(code)
-    expect(inviteLink('https://a.b/foothold/#/app/leagues', 'K7P2QX')).toBe('https://a.b/foothold/#/app/leagues/join/K7P2QX')
+    expect(inviteLink('https://me.github.io/foothold/#/app/leagues', 'K7P2QX')).toBe('https://me.github.io/foothold/#/app/leagues/join/K7P2QX')
+    expect(inviteLink('https://foothold.com.au/', 'K7P2QX')).toBe('https://foothold.com.au/l/K7P2QX')
+    expect(normaliseCode('https://foothold.com.au/l/K7P2QX')).toBe('K7P2QX')
     expect(normaliseCode('K7P2Q')).toBeNull()
     expect(normaliseCode('K7P2Q0')).toBeNull() // no zero in the alphabet
   })

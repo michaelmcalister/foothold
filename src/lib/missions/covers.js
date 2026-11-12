@@ -6,7 +6,7 @@
 // coverSvg is pure (seeded by the mission id), so tests can check it.
 
 import { COVERS } from './covers/index.js'
-import { SERIES } from './series/index.js'
+import CATALOGUE from './catalogue.json'
 
 const W = 300
 const H = 375
@@ -455,7 +455,8 @@ const SCENES = { trailkeepers, ember, heist, quiz, signal }
 // The newer series draw their own covers (missions/covers), with these helpers
 const HELP = { W, H, f, sky, glow, stars, hill, runner, gum, blur, skyline, dish }
 for (const c of COVERS) SCENES[c.saga] = (m, rand, u) => c.draw(m, rand, u, HELP)
-for (const s of SERIES) SAGA_LOOK[s.SAGA.id] = s.LOOK
+// Each series' colours, from the light catalogue (so covers never load the full scripts)
+for (const [id, look] of Object.entries(CATALOGUE.looks)) SAGA_LOOK[id] = look
 
 let uid = 0
 /**

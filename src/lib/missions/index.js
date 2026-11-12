@@ -2,14 +2,14 @@
 // on this device, and the small helpers the Record and Result screens use.
 import { CHAIN, missionById } from './scripts.js'
 import { surgeCount } from './engine.js'
+import { metaLine } from './catalogue.js'
 export * from './scripts.js'
 export * from './engine.js'
 export * from './progress.js'
 
 /** "20 min · Gentle · 3 surges" for the picker. */
 export function missionMeta(m) {
-  const n = surgeCount(m)
-  return [`${m.minutes} min`, m.difficulty, n ? `${n} ${n === 1 ? 'surge' : 'surges'}` : 'No surges'].join(' · ')
+  return metaLine(m, m.beats ? surgeCount(m) : m.surges)
 }
 
 /**

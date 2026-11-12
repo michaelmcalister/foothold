@@ -2,6 +2,7 @@
 // the map opens on a run with patchy signal. API calls always go to the network.
 const SHELL = 'foothold-shell-v1'
 const TILES = 'foothold-tiles-v1'
+const MAX_TILES = 1500 // about 30 to 60 MB of map; the oldest go first
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest'])).then(() => self.skipWaiting()))
@@ -24,7 +25,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       caches.open(TILES).then(async (c) => {
         const hit = await c.match(e.request)
-        const net = fetch(e.request).then((r) => { if (r.ok) c.put(e.request, r.clone()); return r }).catch(() => hit)
+        const net = fetch(e.request).then((r) => {
+          if (r.ok) c.put(e.request, r.clone()).then(() => { if (Math.random() < 0.05) trimTiles(c) })
+          return r
+        }).catch(() => hit)
         return hit || net
       }),
     )
@@ -73,3 +77,9 @@ self.addEventListener('notificationclick', (e) => {
     }),
   )
 })
+
+// Keep the map cache from growing for ever: drop the oldest tiles past MAX_TILES
+async function trimTiles(c) {
+  const keys = await c.keys()
+  for (let i = 0; i < keys.length - MAX_TILES; i++) await c.delete(keys[i])
+}

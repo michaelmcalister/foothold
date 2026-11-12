@@ -3,7 +3,7 @@
 // mission result so the result screen can show it. Kept on this device and,
 // when you're signed in, with your account too (worker/missions.js), so a
 // new phone keeps your place. syncProgress() merges the two.
-import { MISSIONS, CHAINS, SAGAS } from './scripts.js'
+import { CATALOGUE as MISSIONS, CATALOGUE_CHAINS as CHAINS, CATALOGUE_SAGAS as SAGAS } from './catalogue.js'
 import { api } from '../api/index.js'
 
 const KEY = 'fh-missions'

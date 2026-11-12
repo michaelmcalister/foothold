@@ -20,16 +20,23 @@ export function makeCode(rand = Math.random) {
 /** A code from what someone typed or pasted (a bare code or the whole invite link), or null */
 export function normaliseCode(input) {
   const s = String(input ?? '').trim()
-  const fromLink = s.match(/leagues\/join\/([A-Za-z0-9]{6})\b/)
+  const fromLink = s.match(/(?:leagues\/join|\/l)\/([A-Za-z0-9]{6})\b/)
   const raw = (fromLink ? fromLink[1] : s).replace(/[\s-]/g, '').toUpperCase()
   if (raw.length !== CODE_LENGTH) return null
   for (const c of raw) if (!CODE_ALPHABET.includes(c)) return null
   return raw
 }
 
-/** The link that opens the join screen in the app */
+/**
+ * The link that opens the join screen in the app. On Foothold's own server
+ * it's a short link (/l/CODE) that previews nicely in messages
+ * (worker/links.js); on the practice map's static host it's the app's own
+ * address.
+ */
 export function inviteLink(base, code) {
-  return `${String(base).replace(/#.*$/, '').replace(/\/$/, '')}/#/app/leagues/join/${code}`
+  const b = String(base).replace(/#.*$/, '').replace(/\/$/, '')
+  if (/github\.io/.test(b)) return `${b}/#/app/leagues/join/${code}`
+  return `${new URL(b).origin}/l/${code}`
 }
 
 /** League table: most ground gained this week first, then most held */

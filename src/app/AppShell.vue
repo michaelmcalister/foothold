@@ -52,7 +52,7 @@ watch(() => route.name, () => {
 
 const tabs = [
   { name: 'map', label: 'Map', icon: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z M9 3v15 M15 6v15' },
-  { name: 'battles', label: 'Battles', icon: 'M5 19 19 5 M15 5h4v4 M5 5l5 5 M14 14l5 5 M5 15v4h4' },
+  { name: 'battles', label: 'Compete', also: ['rivals', 'leagues', 'league', 'league-join', 'clubs', 'strongholds', 'hill'], icon: 'M5 19 19 5 M15 5h4v4 M5 5l5 5 M14 14l5 5 M5 15v4h4' },
   { name: 'record', label: 'Record' },
   { name: 'coach', label: 'Coach', icon: 'M4 18l5-6 4 3 7-9 M15 6h5v5' },
   { name: 'you', label: 'You', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6' },
@@ -117,7 +117,7 @@ function switchMode(m) {
             <circle cx="60" cy="60" r="16" fill="#F3F5EF" />
           </svg>
         </RouterLink>
-        <RouterLink v-else :to="{ name: t.name }" class="tab" :class="{ on: route.name === t.name }">
+        <RouterLink v-else :to="{ name: t.name }" class="tab" :class="{ on: route.name === t.name || t.also?.includes(route.name) }">
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :d="t.icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
           <span>{{ t.label }}</span>
         </RouterLink>

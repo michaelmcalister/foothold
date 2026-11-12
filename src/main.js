@@ -10,6 +10,14 @@ import { isNativeApp, routeApiToServer } from './lib/native.js'
 // In the iPhone app the screens are bundled: send /api calls to the server
 routeApiToServer()
 
+// A plain address like /app/notifications (from a push notification, or a
+// shared link) opens that screen: the app's own addresses live after the #
+{
+  const base = import.meta.env.BASE_URL
+  const rest = location.pathname.startsWith(base) ? location.pathname.slice(base.length - 1) : ''
+  if (!location.hash && /^\/(app|try|privacy)(\/|$)/.test(rest)) history.replaceState(null, '', base + '#' + rest + location.search)
+}
+
 // Night mode: index.html already set the look before first paint; this keeps
 // it in step with the setting and the phone. Night colours only show in the app.
 startTheme()

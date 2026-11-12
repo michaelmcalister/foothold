@@ -6,7 +6,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { continueList } from '../lib/missions/progress.js'
 import { coverSvg, lookFor } from '../lib/missions/covers.js'
-import { missionMeta } from '../lib/missions/index.js'
+import { metaLine as missionMeta } from '../lib/missions/catalogue.js'
 import { play } from '../lib/audio/sfx.js'
 import { playable } from '../lib/plus.js'
 

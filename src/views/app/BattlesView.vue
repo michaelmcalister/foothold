@@ -1,5 +1,7 @@
 <script setup>
-// Battles, leaderboards and the local feed. Battles start when you take
+// Compete: everything competitive in one place. At the top, a grid to your
+// rivals, private leagues, clubs and strongholds (each its own screen). Then
+// battles, this week's division, leaderboards and the local feed. Battles start when you take
 // someone's ground and run for a week; whoever holds more of it wins.
 // Leaderboards come in two kinds: this season's ground gained, and all time.
 // The Division tab is this week's division table (components/DivisionPanel.vue).
@@ -71,7 +73,7 @@ async function kudos(item) {
 <template>
   <div class="screen">
     <header class="screen-head">
-      <h1>Battles</h1>
+      <h1>Compete</h1>
       <p v-if="season" class="small muted season-line">{{ season.label }}. {{ daysWord(season.daysLeft) }}.</p>
       <div class="seg" role="group" aria-label="Section">
         <button type="button" :aria-pressed="tab === 'battles'" @click="tab = 'battles'">Battles</button>
@@ -79,9 +81,11 @@ async function kudos(item) {
         <button type="button" :aria-pressed="tab === 'leaders'" @click="tab = 'leaders'">Leaders</button>
         <button type="button" :aria-pressed="tab === 'feed'" @click="tab = 'feed'">Feed</button>
       </div>
-      <nav class="social" aria-label="People">
-        <RouterLink class="btn quiet small" :to="{ name: 'rivals' }">Your rivals</RouterLink>
-        <RouterLink class="btn quiet small" :to="{ name: 'leagues' }">Private leagues</RouterLink>
+      <nav class="hub" aria-label="More ways to compete">
+        <RouterLink class="hubtile" :to="{ name: 'rivals' }"><strong>Rivals</strong><span>Who you’re up against</span></RouterLink>
+        <RouterLink class="hubtile" :to="{ name: 'leagues' }"><strong>Leagues</strong><span>Private, with friends</span></RouterLink>
+        <RouterLink class="hubtile" :to="{ name: 'clubs' }"><strong>Clubs</strong><span>Your crew’s ground</span></RouterLink>
+        <RouterLink class="hubtile" :to="{ name: 'strongholds' }"><strong>Strongholds</strong><span>Kings and queens of routes</span></RouterLink>
       </nav>
     </header>
 
@@ -197,6 +201,11 @@ async function kudos(item) {
 </template>
 
 <style scoped>
+.hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.hubtile { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--soft); color: inherit; text-decoration: none; min-height: 44px; }
+.hubtile strong { font-size: 0.98rem; }
+.hubtile span { font-size: 0.8rem; color: var(--ink-60); }
+.hubtile:focus-visible { outline: 3px solid var(--you, #2E55E6); outline-offset: 2px; }
 .plain { list-style: none; margin: 0; padding: 0; }
 .battle { display: grid; gap: 10px; }
 .vs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 1.05rem; }
@@ -218,7 +227,6 @@ async function kudos(item) {
 .feed { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px 10px; align-items: center; }
 .feed > div { min-width: 0; }
 .feed > :nth-child(3):last-child { grid-column: 3 / 5; justify-self: end; }
-.social { display: flex; gap: 8px; flex-wrap: wrap; }
 .talk { text-decoration: none; }
 .kudos {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--soft); color: var(--ink);
