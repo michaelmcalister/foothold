@@ -18,3 +18,7 @@ ios/App/App/config.xml
 *.keystore
 keystore.properties
 android/app/release/
+
+# Firebase app files (docs/PUSH.md)
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist

@@ -10,5 +10,14 @@
     "contentInset": "never",
     "backgroundColor": "#16302A",
     "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "FirebaseMessaging": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
   }
 }

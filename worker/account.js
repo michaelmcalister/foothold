@@ -10,6 +10,7 @@ export const USER_TABLES = [
   { table: 'club_members', col: 'user_id' },
   { table: 'kudos', col: 'user_id' },
   { table: 'notifications', col: 'user_id' },
+  { table: 'push_subs', col: 'user_id' }, // phones and browsers that get push notifications
   { table: 'plans', col: 'user_id' },
   { table: 'feedback', col: 'user_id' },
   { table: 'routes', col: 'user_id' }, // planned routes

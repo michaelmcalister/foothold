@@ -44,9 +44,9 @@ AUTH0_AUDIENCE = "https://api.formtrk.com"
 # e.g. the GitHub Pages build. capacitor://localhost is the iPhone app and
 # https://localhost the Android app.
 ALLOWED_ORIGINS = "capacitor://localhost,https://localhost"
-# Who can open the admin page at /app/admin (user ids, comma separated; worker/admin.js)
 # Error reports (Sentry project "foothold"). A DSN is public: it only lets you send events.
 SENTRY_DSN = "https://34b2335cc58f419dce528ae16ce26d44@o4512309370486784.ingest.de.sentry.io/4512416830718032"
+# Who can open the admin page at /app/admin (user ids, comma separated; worker/admin.js)
 ADMIN_USERS = "62cda1ba-f5bf-4b55-a2f6-54460ba530e2"
 
 # Secrets (set with `npx wrangler secret put NAME`):
@@ -54,7 +54,10 @@ ADMIN_USERS = "62cda1ba-f5bf-4b55-a2f6-54460ba530e2"
 #   ORS_API_KEY  Openrouteservice key for snapping planned routes to paths (or GOOGLE_ROUTES_KEY)
 #   OPEN_METEO_KEY  optional, a paid Open-Meteo key for elevation charts once Foothold is commercial
 #   ANTHROPIC_API_KEY  AI built plans (worker/aiplan.js); optional vars PLAN_MODEL, AI_DAILY_CAP_AUD (default 10)
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  web push (worker/push.js); make a pair with `npm run vapid`
+#   FCM_SERVICE_ACCOUNT  the Firebase service account JSON, for push to the iPhone and Android apps
 
 [triggers]
-# Hourly: end finished battles and send "fading soon" reminders
-crons = ["0 * * * *"]
+# Hourly: end finished battles and send "fading soon" reminders.
+# Every 15 minutes: send waiting push notifications (worker/push.js).
+crons = ["0 * * * *", "*/15 * * * *"]

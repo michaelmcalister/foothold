@@ -83,6 +83,10 @@ export const remote = {
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
   storyRequest: (body) => call('POST', '/api/story-requests', body),
+  // Push notifications (worker/push.js)
+  pushSubscribe: (body) => call('POST', '/api/push', body),
+  pushUnsubscribe: (body) => call('DELETE', '/api/push', body),
+  pushTest: () => call('POST', '/api/push/test'),
   // The owner's admin page (worker/admin.js): what is overview, ideas, feedback, reports or ai
   admin: (what, query = '') => call('GET', `/api/admin/${what}${query}`),
   adminAct: (what, id, body) => call('POST', `/api/admin/${what}/${encodeURIComponent(id)}`, body),

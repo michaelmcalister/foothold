@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast, locate } from '../../lib/store.js'
 import MusicVoiceSettings from '../../components/MusicVoiceSettings.vue'
+import PushSettings from '../../components/PushSettings.vue'
 import Crest from '../../components/Crest.vue'
 import { CRESTS, crestFor } from '../../lib/crests.js'
 import { auth, login, logout } from '../../lib/auth.js'
@@ -175,6 +176,8 @@ async function startAgain() {
       </div>
       <p class="hint">{{ theme.choice === 'auto' ? `Auto follows your phone's light or dark setting. It's ${theme.look} now.` : theme.choice === 'night' ? 'Night uses darker screens and a dark street map, easier on the eyes after sunset.' : 'Day keeps the light screens and street map.' }} Saved on this phone.</p>
     </section>
+
+    <PushSettings v-if="!isLocal" />
 
     <section class="panel stack" aria-labelledby="s-priv">
       <h2 id="s-priv">Privacy zones</h2>

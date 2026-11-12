@@ -14,6 +14,8 @@ import { play } from '../lib/audio/sfx.js'
 import { audio } from '../lib/audio/settings.js'
 import CarryOver from '../components/CarryOver.vue'
 import { rec } from '../lib/recorder.js'
+import { refreshPush } from '../lib/push.js'
+import { serverConfig } from '../lib/auth.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,6 +33,9 @@ onMounted(async () => {
   if (auth.error) toast(auth.error, 7000)
   await boot()
   if (!store.user.onboarded && !openWithoutSetup(route)) router.replace({ name: 'onboarding' })
+  // Push: keep this device's subscription fresh, and open the screen a tapped push points to
+  if (auth.loggedIn) refreshPush(serverConfig?.push)
+  window.addEventListener('fh-open', (e) => router.push(e.detail).catch(() => {}))
   // Moved up a division last week: say so once, with its sound, the next time the app opens
   if (store.user.onboarded) {
     const d = await api.division().catch(() => null)

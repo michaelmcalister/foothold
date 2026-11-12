@@ -50,6 +50,7 @@ export function userOut(row) {
     goal: prefs.goal ?? null,
     homeCentre: prefs.homeCentre ?? null,
     seasonSeen: prefs.seasonSeen ?? null,
+    push: prefs.push ? { on: true, rivals: true, ground: true, stories: true, weekly: true, ...prefs.push } : { on: true, rivals: true, ground: true, stories: true, weekly: true }, // what may be pushed (worker/push.js)
     foundingAt: prefs.foundingAt ?? null, // when the Founding foothold badge was earned (first week journey)
     formtrack: { linked: !!row.formtrack_token_enc, linkedAt: row.formtrack_linked_at || null },
   }

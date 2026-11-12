@@ -1126,6 +1126,11 @@ export const local = {
     throw e
   },
 
+  // Push needs the server, so the practice map has none
+  async pushSubscribe() { throw Object.assign(new Error('Sign in to get notifications on your phone.'), { code: 'signin' }) },
+  async pushUnsubscribe() { return { ok: true } },
+  async pushTest() { throw new Error('Sign in to get notifications on your phone.') },
+
   // The admin page needs the server, so the practice map has none
   async admin() {
     throw Object.assign(new Error('Not found.'), { status: 404 })

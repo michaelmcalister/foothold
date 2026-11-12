@@ -46,3 +46,30 @@ self.addEventListener('fetch', (e) => {
     )
   }
 })
+
+// Push notifications (worker/push.js): show them, and open the right screen when tapped
+self.addEventListener('push', (e) => {
+  let m = {}
+  try { m = e.data ? e.data.json() : {} } catch { m = { body: e.data?.text() } }
+  e.waitUntil(self.registration.showNotification(m.title || 'Foothold', {
+    body: m.body || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    tag: 'foothold',
+    renotify: true,
+    data: { url: m.url || '/app/notifications' },
+  }))
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const path = e.notification.data?.url || '/app/notifications'
+  const target = new URL(self.registration.scope).origin + path
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => c.url.startsWith(self.registration.scope))
+      if (open) return open.focus().then(() => open.navigate(target)).catch(() => self.clients.openWindow(target))
+      return self.clients.openWindow(target)
+    }),
+  )
+})

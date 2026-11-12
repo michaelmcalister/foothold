@@ -16,6 +16,7 @@ import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { secure } from './headers.js'
 import { reportError } from './sentry.js'
+import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleAudio } from './audioLibrary.js'
@@ -499,6 +500,12 @@ async function route(req, env, url, user, ctx) {
   const shared = await routeShareRoute({ env, user, m, path, body, now, limit })
   if (shared !== undefined) return json(shared)
 
+  // Push notifications: subscribe, unsubscribe, test (worker/push.js)
+  if (path.startsWith('/api/push')) {
+    const out = await pushRoute({ env, user, path, m, body, now })
+    if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
+  }
+
   // The owner's admin page (worker/admin.js)
   const admin = await adminRoute({ env, user, url, m, path, body, now })
   if (admin !== undefined) return admin.error ? err(admin.error, admin.status || 400) : json(admin)
@@ -550,6 +557,13 @@ async function route(req, env, url, user, ctx) {
       // The first week badge: kept once earned, so it can only be set, never moved or cleared
       if (!isNum(body.foundingAt, Date.UTC(2020, 0, 1), now + 86400000)) bad('foundingAt must be a time.')
       if (prefs.foundingAt == null) { prefs.foundingAt = body.foundingAt; prefsChanged = true }
+    }
+    if ('push' in body) {
+      // Which notices may become push notifications (worker/push.js GROUPS)
+      const p = body.push
+      if (!p || typeof p !== 'object') bad('Push settings must be a set of switches.')
+      prefs.push = Object.fromEntries(Object.keys(DEFAULT_PUSH).map((k) => [k, k in p ? !!p[k] : (prefs.push?.[k] ?? DEFAULT_PUSH[k])]))
+      prefsChanged = true
     }
     if (prefsChanged) { sets.push('prefs = ?'); args.push(JSON.stringify(prefs)) }
     if (sets.length) await env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...args, user.id).run()
@@ -861,6 +875,8 @@ export async function handleApi(req, env, ctx) {
     if (tts) out.tts = tts
     const ai = aiConfig(env) // AI built plans (Claude), when its key is set
     if (ai) out.ai = ai
+    const push = pushConfig(env) // push notifications, when their keys are set
+    if (push) out.push = push
     if (env.SENTRY_DSN) out.sentryDsn = String(env.SENTRY_DSN) // error reports (public; src/lib/monitoring.js)
     res = json(out)
     return withCors(res, cors)
@@ -927,6 +943,9 @@ export default {
     return new Response('Not found', { status: 404 })
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runCron(env, Number(event?.scheduledTime) || Date.now()).catch((e) => reportError(env, null, e, 'cron')))
+    const now = Number(event?.scheduledTime) || Date.now()
+    // Every 15 minutes: push waiting notices. On the hour: the game's jobs first.
+    const jobs = event?.cron === '*/15 * * * *' ? Promise.resolve() : runCron(env, now)
+    ctx.waitUntil(jobs.then(() => pushWaiting(env, now)).catch((e) => reportError(env, null, e, 'cron')))
   },
 }
