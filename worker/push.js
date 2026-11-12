@@ -65,7 +65,7 @@ export function digest(notices) {
   return {
     title: 'Foothold',
     body: more > 0 ? `${top.text} And ${more} more thing${more === 1 ? '' : 's'} waiting.` : top.text,
-    url: top.kind === 'story' || top.kind === 'season' ? '/app/plan' : top.kind === 'week' ? '/app/week' : '/app/notifications',
+    url: top.kind === 'story' || top.kind === 'season' ? '/app/record' : top.kind === 'week' ? '/app/week' : '/app/notifications',
     ids: list.map((n) => n.id),
   }
 }

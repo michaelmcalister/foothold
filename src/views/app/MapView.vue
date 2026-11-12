@@ -16,6 +16,8 @@ import Crest from '../../components/Crest.vue'
 import StrongholdCard from '../../components/StrongholdCard.vue'
 import FirstWeekCard from '../../components/FirstWeekCard.vue'
 import LoopFinder from '../../components/LoopFinder.vue'
+import ContinueStory from '../../components/ContinueStory.vue'
+import { syncProgress, loadProgress } from '../../lib/missions/progress.js'
 import { LngLatBounds } from 'maplibre-gl'
 import { loadJourney, freshSteps } from '../../lib/journey.js'
 import { exploredShare } from '../../lib/engine/explore.js'
@@ -143,7 +145,10 @@ function onMoved({ bbox: b }) {
 }
 watch(() => store.mode, () => { picked.value = null; suggestion.value = null; finder.value = null; pickedSh.value = null; load() })
 
+// Story progress: this phone's straight away, then merged with the account's
+const storyProgress = ref(loadProgress())
 onMounted(async () => {
+  syncProgress().then((p) => { storyProgress.value = p })
   loadQuests()
   loadHabits()
   nudge.value = await todaysNudge()
@@ -248,6 +253,8 @@ function closeFinder() {
           <span class="l">fading soon</span>
         </div>
       </div>
+
+      <ContinueStory :progress="storyProgress" />
 
       <div v-if="quests.length" class="questcard" :class="{ open: questsOpen }">
         <button class="qhead" type="button" :aria-expanded="questsOpen" aria-controls="map-quests" @click="toggleQuests">

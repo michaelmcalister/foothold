@@ -1126,6 +1126,10 @@ export const local = {
     throw e
   },
 
+  // On the practice map, story progress lives only on this device (missions/progress.js)
+  async missionProgress() { return { progress: {} } },
+  async missionTry() { return { progress: {} } },
+
   // Push needs the server, so the practice map has none
   async pushSubscribe() { throw Object.assign(new Error('Sign in to get notifications on your phone.'), { code: 'signin' }) },
   async pushUnsubscribe() { return { ok: true } },

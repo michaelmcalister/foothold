@@ -2,8 +2,11 @@
 // contested hexes), a once-a-day "fading soon" reminder for anyone with
 // hexes about to go wild, the soft reset at the start of each season, and on
 // Mondays the "your week is ready" notice, streak milestone celebrations,
-// and weekly divisions (worker/divisions.js).
+// and weekly divisions (worker/divisions.js). At 5 pm Sydney time, the
+// weekly story nudge for players part way through a series (worker/missions.js).
 
+import { storyNudges } from './missions.js'
+import { sydneyHour } from './push.js'
 import { battleScore, seasonFor, softenCell, needsReset } from '../src/lib/engine/index.js'
 import { batched, cellsByIds, notify, players, rowToBattle, rowToCell, wildAt } from './db.js'
 import { weekReadyNotices } from './weekly.js'
@@ -110,8 +113,10 @@ export async function runCron(env, now = Date.now()) {
   const fading = await fadingNotices(env, now).catch((e) => (console.error('cron fading', e?.message), 0))
   const weekly = await weekReadyNotices(env, now).catch((e) => (console.error('cron week', e?.message), 0))
   const streaks = await streakNotices(env, now).catch((e) => (console.error('cron streak', e?.message), 0))
+  // Story nudges go out once a day at 5 pm Sydney time (once a week per player)
+  const stories = sydneyHour(now) === 17 ? await storyNudges(env, now).catch((e) => (console.error('cron stories', e?.message), 0)) : 0
   const divisions = await divisionCron(env, now).catch((e) => (console.error('cron divisions', e?.message), null))
   // Old rate limit windows are no use to anyone
   await env.DB.prepare('DELETE FROM rate_limits WHERE win < ?').bind(Math.floor(now / 1000) - 2 * 86400).run().catch(() => {})
-  return { ended, fading, weekly, softened, streaks, divisions }
+  return { ended, fading, weekly, softened, streaks, divisions, stories }
 }

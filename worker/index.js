@@ -16,6 +16,7 @@ import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
 import { secure } from './headers.js'
 import { reportError } from './sentry.js'
+import { missionsRoute } from './missions.js'
 import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
@@ -499,6 +500,12 @@ async function route(req, env, url, user, ctx) {
   // Routes sent to your crew (worker/routeShares.js)
   const shared = await routeShareRoute({ env, user, m, path, body, now, limit })
   if (shared !== undefined) return json(shared)
+
+  // Story progress kept with the account (worker/missions.js)
+  {
+    const out = await missionsRoute({ env, user, path, m, body, now })
+    if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
+  }
 
   // Push notifications: subscribe, unsubscribe, test (worker/push.js)
   if (path.startsWith('/api/push')) {

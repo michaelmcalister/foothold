@@ -83,6 +83,9 @@ export const remote = {
   formtrackSummary: () => call('GET', '/api/integrations/formtrack/summary').catch(() => null),
   feedback: (body) => call('POST', '/api/feedback', body),
   storyRequest: (body) => call('POST', '/api/story-requests', body),
+  // Story progress with the account (worker/missions.js)
+  missionProgress: () => call('GET', '/api/missions/progress'),
+  missionTry: (body) => call('POST', '/api/missions/progress', body),
   // Push notifications (worker/push.js)
   pushSubscribe: (body) => call('POST', '/api/push', body),
   pushUnsubscribe: (body) => call('DELETE', '/api/push', body),

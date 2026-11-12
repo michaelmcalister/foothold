@@ -10,7 +10,7 @@
 // that is from you, and "Know a local story?" asks for a new one
 // (StoryRequest.vue).
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
+import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, syncProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
 import { coverSvg, lookFor } from '../lib/missions/covers.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
@@ -32,7 +32,25 @@ const suggestion = computed(() => {
 const sagaOf = (m) => m.saga || 'trailkeepers'
 const lockedBy = (m) => unlockedBy(m.id)?.title || null
 const played = (m) => !!progress.value[m.id]?.tries
-const groups = SAGAS.map((g) => ({ ...g, look: lookFor(g.id), missions: MISSIONS.filter((m) => sagaOf(m) === g.id) }))
+const allGroups = SAGAS.map((g) => ({ ...g, look: lookFor(g.id), missions: MISSIONS.filter((m) => sagaOf(m) === g.id) }))
+
+// Filters for the series rows: everything, open mysteries, local stories,
+// the new ones, short runs (under 25 minutes), or series you haven't started
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'mystery', label: 'Mysteries' },
+  { key: 'new', label: 'New' },
+  { key: 'short', label: 'Under 25 min' },
+  { key: 'fresh', label: 'Not started' },
+]
+const filter = ref('all')
+const groups = computed(() => allGroups.filter((g) => {
+  if (filter.value === 'mystery') return /mystery/i.test(g.look.tag || '')
+  if (filter.value === 'new') return !!g.isNew
+  if (filter.value === 'short') return g.missions.some((m) => m.minutes <= 25)
+  if (filter.value === 'fresh') return !g.missions.some(played)
+  return true
+}).map((g) => (filter.value === 'short' ? { ...g, missions: g.missions.filter((m) => m.minutes <= 25) } : g)))
 const sagaTitle = (m) => SAGAS.find((g) => g.id === sagaOf(m))?.title || ''
 
 // Covers are drawn once per mission and reused
@@ -43,7 +61,7 @@ const cover = (m) => {
 }
 
 // The next episode to play in each series you've started
-const upNext = computed(() => groups.map((g) => {
+const upNext = computed(() => allGroups.map((g) => {
   if (!g.missions.some(played)) return null
   return g.missions.find((m) => unlocked.value.has(m.id) && !played(m)) || null
 }).filter(Boolean))
@@ -83,6 +101,7 @@ function pick(id) {
 async function openBrowser(e) {
   opener = e?.currentTarget || null
   progress.value = loadProgress()
+  syncProgress().then((p) => { progress.value = p })
   previewId.value = null
   open.value = true
   play('reveal', { wait: false })
@@ -208,6 +227,19 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
             {{ model ? 'No story this time, just the usual coach' : 'Just the run, with the usual coach (chosen)' }}
           </button>
 
+          <section v-if="upNext.length" class="mb-row">
+            <h3 class="rtitle">Continue your stories</h3>
+            <ul class="mb-cards" role="list">
+              <li v-for="m in upNext" :key="m.id">
+                <button type="button" class="mb-card" :class="{ 'is-on': preview.id === m.id, 'is-picked': model === m.id }" :style="{ '--ring': lookFor(sagaOf(m)).accent }" :aria-label="`${sagaTitle(m)}: ${m.title}. ${missionMeta(m)}`" @click="show(m)">
+                  <span class="cart" v-html="cover(m)" />
+                  <span class="cfade" />
+                  <span class="ctext"><span class="cep">{{ sagaTitle(m) }}</span><span class="ctitle">{{ m.title }}</span></span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
           <section class="mb-row mb-near" aria-labelledby="near-title">
             <h3 id="near-title" class="rtitle"><span>Stories near you</span></h3>
             <p class="rblurb">Real places and real history, from your suburb to the other side of the world.</p>
@@ -234,18 +266,11 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
             <button type="button" class="near-req" @click="asking = true">Know a local story? Tell us where</button>
           </section>
 
-          <section v-if="upNext.length" class="mb-row">
-            <h3 class="rtitle">Up next for you</h3>
-            <ul class="mb-cards" role="list">
-              <li v-for="m in upNext" :key="m.id">
-                <button type="button" class="mb-card" :class="{ 'is-on': preview.id === m.id, 'is-picked': model === m.id }" :style="{ '--ring': lookFor(sagaOf(m)).accent }" :aria-label="`${sagaTitle(m)}: ${m.title}. ${missionMeta(m)}`" @click="show(m)">
-                  <span class="cart" v-html="cover(m)" />
-                  <span class="cfade" />
-                  <span class="ctext"><span class="cep">{{ sagaTitle(m) }}</span><span class="ctitle">{{ m.title }}</span></span>
-                </button>
-              </li>
-            </ul>
-          </section>
+
+          <div class="mb-filters" role="group" aria-label="Show series">
+            <button v-for="f in FILTERS" :key="f.key" type="button" class="mb-chip" :aria-pressed="filter === f.key" @click="filter = f.key">{{ f.label }}</button>
+          </div>
+          <p v-if="!groups.length" class="mb-empty-row">Nothing here yet. Try another filter.</p>
 
           <section v-for="g in groups" :key="g.id" class="mb-row" :style="{ '--ring': g.look.accent }">
             <h3 class="rtitle"><span>{{ g.title }}</span> <span v-if="g.isNew" class="mb-new">New</span> <span class="rtag">{{ g.look.tag }}</span></h3>
@@ -283,6 +308,11 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 </template>
 
 <style scoped>
+.mb-filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 2px; scrollbar-width: none; }
+.mb-chip { flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, 0.35); background: transparent; color: inherit; font: inherit; font-weight: 700; font-size: 0.88rem; }
+.mb-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--deep); }
+.mb-chip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.mb-empty-row { padding: 8px 16px; opacity: 0.8; }
 .mpick { display: grid; gap: 8px; }
 .suggest { display: flex; align-items: center; gap: 10px; background: var(--tint); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 650; font-size: 0.92rem; }
 .suggest span { flex: 1; min-width: 0; }

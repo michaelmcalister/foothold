@@ -8,7 +8,7 @@
 import { hit } from './db.js'
 import { userFor } from './auth.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
-import { MISSIONS } from '../src/lib/missions/index.js'
+import { MISSIONS } from '../src/lib/missions/scripts.js'
 
 // Australian voices you can pick for the coach (Music and voice settings).
 // All sit in the Foothold ElevenLabs account; Charlie is ElevenLabs' own.
