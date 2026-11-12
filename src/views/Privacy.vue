@@ -61,6 +61,12 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Stories near you</h2>
       <p>When you tap Find stories near me, your phone asks for your location once and works out how far away each story is set. That all happens on your phone: your location isn't sent to us or kept.</p>
 
+      <h2>Stories on your own streets</h2>
+      <p>The Your Patch stories use the names of parks and streets near you. When one starts, the app sends your position rounded to about a kilometre to our server, which asks OpenStreetMap’s Overpass service for nearby names. Only the rounded point goes to OpenStreetMap, and only names come back. The lines that use those names are spoken by ElevenLabs as usual, but we don’t keep copies of them.</p>
+
+      <h2>Capture the story and group runs</h2>
+      <p>Finish a story where it is set, and your flag is planted there: other players see your player name on that place’s board, never your run or where you live. In a group run, the people in the group see each other’s player names, how many surges each has done and which way each voted. Delete your account and your flags, groups and votes go with it.</p>
+
       <h2>Ghost runs</h2>
       <p>When you race a ghost, it's one of your own past runs, or a route at a pace you pick. The result and the ghost's line are kept on your phone so the recap can show both of you. Nothing about it is sent anywhere.</p>
 

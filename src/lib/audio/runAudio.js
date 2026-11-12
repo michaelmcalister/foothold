@@ -11,14 +11,16 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker } from './voice.js'
+import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker, setPrivateLines } from './voice.js'
 import { enqueue, clear } from './queue.js'
 import { isIOSApp } from '../native.js'
 import * as sfx from './sfx.js'
 import * as spotify from './spotify.js'
 import { api } from '../api/index.js'
+import { store } from '../store.js'
 import { nextSession, toISO, trainingPaces, DEFAULT_5K_S } from '../coach/index.js'
 import { createMission, missionById, recordTry, sagaById, CHAINS } from '../missions/index.js'
+import { personalise, wordsFrom } from '../missions/local.js'
 import { CAST, stripTags } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
 import { listenFor, stopListening as stopMic, canListen, primeListening, optionsPrompt } from './listen.js'
@@ -288,6 +290,16 @@ function startScape(saga) {
   return s
 }
 
+// Names from around you for stories on your own streets, from your position
+// rounded to about a kilometre. Plain words if it takes more than 4 seconds.
+let localWords = null
+async function nearbyWords() {
+  const here = rec.points.at(-1) || (store.located ? store.centre : null)
+  if (!here) return wordsFrom({})
+  const near = await Promise.race([api.nearby(here).catch(() => ({})), new Promise((r) => setTimeout(() => r({}), 4000))])
+  return wordsFrom(near)
+}
+
 // Today's planned session, so the coach can say if an easy run is too quick
 async function todaysTarget() {
   try {
@@ -303,6 +315,9 @@ async function todaysTarget() {
  * the last episode when you say yes to the next one).
  */
 function startMission(script) {
+  // Stories on your own streets: fill in the real names (missions/local.js)
+  if (script?.local) script = personalise(script, localWords || wordsFrom({}))
+  setPrivateLines(!!script?.local) // lines naming places near you aren't kept on the server
   mission = script ? createMission(script, { paces: runPaces }) : null
   const saga = script ? sagaById(script.saga) : null
   narrator = saga?.narrator || null
@@ -432,6 +447,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   const { paces, target } = await todaysTarget()
   runPaces = paces
   const script = missionId ? missionById(missionId) : null
+  if (script?.local) localWords = await nearbyWords()
   startMission(script)
   // no thriller score: Foothold's own tracks, unless Spotify is playing yours
   if (!scape) runMusic = startRunMusic()

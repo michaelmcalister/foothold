@@ -1130,6 +1130,9 @@ export const local = {
   async missionProgress() { return { progress: {} } },
   async missionTry() { return { progress: {} } },
 
+  // Stories on your own streets need the server: the practice map uses plain words
+  async nearby() { return { suburb: null, parks: [], streets: [], landmarks: [], water: [] } },
+
   // The story season on the practice map: its dates, with no community total
   async storySeason() {
     const { STORY_SEASON, seasonState } = await import('../storySeason.js')

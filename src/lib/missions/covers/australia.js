@@ -116,6 +116,14 @@ const gathering = scene({
     + [[95, 175], [120, 150], [150, 135], [175, 125], [205, 140], [225, 170], [215, 200], [185, 215], [150, 210], [210, 228]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#FFF3C4"/><circle cx="${x}" cy="${y}" r="8" fill="#FFF3C4" opacity="0.25"/>`).join(''),
 })
 
+// Your Patch: rooftops of a suburb at golden hour, a kite over the park
+const yourpatch = scene({
+  sky: [[0, '#26324A'], [0.55, '#6A8AB0'], [0.85, '#F2B880'], [1, '#FFE2B0']], glow: '#FFE6B8', sun: [230, 200, 50],
+  hills: [[230, 12, '#3A5A3A', 4]], ground: [292, '#2A4A2A'], rim: '#FFD166',
+  mark: () => [30, 90, 150, 210, 260].map((x, i) => `<path d="M${x} 262 l22 -18 l22 18 v28 h-44 Z" fill="${['#C2703D', '#A85A32', '#C98A4A', '#B0603A', '#9A5030'][i]}"/>`).join('')
+    + '<path d="M200 110 l14 -16 l14 16 l-14 18 Z" fill="#E5484D"/><path d="M214 128 q-10 30 -40 60 q-20 20 -30 60" stroke="#F4EAD8" stroke-width="1.2" fill="none"/>',
+})
+
 export const COVERS = [
   { saga: 'tiger', draw: tiger },
   { saga: 'mahogany', draw: mahogany },
@@ -128,4 +136,5 @@ export const COVERS = [
   { saga: 'hawkesbury', draw: hawkesbury },
   { saga: 'nugget', draw: nugget },
   { saga: 'gathering', draw: gathering },
+  { saga: 'yourpatch', draw: yourpatch },
 ]

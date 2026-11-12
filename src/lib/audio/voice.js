@@ -195,7 +195,11 @@ const madeKey = (voiceKey, text) => voiceKey + '|' + text
 
 // keep: false asks the server not to store the line for good (it names something personal)
 let coachNeedsSignIn = false
+// Stories on your own streets name places near you: their lines aren't kept on the server
+let privateLines = false
+export function setPrivateLines(on) { privateLines = !!on }
 async function fetchVoice(text, voiceKey, timeoutMs = 6000, keep = true) {
+  keep = keep && !privateLines
   const signin = await authHeader()
   if (coachNeedsSignIn && !isCast(voiceKey) && !signin.Authorization) throw new Error('server voice needs sign in')
   const r = await fetch(import.meta.env.BASE_URL + 'api/tts', {

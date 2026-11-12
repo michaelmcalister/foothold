@@ -86,6 +86,8 @@ export const remote = {
   // Story progress with the account (worker/missions.js)
   missionProgress: () => call('GET', '/api/missions/progress'),
   missionTry: (body) => call('POST', '/api/missions/progress', body),
+  // Real names nearby, for stories on your own streets (worker/nearby.js)
+  nearby: ({ lat, lng }) => call('GET', '/api/nearby' + q({ lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100 })),
   // The story season (worker/storySeason.js)
   storySeason: () => call('GET', '/api/story-season'),
   // Capture the story (worker/storyflags.js)
