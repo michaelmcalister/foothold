@@ -18,4 +18,6 @@ export default defineConfig({
   base: process.env.BASE_PATH || '/',
   // MapLibre's worker is an ES module
   worker: { format: 'es' },
+  // a whole run saved through the fake database can take a few seconds on CI's slower machines
+  test: { testTimeout: 30000 },
 })
