@@ -252,7 +252,14 @@ export const LIMITS = {
   aiPlanUser: { max: 15, sec: 86400 }, // per signed-in player
 }
 
-/** Count one use. Fails open if the table is missing so a hiccup can't lock everyone out. */
+// Buckets that spend real money (voice lines, AI plans). If the limits
+// table can't be read, these say no rather than letting anyone run up a bill.
+export const PAID = new Set(['tts', 'audio', 'aiPlanHour', 'aiPlanDay', 'aiPlanUser'])
+
+/**
+ * Count one use. Fails open if the table is missing so a hiccup can't lock
+ * everyone out, except for the paid buckets, which fail closed.
+ */
 export async function hit(env, bucket, key) {
   const lim = LIMITS[bucket]
   if (!lim || !key) return { ok: true }
@@ -266,6 +273,6 @@ export async function hit(env, bucket, key) {
     ).bind(bucket, String(key), win).first()
     return { ok: (row?.count ?? 1) <= lim.max, retryAfter: win + lim.sec - now }
   } catch {
-    return { ok: true }
+    return PAID.has(bucket) ? { ok: false, retryAfter: 300 } : { ok: true }
   }
 }

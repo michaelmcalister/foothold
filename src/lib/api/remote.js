@@ -8,6 +8,14 @@ let tokenGetter = async () => null
 
 export function setTokenGetter(fn) { tokenGetter = fn }
 
+/** The sign-in header for calls made outside this adapter (the coach voice), or nothing. */
+export async function authHeader() {
+  try {
+    const t = await tokenGetter()
+    return t ? { Authorization: `Bearer ${t}` } : {}
+  } catch { return {} }
+}
+
 function deviceId() {
   try {
     let id = localStorage.getItem('fh-device')

@@ -14,6 +14,7 @@ import { encryptSecret, decryptSecret } from './crypto.js'
 import { extractToken, fetchSummary, logCardio } from './formtrack.js'
 import { authConfig, userFor } from './auth.js'
 import { runCron } from './cron.js'
+import { secure } from './headers.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
 import { handleAudio } from './audioLibrary.js'
@@ -918,8 +919,8 @@ export async function handleApi(req, env, ctx) {
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url)
-    if (url.pathname.startsWith('/api/')) return handleApi(req, env, ctx)
-    if (env.ASSETS) return env.ASSETS.fetch(req)
+    if (url.pathname.startsWith('/api/')) return secure(await handleApi(req, env, ctx), url.pathname)
+    if (env.ASSETS) return secure(await env.ASSETS.fetch(req), url.pathname)
     return new Response('Not found', { status: 404 })
   },
   async scheduled(event, env, ctx) {

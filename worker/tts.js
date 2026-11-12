@@ -6,6 +6,7 @@
 // are rate limited per address so nobody can run up the bill. A line sent
 // with keep: false (it names a device) skips R2 and only sits in the cache.
 import { hit } from './db.js'
+import { userFor } from './auth.js'
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
 import { MISSIONS } from '../src/lib/missions/index.js'
 
@@ -61,6 +62,11 @@ export function isScriptLine(text) {
   return scriptLines.has(text)
 }
 
+async function signedIn(req, env) {
+  if (!req.headers.get('authorization') && !req.headers.get('x-device-id')) return false
+  try { return !!(await userFor(req, env)).user } catch { return false }
+}
+
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 
 async function sha(text) {
@@ -68,7 +74,7 @@ async function sha(text) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.caches?.default } = {}) {
+export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.caches?.default, isSignedIn = signedIn } = {}) {
   if (!ttsOn(env)) return json({ error: "The voice isn't set up yet.", code: 'tts_off' }, 503)
   const body = await req.json().catch(() => null)
   const text = String(body?.text || '').replace(/\s+/g, ' ').trim()
@@ -87,8 +93,13 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   const kept = env.AUDIO ? await env.AUDIO.get(stored).catch(() => null) : null
   if (kept) return keep(new Response(await kept.arrayBuffer(), { headers: AUDIO_HEADERS }), key, cache)
 
+  // Lines from the mission scripts are a fixed set anyone can hear. Anything
+  // else costs money to make, so it needs a signed-in player (the app falls
+  // back to the phone's own voice otherwise).
+  const scripted = story && isScriptLine(text)
+  if (!scripted && !(await isSignedIn(req, env))) return json({ error: 'Sign in to use the coach voice.', code: 'signin' }, 401)
   const ip = req.headers.get('cf-connecting-ip') || 'unknown'
-  const r = story && isScriptLine(text) ? { ok: true } : await hit(env, 'tts', ip)
+  const r = scripted ? { ok: true } : await hit(env, 'tts', ip)
   if (!r.ok) return json({ error: 'The coach needs a breather. Updates will use the phone voice for a bit.', code: 'rate_limited' }, 429, { 'retry-after': String(r.retryAfter || 600) })
 
   const ask = (model, words, settings) => fetcher(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {

@@ -11,6 +11,7 @@ import { createMission, lineText, surgeCount } from '../src/lib/missions/engine.
 import { CAST, isCast, stripTags } from '../src/lib/missions/cast.js'
 import { trainingPaces } from '../src/lib/coach/paces.js'
 import { THEMES, scheduleIntro, scheduleOutro, INTRO_S, SCENES, STINGS, SCORES, musicStep, stepSeconds, spotTimes, rng, startScene, scheduleSting, createSoundscape, intensityFor } from '../src/lib/audio/soundscape.js'
+const yes = async () => true // a signed-in player
 import { handleTts, STORY_MODEL } from '../worker/tts.js'
 
 const paces = trainingPaces(30 * 60)
@@ -156,7 +157,7 @@ describe('server cast voices', () => {
   it('speaks a cast line with its own voice and the expressive model', async () => {
     const calls = []
     const fetcher = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return new Response(new Uint8Array([1, 2, 3]), { status: 200 }) }
-    const res = await handleTts(req({ text: '[whispers] Swap them.', voice: 'viv' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    const res = await handleTts(req({ text: '[whispers] Swap them.', voice: 'viv' }), { ...env, DB: fakeDb() }, { isSignedIn: yes, fetcher, cache: null })
     expect(res.status).toBe(200)
     expect(calls[0].url).toContain(CAST.viv.voiceId)
     expect(calls[0].body).toMatchObject({ model_id: STORY_MODEL, text: '[whispers] Swap them.' })
@@ -168,7 +169,7 @@ describe('server cast voices', () => {
       calls.push(JSON.parse(init.body))
       return calls.length === 1 ? new Response('no', { status: 400 }) : new Response(new Uint8Array([1]), { status: 200 })
     }
-    const res = await handleTts(req({ text: '[laughs] Beauty.', voice: 'bluey' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    const res = await handleTts(req({ text: '[laughs] Beauty.', voice: 'bluey' }), { ...env, DB: fakeDb() }, { isSignedIn: yes, fetcher, cache: null })
     expect(res.status).toBe(200)
     expect(calls[1]).toMatchObject({ model_id: 'eleven_multilingual_v2', text: 'Beauty.' })
   })
@@ -176,7 +177,7 @@ describe('server cast voices', () => {
   it('an unknown voice is the coach voice, never a cast member', async () => {
     const calls = []
     const fetcher = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return new Response(new Uint8Array([1]), { status: 200 }) }
-    await handleTts(req({ text: 'Hi.', voice: 'toString' }), { ...env, DB: fakeDb() }, { fetcher, cache: null })
+    await handleTts(req({ text: 'Hi.', voice: 'toString' }), { ...env, DB: fakeDb() }, { isSignedIn: yes, fetcher, cache: null })
     expect(calls[0].body.model_id).not.toBe(STORY_MODEL)
   })
 })

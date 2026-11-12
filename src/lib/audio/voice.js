@@ -9,6 +9,7 @@ import { noteTrouble } from './trouble.js'
 import { context, speakerOut, resume, rebuildContext } from './sfx.js'
 import { audio } from './settings.js'
 import { isAndroidApp, isNativeApp, isIOSApp, audioMix } from '../native.js'
+import { authHeader } from '../api/remote.js'
 
 // Why a server voice didn't play goes on the shared trouble list (trouble.js)
 export { soundTrouble as voiceTrouble } from './trouble.js'
@@ -193,14 +194,19 @@ const made = new Map()
 const madeKey = (voiceKey, text) => voiceKey + '|' + text
 
 // keep: false asks the server not to store the line for good (it names something personal)
+let coachNeedsSignIn = false
 async function fetchVoice(text, voiceKey, timeoutMs = 6000, keep = true) {
+  const signin = await authHeader()
+  if (coachNeedsSignIn && !isCast(voiceKey) && !signin.Authorization) throw new Error('server voice needs sign in')
   const r = await fetch(import.meta.env.BASE_URL + 'api/tts', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    // Signed in so fresh coach lines can be made (script lines need no sign-in)
+    headers: { 'content-type': 'application/json', ...signin },
     body: JSON.stringify(keep ? { text, voice: voiceKey } : { text, voice: voiceKey, keep: false }),
     signal: AbortSignal.timeout(timeoutMs),
   })
   if (!r.ok) {
+    if (r.status === 401) coachNeedsSignIn = true // the coach voice is for signed-in players; story voices carry on
     if (r.status === 429 || r.status === 503) serverPaused = Date.now() + 10 * 60000
     throw new Error('server voice ' + r.status)
   }
