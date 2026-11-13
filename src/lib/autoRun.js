@@ -7,8 +7,9 @@
 import { reactive } from 'vue'
 import { rec, simStep } from './recorder.js'
 import { busy } from './audio/queue.js'
-import { missionLive } from './audio/runAudio.js'
-import { answerMission } from './audio/runAudio.js'
+import { missionLive, missionOffer, answerMission, answerOffer } from './audio/runAudio.js'
+import { stopListening } from './audio/listen.js'
+import { audio } from './audio/settings.js'
 import { distance } from './engine/geo.js'
 
 export const auto = reactive({ on: false, note: '' })
@@ -46,6 +47,7 @@ export function onLoop(start, d, r = 450) {
 }
 
 let timer = 0
+let voiceWas = null
 
 /**
  * Start moving. start: { lat, lng }. leg(): the Story Maker leg's line, or
@@ -54,6 +56,9 @@ let timer = 0
  */
 export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
   stopAuto()
+  // answers are tapped, not spoken: the microphone would hold the story up
+  voiceWas = audio.answerByVoice
+  audio.answerByVoice = false
   auto.on = true
   auto.note = 'Auto run: skipping the quiet bits'
   const speed = SPEED[mode] || SPEED.run
@@ -69,6 +74,8 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
     const view = missionLive.value
     // the end: wait for the last words, then finish
     if (!view || view.done || rec.distanceM > MAX_M) {
+      // "play the next episode?" gets a quiet no: one story at a time
+      if (missionOffer.value) { stopListening(); answerOffer('B', { quiet: true }) }
       if (busy()) return
       endingSince ||= Date.now()
       if (Date.now() - endingSince < 1500) return
@@ -105,6 +112,7 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
 
 export function stopAuto() {
   clearInterval(timer)
+  if (voiceWas !== null) { audio.answerByVoice = voiceWas; voiceWas = null }
   auto.on = false
   auto.note = ''
 }

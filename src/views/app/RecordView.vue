@@ -41,6 +41,7 @@ import PocketMode from '../../components/PocketMode.vue'
 import AskCard from '../../components/AskCard.vue'
 import StoryMaker from '../../components/StoryMaker.vue'
 import { maker, walkFor, storyEnded } from '../../lib/storyMaker/session.js'
+import { pretendAt } from '../../lib/store.js'
 
 const router = useRouter()
 const here = useRoute()
@@ -223,6 +224,23 @@ function begin({ sim = false } = {}) {
   const first = nav && planned.route.steps[0]
   if (first?.turn === 'depart' && audio.directions) coachSays(first.text)
   return ready
+}
+
+// ---- admins: test from anywhere. Pan the map, then put yourself at its middle ----
+async function putMeHere() {
+  const c = tmap.value?.map?.getCenter?.()
+  if (!c) return toast('The map isn’t ready yet.')
+  await pretendAt({ lat: c.lat, lng: c.lng })
+  maker.places = null // look around the new spot
+  maker.near = []
+  maker.ready = null
+  toast('You’re testing from the middle of the map. Stories are made from here.')
+}
+async function backToReal() {
+  await pretendAt(null)
+  maker.places = null
+  maker.near = []
+  maker.ready = null
 }
 
 // ---- admins: hear a whole story without running it (lib/autoRun.js) ----
@@ -478,6 +496,17 @@ onBeforeUnmount(() => {})
             <button class="btn quiet small" type="button" @click="dropLeftover">Discard</button>
           </div>
         </div>
+        <div v-if="store.user?.admin && !live" class="pretend small">
+          <template v-if="store.pretend">
+            <span>Testing from {{ store.pretend.lat.toFixed(4) }}, {{ store.pretend.lng.toFixed(4) }}.</span>
+            <button class="btn quiet small" type="button" @click="putMeHere">Move to the map’s middle</button>
+            <button class="btn quiet small" type="button" @click="backToReal">Back to where I am</button>
+          </template>
+          <template v-else>
+            <span class="muted">Admin: pan the map anywhere, then</span>
+            <button class="btn quiet small" type="button" @click="putMeHere">Put me here</button>
+          </template>
+        </div>
         <StoryMaker v-if="mode !== 'ride' && !isLocal" />
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
         <GroupRun v-if="mode !== 'ride' && !isLocal && (missionId || groupCode)" v-model:mission-id="missionId" :join-code="groupCode" @go="begin" />
@@ -556,6 +585,7 @@ onBeforeUnmount(() => {})
 .maparea > :first-child { position: absolute; inset: 0; }
 .finishing { text-align: center; margin: 6px 0 0; font-weight: 700; }
 .autobtn { justify-self: center; margin-top: 6px; }
+.pretend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 12px; background: var(--soft); margin: 8px 0 0; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);

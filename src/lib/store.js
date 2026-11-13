@@ -17,6 +17,7 @@ export const store = reactive({
   unread: 0,
   centre: null,
   located: false,
+  pretend: null, // admins: a place to test from instead of where you are (Record screen)
   toast: null,
   offline: false, // started without the server: showing the last known player
   bootError: null, // couldn't start at all (offline on the very first open)
@@ -58,7 +59,15 @@ export async function boot() {
   await refresh().catch(() => {}) // offline: the last known numbers stay
 }
 
+/** Admins: act as if you're at p (a story tested somewhere else), or null to go back. Not saved anywhere. */
+export async function pretendAt(p) {
+  store.pretend = p ? { lat: p.lat, lng: p.lng } : null
+  if (p) { store.centre = { lat: p.lat, lng: p.lng }; store.located = true; await api.ensureWorld(store.centre).catch(() => {}) }
+  else await locate().catch(() => {})
+}
+
 export async function locate() {
+  if (store.pretend) return store.pretend // an admin testing from somewhere else
   const p = await whereAmI()
   if (p) {
     store.centre = p
