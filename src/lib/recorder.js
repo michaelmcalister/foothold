@@ -231,6 +231,33 @@ export function start(mode = 'run') {
  * Weak GPS (indoors, tall buildings): start the clock now and take rougher
  * fixes until sharper ones come. Points still need 150 m or better.
  */
+// ---- the admin auto run: a pretend runner, moved by lib/autoRun.js ----
+let sim = false
+export const isSim = () => sim
+
+/** Start recording with no GPS: positions come from simStep. Never kept or saved. */
+export function startSim(mode = 'run') {
+  sim = true
+  Object.assign(rec, { status: 'recording', mode, points: [], startedAt: Date.now(), elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null, rough: false, accuracy: 5 })
+  pausedTotal = 0
+}
+
+/** One pretend GPS fix, at a pretend time (seconds into the run). */
+export function simStep({ lat, lng }, elapsedS) {
+  if (!sim || rec.status !== 'recording') return
+  rec.elapsedS = Math.round(elapsedS)
+  const p = { lat, lng, t: rec.startedAt + elapsedS * 1000, acc: 5 }
+  const last = rec.points[rec.points.length - 1]
+  if (last) {
+    const d = distance(last, p)
+    if (d < 1) return
+    rec.distanceM += d
+  }
+  rec.points.push(p)
+  rec.toStartM = rec.points.length > 1 ? Math.round(distance(rec.points[0], p)) : null
+  rec.paceSPerKm = summarise(rec.points.slice(-60)).paceSPerKm
+}
+
 export function startAnyway() {
   if (rec.status !== 'acquiring') return
   rec.rough = true
@@ -258,8 +285,9 @@ export function stop() {
   watchId = null
   try { lock?.release() } catch { /* already released */ }
   const points = rec.points.slice()
-  const out = { mode: rec.mode, points, startedAt: rec.startedAt, distanceM: rec.distanceM }
-  if (points.length > 1) persist() // kept until it's saved or discarded, in case saving fails
+  const out = { mode: rec.mode, points, startedAt: rec.startedAt, distanceM: rec.distanceM, simulated: sim }
+  if (points.length > 1 && !sim) persist() // kept until it's saved or discarded, in case saving fails
+  sim = false
   Object.assign(rec, { status: 'idle', points: [], elapsedS: 0, distanceM: 0, toStartM: null, paceSPerKm: null, notice: null, lastFixAt: null })
   return out
 }

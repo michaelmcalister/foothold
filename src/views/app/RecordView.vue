@@ -12,7 +12,8 @@ import { crew } from '../../lib/groupRun.js'
 import { ref, computed, watch, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
-import { rec, start, startAnyway, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
+import { rec, start, startSim, isSim, startAnyway, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
+import { auto, startAuto, stopAuto } from '../../lib/autoRun.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -209,17 +210,35 @@ async function music() {
   musicBusy.value = false
 }
 
-function begin() {
+function begin({ sim = false } = {}) {
   error.value = null
   resetGhostRace()
-  start(mode.value)
+  if (sim) startSim(mode.value)
+  else start(mode.value)
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
   const walk = mode.value !== 'ride' && maker.ready ? walkFor(mode.value) : null // a Story Maker story
-  beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' || walk ? null : missionId.value, walk })
+  const ready = beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' || walk ? null : missionId.value, walk })
   nav = hasDirections.value ? createNavigator(plannedRing.value, planned.route.steps) : null
   nextTurn.value = null
   const first = nav && planned.route.steps[0]
   if (first?.turn === 'depart' && audio.directions) coachSays(first.text)
+  return ready
+}
+
+// ---- admins: hear a whole story without running it (lib/autoRun.js) ----
+const canAuto = computed(() => !!store.user?.admin && mode.value !== 'ride' && !!(maker.ready || missionId.value) && store.located)
+async function autoBegin() {
+  const from = { lat: store.centre.lat, lng: store.centre.lng }
+  await begin({ sim: true })
+  startAuto({ start: from, mode: mode.value, leg: () => maker.leg?.ring || null, onDone: autoFinish })
+}
+function autoFinish() {
+  stopAuto()
+  const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM }
+  finishRun(totals)
+  maker.leg = null // the story stays ready, to hear again
+  discard() // a pretend run is never saved
+  toast('Auto run finished. Nothing was saved.')
 }
 const audioLine = computed(() => {
   const parts = []
@@ -291,6 +310,7 @@ function keepGoing() {
 onBeforeUnmount(() => clearInterval(finishTimer))
 
 async function finish() {
+  if (isSim()) return autoFinish()
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   pendingGhost = ghostOutcome()
   const out = stop()
@@ -346,7 +366,8 @@ function dropLeftover() {
 }
 
 function cancel() {
-  if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
+  if (isSim()) stopAuto()
+  else if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
   discard()
   endRun()
 }
@@ -463,7 +484,8 @@ onBeforeUnmount(() => {})
         <GhostPicker v-model="ghostPick" :mode="mode" :here="store.located ? store.centre : null" :route="plannedRing ? planned.route : null" :usual-pace="usual" />
         <div v-if="error" class="notice bad">{{ error }}</div>
         <div v-else-if="rec.error" class="notice bad">{{ rec.error }}</div>
-        <button class="btn block go" type="button" @click="begin">Start {{ mode }}</button>
+        <button class="btn block go" type="button" @click="begin()">Start {{ mode }}</button>
+        <button v-if="canAuto" class="btn quiet small autobtn" type="button" @click="autoBegin">Auto run this story (admin): hear it all without running</button>
         <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
         <div class="alt">
           <button class="btn quiet small" type="button" @click="fileInput.click()">Import from a watch or app (GPX, TCX, FIT)</button>
@@ -520,6 +542,7 @@ onBeforeUnmount(() => {})
           <button v-if="finishing" class="btn" type="button" @click="keepGoing">Keep going</button>
           <button v-else class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="askFinish">Finish</button>
         </div>
+        <p v-if="auto.on" class="finishing small" aria-live="polite">{{ auto.note }}. Nothing is saved.</p>
         <p v-if="finishing" class="finishing small" aria-live="assertive">Finishing in {{ finishing }}. Tap Keep going if you're not done.</p>
         <button v-if="rec.status !== 'acquiring'" class="discard" type="button" @click="cancel">Discard</button>
       </template>
@@ -532,6 +555,7 @@ onBeforeUnmount(() => {})
 .maparea { position: relative; min-height: 0; }
 .maparea > :first-child { position: absolute; inset: 0; }
 .finishing { text-align: center; margin: 6px 0 0; font-weight: 700; }
+.autobtn { justify-self: center; margin-top: 6px; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);
