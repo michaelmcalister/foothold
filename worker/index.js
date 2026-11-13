@@ -21,6 +21,7 @@ import { storyFlagRoute } from './storyflags.js'
 import { storySeason } from './storySeason.js'
 import { handleNearby } from './nearby.js'
 import { groupRoute } from './groups.js'
+import { storyMakerRoute } from './storymaker.js'
 import { billingRoute, handleStripeWebhook, premiumConfig, premiumOn, planOf, cancelForDelete } from './billing.js'
 import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
@@ -272,6 +273,12 @@ async function route(req, env, url, user, ctx) {
     await limit('route', 'That’s a lot of looking around. Try again in a bit.')
     const out = await handleNearby(url)
     return out.error ? err(out.error, out.status) : json(out)
+  }
+
+  // The Story Maker: stories written around where you run (worker/storymaker.js)
+  if (path.startsWith('/api/storymaker')) {
+    const out = await storyMakerRoute({ env, user, path, m, body, url, now })
+    if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
   }
 
   // Group runs: friends running the same episode together (worker/groups.js)

@@ -4,6 +4,7 @@
 // of it. With no server (the GitHub Pages practice build), or when a lookup
 // fails, the planner keeps straight lines.
 import { pairKey } from './planner.js'
+import { authHeader } from './api/remote.js'
 
 const RAW = import.meta.env.VITE_API_URL || ''
 const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
@@ -18,7 +19,7 @@ export const knownPaths = () => known
 async function ask(points, mode) {
   const res = await fetch(API + '/api/route', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...(await authHeader().catch(() => ({}))) }, // the paid routers need a signed-in player
     body: JSON.stringify({ mode, points }),
   })
   if (res.status === 429 || res.status >= 500) { quietUntil = Date.now() + 60000; throw new Error('paths unavailable') }
@@ -67,7 +68,7 @@ export async function routeVia(points, mode, { steps = true } = {}) {
   try {
     const res = await fetch(API + '/api/route', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(await authHeader().catch(() => ({}))) },
       body: JSON.stringify({ mode, points: points.slice(0, 25), steps }),
       signal: AbortSignal.timeout(15000),
     })

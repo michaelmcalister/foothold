@@ -35,6 +35,7 @@ export function suggestMission(sessionType, unlocked) {
 /** The result screen's heading for a mission run. */
 export function missionHeadline(s) {
   if (!s) return ''
+  if (s.made) return `${s.completed ? 'Story complete' : 'Story played'}: ${s.title}, ${s.stops} ${s.stops === 1 ? 'stop' : 'stops'}`
   const surges = s.surgesTotal ? `, ${s.surgesDone} of ${s.surgesTotal} ${s.surgesTotal === 1 ? 'surge' : 'surges'}` : ''
   const quiz = s.quizTotal ? `, ${s.quizRight} of ${s.quizTotal} ${s.quizTotal === 1 ? 'question' : 'questions'} right` : ''
   const points = s.score != null ? `, ${s.score.toLocaleString('en-AU')} points` : ''

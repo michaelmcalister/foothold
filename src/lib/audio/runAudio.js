@@ -439,7 +439,7 @@ export function answerOffer(key, { quiet = false } = {}) {
 /** True when the run's music couldn't start because Spotify was asleep on this phone. */
 export const musicWaiting = ref(false)
 
-export async function beginRun(mode, { onError = () => {}, missionId = null } = {}) {
+export async function beginRun(mode, { onError = () => {}, missionId = null, walk = null } = {}) {
   endRun()
   unlock()
   // a mission that asks questions: ask for the microphone now, inside the tap
@@ -477,6 +477,12 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
   const script = missionId ? missionById(missionId) : null
   if (script?.local) localWords = await nearbyWords()
   startMission(script)
+  // a Story Maker story plays like a mission, moving by place (storyMaker/walk.js)
+  if (walk) {
+    mission = walk
+    setPrivateLines(!walk.shared) // lines naming places near you are only kept once the story is shared
+    track('story_started', { mission: 'made', saga: 'storymaker', crew: false })
+  }
   // no thriller score: Foothold's own tracks, unless Spotify is playing yours
   if (!scape) runMusic = startRunMusic()
   missionSpokeAt = -Infinity
@@ -501,7 +507,8 @@ export async function beginRun(mode, { onError = () => {}, missionId = null } = 
         if (ready && !loopWasReady) sfx.cue('loopReady')
         if (ready) loopWasReady = true
         else if (rec.toStartM == null || rec.toStartM > 60) loopWasReady = false // only ping again after heading away
-        const live = { elapsedS: rec.elapsedS, distanceM: rec.distanceM, paceSPerKm: rec.paceSPerKm, toStartM: rec.toStartM, altM: smoothAlt() }
+        const last = rec.points[rec.points.length - 1]
+        const live = { elapsedS: rec.elapsedS, distanceM: rec.distanceM, paceSPerKm: rec.paceSPerKm, toStartM: rec.toStartM, altM: smoothAlt(), here: last ? { lat: last.lat, lng: last.lng } : null, accuracyM: rec.accuracy }
         let loopSaid = false
         // every 20 seconds or so, what's around you (a park, a main road, shops)
         if (scape && probe && rec.elapsedS - probedAt >= 20) {
@@ -557,7 +564,7 @@ export function finishRun({ elapsedS, distanceM }) {
     const out = mission.finish()
     summary = out.summary
     for (const line of out.lines) sayLine(line)
-    if (summary.clockS >= 60) recordTry(summary) // any real try unlocks the next mission
+    if (summary.clockS >= 60 && !summary.made) recordTry(summary) // any real try unlocks the next mission
     track('story_finished', { mission: summary.id || '', completed: !!summary.completed, minutes: Math.round(summary.clockS / 60) })
     if (inCrew()) sendProgress({ surges: summary.surgesDone, done: !!summary.completed, final: true })
   }

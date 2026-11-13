@@ -100,6 +100,16 @@ export const remote = {
   // Capture the story (worker/storyflags.js)
   storyFlag: (body) => call('POST', '/api/stories/flag', body),
   storyFlags: (mission) => call('GET', '/api/stories/flags' + q({ mission })),
+  // The Story Maker (worker/storymaker.js): positions rounded to about a kilometre
+  storyPlaces: (lat, lng) => call('GET', `/api/storymaker/places?lat=${lat.toFixed(2)}&lng=${lng.toFixed(2)}`),
+  storiesNear: (lat, lng) => call('GET', `/api/storymaker/near?lat=${lat.toFixed(2)}&lng=${lng.toFixed(2)}`),
+  storyMake: (body) => call('POST', '/api/storymaker/stories', { ...body, lat: Number(body.lat.toFixed(2)), lng: Number(body.lng.toFixed(2)) }),
+  story: (id) => call('GET', `/api/storymaker/stories/${encodeURIComponent(id)}`),
+  storyChapter: (id, path, next) => call('POST', `/api/storymaker/stories/${encodeURIComponent(id)}/chapter`, { path, next }),
+  storyShare: (id, shared = true) => call('POST', `/api/storymaker/stories/${encodeURIComponent(id)}/share`, { shared }),
+  storyReport: (id) => call('POST', `/api/storymaker/stories/${encodeURIComponent(id)}/report`, {}),
+  storyPlayed: (id, finished) => call('POST', `/api/storymaker/stories/${encodeURIComponent(id)}/played`, { finished }),
+  storyDelete: (id) => call('DELETE', `/api/storymaker/stories/${encodeURIComponent(id)}`),
   // Group runs (worker/groups.js)
   groupCreate: (missionId) => call('POST', '/api/groups', { missionId }),
   groupJoin: (code) => call('POST', '/api/groups/join', { code }),

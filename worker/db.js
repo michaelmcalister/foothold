@@ -252,11 +252,14 @@ export const LIMITS = {
   aiPlanHour: { max: 5, sec: 3600 }, // AI plan builds per address
   aiPlanDay: { max: 15, sec: 86400 },
   aiPlanUser: { max: 15, sec: 86400 }, // per signed-in player
+  storyPlaces: { max: 40, sec: 3600 }, // Story Maker landmark lookups (most come from the cache)
+  storyMake: { max: 5, sec: 86400 }, // new Story Maker stories per player
+  storyChapter: { max: 40, sec: 86400 }, // newly written chapters per player (kept ones are free)
 }
 
 // Buckets that spend real money (voice lines, AI plans). If the limits
 // table can't be read, these say no rather than letting anyone run up a bill.
-export const PAID = new Set(['tts', 'ttsScript', 'audio', 'route', 'elevation', 'aiPlanHour', 'aiPlanDay', 'aiPlanUser'])
+export const PAID = new Set(['tts', 'ttsScript', 'audio', 'route', 'elevation', 'aiPlanHour', 'aiPlanDay', 'aiPlanUser', 'storyMake', 'storyChapter'])
 
 /**
  * Count one use. Fails open if the table is missing so a hiccup can't lock
@@ -272,6 +275,7 @@ export const GLOBAL_CAPS = {
   route: 20000, // path lookups (the free router counts too: it has fair use rules)
   elevation: 20000,
   aiPlanDay: 300,
+  storyChapter: 1500, // Story Maker chapters written by Claude, for everyone together
 }
 export const capFor = (env, bucket) => Number(env?.[`CAP_${bucket.replace(/[A-Z]/g, (c) => '_' + c).toUpperCase()}`]) || GLOBAL_CAPS[bucket]
 

@@ -53,6 +53,11 @@ function checkedIn(act) {
 const a = computed(() => res.value?.activity)
 const race = computed(() => (a.value ? ghostRace(a.value.id) : null))
 const mission = computed(() => resultFor(route.params.id))
+// a Story Maker story you made: share it from here
+const storyShared = ref(false)
+async function shareStory() {
+  try { await api.storyShare(mission.value.storyId); storyShared.value = true } catch (e) { toast(e.message) }
+}
 const nextUp = computed(() => (mission.value ? nextEpisode(mission.value.id) : null))
 const highlight = computed(() => res.value?.diff ? [...res.value.diff.claimed, ...res.value.diff.taken.map((t) => t.h3)] : [])
 const newHexes = computed(() => (res.value?.diff?.claimed.length || 0) + (res.value?.diff?.taken.length || 0))
@@ -169,6 +174,11 @@ async function sendAppeal() {
         <strong>{{ missionHeadline(mission) }}</strong>
         <p v-if="mission.closing">{{ mission.closing }}</p>
         <RouterLink v-if="nextUp" class="btn small nextep" :to="{ name: 'record', query: { mission: nextUp.id } }">Play the next episode: {{ nextUp.title }}</RouterLink>
+        <template v-if="mission.made && mission.yours && !mission.shared && mission.stops >= 2">
+          <p v-if="!storyShared">Share it, and runners near here can run your story too. Their choices can grow it.</p>
+          <p v-else>Shared. Runners near here can now run it.</p>
+          <button v-if="!storyShared" class="btn small nextep" type="button" @click="shareStory">Share this story</button>
+        </template>
       </div>
       <FeelCheckin v-if="askFeel" :activity="a" :plan="plan" :recent="recent" @saved="checkedIn" @plan="(p) => (plan = p)" />
 

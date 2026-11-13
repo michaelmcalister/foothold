@@ -16,6 +16,8 @@ export const USER_TABLES = [
   { table: 'story_flags', col: 'user_id' }, // flags you planted where stories are set
   { table: 'run_group_members', col: 'user_id' }, // group runs you joined
   { table: 'run_group_votes', col: 'user_id' }, // your votes in group runs // Foothold Plus (worker/billing.js) // where you're up to in each story series // phones and browsers that get push notifications
+  { table: 'made_reports', col: 'user_id' }, // Story Maker stories you reported
+  { table: 'made_stories', col: 'maker' }, // stories you made with the Story Maker (their chapters go too)
   { table: 'plans', col: 'user_id' },
   { table: 'feedback', col: 'user_id' },
   { table: 'routes', col: 'user_id' }, // planned routes
@@ -52,6 +54,8 @@ export async function deleteAccount(env, user) {
   const stmts = [
     ...socialDeleteStatements(env, user.id),
     p('DELETE FROM kudos WHERE activity_id IN (SELECT id FROM activities WHERE user_id = ?)', user.id),
+    p('DELETE FROM made_chapters WHERE story_id IN (SELECT id FROM made_stories WHERE maker = ?)', user.id), // before the stories themselves
+    p('DELETE FROM made_reports WHERE story_id IN (SELECT id FROM made_stories WHERE maker = ?)', user.id),
     ...USER_TABLES.filter((t) => !t.keep).map(({ table, col }) => p(`DELETE FROM ${table} WHERE ${col} = ?`, user.id)),
     ...refreshHolderStatements(env, held), // after their efforts go: the next best holds each hill
     p('DELETE FROM battles WHERE attacker = ? OR defender = ?', user.id, user.id),

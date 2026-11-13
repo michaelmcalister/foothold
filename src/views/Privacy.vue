@@ -67,6 +67,9 @@ import BrandMark from '../components/BrandMark.vue'
       <h2>Capture the story and group runs</h2>
       <p>Finish a story where it is set, and your flag is planted there: other players see your player name on that place’s board, never your run or where you live. In a group run, the people in the group see each other’s player names, how many surges each has done and which way each voted. Delete your account and your flags, groups and votes go with it.</p>
 
+      <h2>The Story Maker</h2>
+      <p>When you make a story, the app sends your position rounded to about a kilometre, and our server looks up the public landmarks around there on OpenStreetMap and any articles about them on Wikipedia. Claude, an AI model made by Anthropic, then writes each chapter from those landmarks and facts. Claude gets the landmarks, the facts and the story so far, never your position, your name or anything about you. Choosing the stops and the way to each one happens on your phone. We keep the story: its title, its chapters and the public landmarks it uses, never where you started or ran. If you share it, other players near there see it with your player name, can run it, and their choices can add new chapters. Unshare or delete it any time. Delete your account and your stories go with it.</p>
+
       <h2>Ghost runs</h2>
       <p>When you race a ghost, it's one of your own past runs, or a route at a pace you pick. The result and the ghost's line are kept on your phone so the recap can show both of you. Nothing about it is sent anywhere.</p>
 

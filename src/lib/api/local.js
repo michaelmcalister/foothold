@@ -1143,6 +1143,16 @@ export const local = {
   // Story flags need the server: the practice map has none
   async storyFlag() { return { planted: false, count: 0, recent: [] } },
   async storyFlags() { return { count: 0, recent: [], first: null, mine: null } },
+  // The Story Maker needs an account and the server
+  async storyPlaces() { throw new Error('Sign in to make stories where you run.') },
+  async storiesNear() { return { stories: [] } },
+  async storyMake() { throw new Error('Sign in to make stories where you run.') },
+  async story() { throw new Error('Sign in to run stories.') },
+  async storyChapter() { throw new Error('Sign in to run stories.') },
+  async storyShare() { return null },
+  async storyReport() { return { ok: true } },
+  async storyPlayed() { return { ok: true } },
+  async storyDelete() { return { ok: true } },
   // Group runs need an account and the server
   async groupCreate() { throw new Error('Sign in to run with friends.') },
   async groupJoin() { throw new Error('Sign in to run with friends.') },

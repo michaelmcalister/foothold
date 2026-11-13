@@ -11,6 +11,7 @@ const right = computed(() => {
   const v = props.view
   if (v.paused) return 'Paused'
   if (v.done) return 'Complete'
+  if (v.toGo != null) return v.toGo >= 1000 ? `${(v.toGo / 1000).toFixed(1)} km` : `${Math.round(v.toGo / 10) * 10} m`
   if (!v.kind) return v.score != null ? `${v.score.toLocaleString('en-AU')} pts` : v.surgesTotal ? `${v.surgesDone} of ${v.surgesTotal} surges` : ''
   const left = v.remainingM != null ? `${v.remainingM} m` : duration(v.remainingS)
   return `${LABEL[v.kind]} ${left}`

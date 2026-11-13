@@ -38,6 +38,8 @@ import { createNavigator } from '../../lib/directions.js'
 import { surroundingsOnMap } from '../../lib/surroundings.js'
 import PocketMode from '../../components/PocketMode.vue'
 import AskCard from '../../components/AskCard.vue'
+import StoryMaker from '../../components/StoryMaker.vue'
+import { maker, walkFor, storyEnded } from '../../lib/storyMaker/session.js'
 
 const router = useRouter()
 const here = useRoute()
@@ -212,7 +214,8 @@ function begin() {
   resetGhostRace()
   start(mode.value)
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
-  beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' ? null : missionId.value })
+  const walk = mode.value !== 'ride' && maker.ready ? walkFor(mode.value) : null // a Story Maker story
+  beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' || walk ? null : missionId.value, walk })
   nav = hasDirections.value ? createNavigator(plannedRing.value, planned.route.steps) : null
   nextTurn.value = null
   const first = nav && planned.route.steps[0]
@@ -292,8 +295,21 @@ async function finish() {
   pendingGhost = ghostOutcome()
   const out = stop()
   const missionSummary = finishRun(totals)
+  storyEnded(missionSummary)
   await saveRecording(out, totals.elapsedS, missionSummary)
 }
+
+// A Story Maker story routes each leg as it comes: the dashed line and the
+// turn by turn directions follow the stop you're heading for
+watch(() => maker.leg, (leg) => {
+  if (!leg || !live.value) return
+  plannedRing.value = leg.ring
+  nav = leg.steps ? createNavigator(leg.ring, leg.steps) : null
+  nextTurn.value = null
+})
+// picking a Story Maker story replaces a picked series episode, and the other way round
+watch(() => maker.ready, (r) => { if (r) missionId.value = null })
+watch(missionId, (id) => { if (id && maker.ready) maker.ready = null })
 
 async function saveRecording(out, elapsedS, missionSummary = null) {
   // Join any stretch where GPS went quiet, so it still counts and a loop can close
@@ -441,6 +457,7 @@ onBeforeUnmount(() => {})
             <button class="btn quiet small" type="button" @click="dropLeftover">Discard</button>
           </div>
         </div>
+        <StoryMaker v-if="mode !== 'ride' && !isLocal" />
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
         <GroupRun v-if="mode !== 'ride' && !isLocal && (missionId || groupCode)" v-model:mission-id="missionId" :join-code="groupCode" @go="begin" />
         <GhostPicker v-model="ghostPick" :mode="mode" :here="store.located ? store.centre : null" :route="plannedRing ? planned.route : null" :usual-pace="usual" />
