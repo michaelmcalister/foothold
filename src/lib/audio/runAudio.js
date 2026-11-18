@@ -239,7 +239,10 @@ export function answerMission(key) {
 let scapeSaga = null
 let scapeScene = null
 async function afterListening({ force = false } = {}) {
-  if (pageHidden()) return // locked or in the background: wait for onVisible
+  // The microphone switched the phone's sound off. Take it back straight away,
+  // even if the phone was locked while it listened: the phone's own player
+  // (nativeSound.js) can play from the background, so waiting left runs silent.
+  if (pageHidden()) { await reclaimSpeaker(); return } // the web effects wake again on onVisible
   if (!(await reclaimSpeaker()) && !force) return
   const had = !!scape
   scape?.stop(0)

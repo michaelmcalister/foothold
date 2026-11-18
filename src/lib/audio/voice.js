@@ -10,6 +10,8 @@ import { context, speakerOut, resume, rebuildContext } from './sfx.js'
 import { audio } from './settings.js'
 import { isAndroidApp, isNativeApp, isIOSApp, audioMix } from '../native.js'
 import { authHeader } from '../api/remote.js'
+import { wavBytes } from './wav.js'
+import { playNative } from './nativeSound.js'
 
 // Why a server voice didn't play goes on the shared trouble list (trouble.js)
 export { soundTrouble as voiceTrouble } from './trouble.js'
@@ -232,8 +234,8 @@ const asDataUrl = (blob) => new Promise((resolve, reject) => {
 // follows, so a line never starts or stops dead (and the speaker doesn't
 // switch away mid word). Done on the decoded sound, so it works on iPhone,
 // where an <audio> element's volume can't be changed. Pure parts exported for tests.
-export const FADE_S = 0.5
-export const FADE_IN_S = 0.5
+export const FADE_S = 0.25
+export const FADE_IN_S = 0.25
 export const TAIL_S = 0.35
 // the fade in starts where the voice does, not in the quiet before it
 const AUDIBLE = 0.01
@@ -253,17 +255,7 @@ export function fadeOut(samples, sampleRate, fadeS = FADE_S, tailS = TAIL_S) {
   for (let i = 0; i < f; i++) out[n - f + i] *= 0.5 * (1 + Math.cos((Math.PI * (i + 1)) / f))
   return out
 }
-export function wavBytes(samples, sampleRate) {
-  const b = new ArrayBuffer(44 + samples.length * 2)
-  const v = new DataView(b)
-  const text = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)) }
-  text(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); text(8, 'WAVE'); text(12, 'fmt ')
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true)
-  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true)
-  text(36, 'data'); v.setUint32(40, samples.length * 2, true)
-  for (let i = 0; i < samples.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 0x7fff, true)
-  return new Uint8Array(b)
-}
+export { wavBytes } // lives in wav.js, shared with the effects
 async function soften(blob) {
   try {
     const C = window.OfflineAudioContext || window.webkitOfflineAudioContext
@@ -323,6 +315,10 @@ async function playWeb(blob, text) {
  */
 async function playVoice(blob, text) {
   blob = await soften(blob)
+  // iPhone app: the phone's own player keeps going with the screen locked
+  if (isIOSApp() && !audio.muted) {
+    try { if (await playNative(new Uint8Array(await blob.arrayBuffer()), { timeoutMs: 6000 + text.length * 130 })) return } catch (e) { trouble('voice native', e) /* the web view's ways */ }
+  }
   try { return await asAnnouncement(() => playBlob(blob, text)) } catch (e) { trouble('voice element', e) /* next way */ }
   try { return await asAnnouncement(() => playWeb(blob, text)) } catch (e) { trouble('voice web audio', e) /* next way */ }
   return playBlob(blob, text)

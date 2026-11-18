@@ -11,6 +11,8 @@ import { reactive, watch } from 'vue'
 import { audio } from './settings.js'
 import { enqueue } from './queue.js'
 import { note, tone, noise, pluck, bell, blip, pad, kick, crash, swell } from './synth.js'
+import { wavBytes } from './wav.js'
+import { playNative, nativeSoundOn } from './nativeSound.js'
 
 // ---- the effects ----
 // Each one: dur (seconds, for queueing) and build(ctx, out, t, opts). Levels
@@ -461,6 +463,19 @@ const wait = (s) => new Promise((r) => setTimeout(r, Math.max(0, s * 1000)))
 export async function play(name, opts = {}) {
   if (!EFFECTS[name] || !audio.sfx) return false
   if (name === 'tap' && !audio.tapSound) return false
+  // iPhone app: drawn once into a clip and played by the phone itself, so
+  // effects keep going with the screen locked and after a quiet stretch
+  if (nativeSoundOn() && name !== 'tap') {
+    if (audio.muted) return false
+    try {
+      const bytes = await rendered(name, opts)
+      const volume = Math.max(0, Math.min(1, audio.sfxVolume)) * (opts.quiet ? 0.65 : 1)
+      if (bytes && (await playNative(bytes, { volume, wait: false }))) {
+        if (opts.wait !== false) await wait(EFFECTS[name].dur)
+        return true
+      }
+    } catch { /* the web way below */ }
+  }
   if (!(await resume())) return false
   try {
     const out = opts.quiet ? quietBus() : sfxBus
@@ -468,6 +483,27 @@ export async function play(name, opts = {}) {
   } catch { return false }
   if (opts.wait !== false) await wait(EFFECTS[name].dur)
   return true
+}
+
+// Each effect drawn once (per set of options) into WAV bytes, for the phone's own player
+const clips = new Map()
+export async function rendered(name, opts) {
+  const { wait: _w, quiet: _q, ...shape } = opts || {}
+  const key = name + JSON.stringify(shape)
+  if (clips.has(key)) return clips.get(key)
+  const C = typeof window !== 'undefined' ? window.OfflineAudioContext || window.webkitOfflineAudioContext : null
+  if (!C) return null
+  const rate = 44100
+  const oc = new C(1, Math.ceil(rate * (EFFECTS[name].dur + 0.35)), rate)
+  const limit = oc.createDynamicsCompressor() // the same safety net as the live sound
+  limit.threshold.value = -6
+  limit.ratio.value = 12
+  limit.connect(oc.destination)
+  scheduleEffect(oc, limit, name, 0.01, shape)
+  const buf = await oc.startRendering()
+  const bytes = wavBytes(buf.getChannelData(0), rate)
+  clips.set(key, bytes)
+  return bytes
 }
 
 let quiet = null

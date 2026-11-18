@@ -41,11 +41,12 @@ describe('voice fade out', () => {
 describe('voice fade in', () => {
   const sr = 1000
 
-  it('rises from silence over half a second, starting where the voice starts', () => {
+  it('rises from silence over a quarter second, starting where the voice starts', () => {
     const clip = new Float32Array(2000).fill(0.8)
     clip.fill(0, 0, 200) // a fifth of a second of quiet first
     const out = fadeIn(clip, sr)
-    expect(FADE_IN_S).toBe(0.5)
+    expect(FADE_IN_S).toBe(0.25)
+    expect(FADE_S).toBe(0.25)
     expect(out.length).toBe(2000)
     expect(out[200]).toBeCloseTo(0) // the first sound starts silent
     const mid = out[200 + Math.round((FADE_IN_S * sr) / 2)]

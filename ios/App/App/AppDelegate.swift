@@ -33,6 +33,73 @@ public class AudioMixPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+// Foothold's voice lines and sound effects, played by the phone itself
+// (src/lib/audio/nativeSound.js). Sound from the web view stops when the
+// phone locks, falls asleep after a quiet minute, and can only start again
+// from a tap. Native players under the app's playback mode (AudioMix) keep
+// going with the screen locked. Each play resolves when the sound ends.
+@objc(NativeSoundPlugin)
+public class NativeSoundPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDelegate {
+    public let identifier = "NativeSoundPlugin"
+    public let jsName = "NativeSound"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "play", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopAll", returnType: CAPPluginReturnPromise)
+    ]
+    private var playing: [ObjectIdentifier: (AVAudioPlayer, CAPPluginCall)] = [:]
+
+    // The microphone leaves the phone in record mode (or switched off): put playback back
+    private func ready() {
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playback {
+            try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        }
+        try? session.setActive(true)
+    }
+
+    @objc func play(_ call: CAPPluginCall) {
+        guard let b64 = call.getString("data"), let data = Data(base64Encoded: b64) else {
+            call.reject("no sound")
+            return
+        }
+        let volume = Float(call.getDouble("volume") ?? 1)
+        DispatchQueue.main.async {
+            self.ready()
+            do {
+                let player = try AVAudioPlayer(data: data)
+                player.volume = max(0, min(1, volume))
+                player.delegate = self
+                self.playing[ObjectIdentifier(player)] = (player, call)
+                if !player.play() {
+                    self.playing.removeValue(forKey: ObjectIdentifier(player))
+                    call.reject("would not play")
+                }
+            } catch {
+                call.reject(error.localizedDescription)
+            }
+        }
+    }
+
+    @objc func stopAll(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            for (_, entry) in self.playing {
+                entry.0.stop()
+                entry.1.resolve(["stopped": true])
+            }
+            self.playing.removeAll()
+            call.resolve()
+        }
+    }
+
+    public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if let entry = playing.removeValue(forKey: ObjectIdentifier(player)) { entry.1.resolve(["ok": flag]) }
+    }
+
+    public func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        if let entry = playing.removeValue(forKey: ObjectIdentifier(player)) { entry.1.reject(error?.localizedDescription ?? "decode") }
+    }
+}
+
 // Whether Foothold may use location yet, without asking (the background
 // location plugin can only ask). The first-open welcome uses it to say
 // "already sorted" instead of waiting for a prompt that never comes.
@@ -56,10 +123,11 @@ public class AppPermissionsPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-// The app's screen: Capacitor's, plus the AudioMix and AppPermissions plugins above.
+// The app's screen: Capacitor's, plus the AudioMix, NativeSound and AppPermissions plugins above.
 class FootholdViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(AudioMixPlugin())
+        bridge?.registerPluginInstance(NativeSoundPlugin())
         bridge?.registerPluginInstance(AppPermissionsPlugin())
     }
 }

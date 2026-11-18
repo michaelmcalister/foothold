@@ -14,6 +14,7 @@ older app version keeps calling the server after every deploy.
 | Auth0 sign-in in a secure sheet, back through the app's own link | `@capacitor/browser`, `@capacitor/app` | `src/lib/auth.js` |
 | Spotify sign-in (back through the website's return page, then the app link) | same | `src/lib/audio/spotify.js`, `public/spotify/callback/` |
 | Answering mission questions out loud | `@capgo/capacitor-speech-recognition` | `src/lib/audio/listen.js` |
+| Voice lines and sound effects that keep playing with the phone locked | `NativeSound` (in `ios/App/App/AppDelegate.swift`) | `src/lib/audio/nativeSound.js` |
 | `/api/...` calls sent to the server, share links pointing at the website | none | `src/lib/native.js` |
 
 `isNativeApp()` (in `src/lib/native.js`) is false on the website, so none of
