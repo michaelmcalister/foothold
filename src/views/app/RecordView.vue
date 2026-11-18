@@ -464,6 +464,21 @@ onBeforeUnmount(() => {})
       <RouterLink v-if="!live" class="back" to="/app" aria-label="Back to the map">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </RouterLink>
+      <!-- Admins: test from anywhere. Pan the map so the crosshairs sit where you want to be -->
+      <template v-if="store.user?.admin && !live">
+        <svg class="aim" :class="{ set: store.pretend }" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+          <circle cx="32" cy="32" r="20" fill="none" stroke-width="2.5" />
+          <path d="M32 2v16M32 46v16M2 32h16M46 32h16" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="32" cy="32" r="3" />
+        </svg>
+        <div class="putme" role="group" :aria-label="store.pretend ? 'Testing from the orange crosshairs (admin)' : 'Test from another place (admin)'">
+          <button type="button" class="putbtn" @click="putMeHere">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.2" /><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /><circle cx="12" cy="12" r="2.2" fill="currentColor" /></svg>
+            {{ store.pretend ? 'Move me here' : 'Put me here' }}
+          </button>
+          <button v-if="store.pretend" type="button" class="putback" @click="backToReal">Back to me</button>
+        </div>
+      </template>
       <div v-if="loopHint" class="loophint" :class="{ ready: loopReady }" aria-live="polite">{{ loopHint }}</div>
       <div v-if="routeLine" class="routeline" :class="{ off: offRoute > 25 }" aria-live="polite">
         <span>{{ routeLine }}</span>
@@ -495,17 +510,6 @@ onBeforeUnmount(() => {})
             <button class="btn small" type="button" @click="saveLeftover">Save it</button>
             <button class="btn quiet small" type="button" @click="dropLeftover">Discard</button>
           </div>
-        </div>
-        <div v-if="store.user?.admin && !live" class="pretend small">
-          <template v-if="store.pretend">
-            <span>Testing from {{ store.pretend.lat.toFixed(4) }}, {{ store.pretend.lng.toFixed(4) }}.</span>
-            <button class="btn quiet small" type="button" @click="putMeHere">Move to the map’s middle</button>
-            <button class="btn quiet small" type="button" @click="backToReal">Back to where I am</button>
-          </template>
-          <template v-else>
-            <span class="muted">Admin: pan the map anywhere, then</span>
-            <button class="btn quiet small" type="button" @click="putMeHere">Put me here</button>
-          </template>
         </div>
         <StoryMaker v-if="mode !== 'ride' && !isLocal" />
         <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
@@ -585,7 +589,17 @@ onBeforeUnmount(() => {})
 .maparea > :first-child { position: absolute; inset: 0; }
 .finishing { text-align: center; margin: 6px 0 0; font-weight: 700; }
 .autobtn { justify-self: center; margin-top: 6px; }
-.pretend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 12px; background: var(--soft); margin: 8px 0 0; }
+.aim { position: absolute; left: 50%; top: 50%; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; stroke: #0B1622; fill: #0B1622; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9)); }
+.aim.set { stroke: #E8590C; fill: #E8590C; }
+.putme {
+  position: absolute; left: 50%; top: calc(50% + 44px); z-index: 2; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 999px;
+  background: #0B1622; color: #fff; box-shadow: 0 6px 18px -6px rgba(11, 22, 34, 0.6); white-space: nowrap;
+}
+.putbtn, .putback { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; font: inherit; font-weight: 800; font-size: 0.88rem; cursor: pointer; padding: 8px 14px; min-height: 36px; }
+.putbtn { background: #FFC15E; color: #1A1206; }
+.putback { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.putbtn:focus-visible, .putback:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
 .back {
   position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 2;
   width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink);
