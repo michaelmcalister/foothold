@@ -5,7 +5,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { continueList } from '../lib/missions/progress.js'
-import { coverSvg, lookFor } from '../lib/missions/covers.js'
+import { lookFor } from '../lib/missions/covers.js'
+import CoverArt from './CoverArt.vue'
 import { metaLine as missionMeta } from '../lib/missions/catalogue.js'
 import { play } from '../lib/audio/sfx.js'
 import { playable } from '../lib/plus.js'
@@ -15,7 +16,6 @@ const router = useRouter()
 const list = computed(() => continueList(props.progress || undefined))
 const next = computed(() => list.value[0] || null)
 const look = computed(() => (next.value ? lookFor(next.value.saga) : null))
-const art = computed(() => (next.value ? coverSvg(next.value.mission) : ''))
 
 function run() {
   play('lockIn', { wait: false })
@@ -25,7 +25,7 @@ function run() {
 
 <template>
   <section v-if="next" class="cstory" :style="{ '--accent': look.accent, '--deep': look.deep }" aria-labelledby="cs-title">
-    <span class="art" aria-hidden="true" v-html="art" />
+    <CoverArt class="art" aria-hidden="true" :mission="next.mission" eager />
     <span class="shade" aria-hidden="true" />
     <div class="text">
       <p class="kicker">Continue your story</p>
@@ -44,7 +44,7 @@ function run() {
 <style scoped>
 .cstory { position: relative; overflow: hidden; border-radius: 16px; background: var(--deep); color: #fff; min-height: 128px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; padding: 14px; }
 .art { position: absolute; inset: 0; opacity: 0.85; }
-.art :deep(svg) { width: 100%; height: 100%; display: block; object-fit: cover; }
+.art :deep(img) { opacity: 1; }
 .shade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--deep) 30%, transparent 85%); }
 .text, .go, .locked { position: relative; margin: 0; font-size: 0.82rem; font-weight: 750; }
 .more { position: relative; }

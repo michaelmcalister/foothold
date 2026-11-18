@@ -11,12 +11,13 @@
 // (StoryRequest.vue).
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { MISSIONS, SAGAS, missionById, missionMeta, unlockedIds, loadProgress, syncProgress, suggestMission, unlockedBy } from '../lib/missions/index.js'
-import { coverSvg, lookFor } from '../lib/missions/covers.js'
+import { lookFor } from '../lib/missions/covers.js'
 import { api } from '../lib/api/index.js'
 import { nextSession, toISO } from '../lib/coach/index.js'
 import { play } from '../lib/audio/sfx.js'
 import { placeOf, storiesNear, distanceLabel, locateMe } from '../lib/missions/places.js'
 import StoryRequest from './StoryRequest.vue'
+import CoverArt from './CoverArt.vue'
 import { playable, plusBadge, canSell, startCheckout } from '../lib/plus.js'
 import { toast } from '../lib/store.js'
 import { STORY_SEASON } from '../lib/storySeason.js'
@@ -72,12 +73,7 @@ const groups = computed(() => allGroups.filter((g) => {
 }).map((g) => (filter.value === 'short' ? { ...g, missions: g.missions.filter((m) => m.minutes <= 25) } : g)))
 const sagaTitle = (m) => SAGAS.find((g) => g.id === sagaOf(m))?.title || ''
 
-// Covers are drawn once per mission and reused
-const covers = new Map()
-const cover = (m) => {
-  if (!covers.has(m.id)) covers.set(m.id, coverSvg(m))
-  return covers.get(m.id)
-}
+// Covers (CoverArt.vue) are drawn once per mission, as images, when they come near the screen
 
 // The next episode to play in each series you've started
 const upNext = computed(() => allGroups.map((g) => {
@@ -194,7 +190,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 
     <!-- Closed: the chosen mission as a poster banner -->
     <button v-if="chosen" type="button" class="mb-banner" :style="{ '--accent': lookFor(sagaOf(chosen)).accent, '--deep': lookFor(sagaOf(chosen)).deep }" aria-haspopup="dialog" @click="openBrowser">
-      <span class="mb-art" v-html="cover(chosen)" />
+      <CoverArt class="mb-art" :mission="chosen" eager />
       <span class="mb-shade" />
       <span class="btext">
         <span class="mb-series">{{ sagaTitle(chosen) }}<template v-if="chosen.episode">, episode {{ chosen.episode }}</template></span>
@@ -205,7 +201,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
     </button>
     <button v-else type="button" class="mb-banner mb-empty" aria-haspopup="dialog" @click="openBrowser">
       <span class="mb-strip" aria-hidden="true">
-        <span v-for="m in teaser" :key="m.id" class="mb-tile" v-html="cover(m)" />
+        <CoverArt v-for="m in teaser" :key="m.id" class="mb-tile" :mission="m" eager />
       </span>
       <span class="mb-shade" />
       <span class="btext">
@@ -229,7 +225,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
           <section class="mb-hero" aria-live="polite">
             <div class="hstage">
               <Transition name="xf">
-                <div :key="preview.id" class="hart" v-html="cover(preview)" />
+                <CoverArt :key="preview.id" class="hart" :mission="preview" eager />
               </Transition>
               <div class="hfade" />
             </div>
@@ -278,7 +274,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
             <ul class="mb-cards" role="list">
               <li v-for="m in upNext" :key="m.id">
                 <button type="button" class="mb-card" :class="{ 'is-on': preview.id === m.id, 'is-picked': model === m.id }" :style="{ '--ring': lookFor(sagaOf(m)).accent }" :aria-label="`${sagaTitle(m)}: ${m.title}. ${missionMeta(m)}`" @click="show(m)">
-                  <span class="cart" v-html="cover(m)" />
+                  <CoverArt class="cart" :mission="m" />
                   <span class="cfade" />
                   <span class="ctext"><span class="cep">{{ sagaTitle(m) }}</span><span class="ctitle">{{ m.title }}</span></span>
                 </button>
@@ -300,7 +296,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
             <ul v-else class="mb-cards" role="list">
               <li v-for="n in nearby" :key="n.mission.id">
                 <button type="button" class="mb-card" :class="{ 'is-on': preview.id === n.mission.id, 'is-lock': !unlocked.has(n.mission.id) }" :style="{ '--ring': lookFor(sagaOf(n.mission)).accent }" :aria-label="`${sagaTitle(n.mission)}: ${n.mission.title}. Set at ${n.place.name}, ${n.label}`" @click="show(n.mission)">
-                  <span class="cart" v-html="cover(n.mission)" />
+                  <CoverArt class="cart" :mission="n.mission" />
                   <span class="cfade" />
                   <span class="ctext">
                     <span class="cep">{{ n.label }}</span>
@@ -329,7 +325,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
                   :aria-label="`${m.title}. ${missionMeta(m)}${unlocked.has(m.id) ? '' : '. Locked'}${played(m) ? '. Played' : ''}`"
                   @click="show(m)"
                 >
-                  <span class="cart" v-html="cover(m)" />
+                  <CoverArt class="cart" :mission="m" />
                   <span class="cfade" />
                   <span v-if="!unlocked.has(m.id)" class="clock" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
@@ -374,7 +370,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
   font: inherit; text-align: left; color: #fff; cursor: pointer; background: var(--deep, #10131C); isolation: isolate;
 }
 .mb-banner .mb-art, .mb-banner .mb-strip { position: absolute; inset: 0; z-index: -2; }
-.mb-banner .mb-art :deep(svg), .mb-tile :deep(svg) { width: 100%; height: 100%; display: block; }
+.mb-banner .mb-art :deep(img), .mb-tile :deep(img) { width: 100%; height: 100%; display: block; }
 .mb-banner .mb-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
 .mb-banner .mb-tile { display: block; overflow: hidden; }
 .mb-banner .mb-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.1) 100%); }
@@ -412,7 +408,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 .mb-hero { position: relative; margin-top: calc(-1 * (env(safe-area-inset-top) + 64px)); }
 .hstage { position: relative; height: min(calc(112vw / var(--zoom, 1)), 540px); overflow: hidden; }
 .hart { position: absolute; inset: 0; }
-.hart :deep(svg) { width: 100%; height: 100%; display: block; animation: drift 18s ease-in-out infinite alternate; transform-origin: 50% 40%; }
+.hart :deep(img) { width: 100%; height: 100%; display: block; animation: drift 18s ease-in-out infinite alternate; transform-origin: 50% 40%; }
 @keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.12) translateY(-1.5%); } }
 .hfade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, var(--deep) 98%); }
 .hinfo { position: relative; margin-top: -92px; padding: 0 16px 6px; display: grid; gap: 6px; }
@@ -456,7 +452,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .mb-card .cart { position: absolute; inset: 0; }
-.mb-card .cart :deep(svg) { width: 100%; height: 100%; display: block; }
+.mb-card .cart :deep(img) { width: 100%; height: 100%; display: block; }
 .cfade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.85) 100%); }
 .ctext { position: absolute; left: 8px; right: 8px; bottom: 8px; display: grid; gap: 1px; }
 .cep { font-size: 0.68rem; font-weight: 750; color: var(--ring, #fff); }
@@ -494,7 +490,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
 .xf-enter-from, .xf-leave-to { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hart :deep(svg) { animation: none; }
+  .hart :deep(img) { animation: none; }
   .mb-enter-active, .mb-leave-active, .xf-enter-active, .xf-leave-active, .mb-card, .browse, .hfade { transition: none; }
 }
 </style>

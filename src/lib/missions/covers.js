@@ -478,3 +478,14 @@ export function coverSvg(m) {
 
 /** Covers we have art for. */
 export const hasCover = (m) => !!SCENES[m?.saga || 'trailkeepers']
+
+// A cover as an image address, drawn once per mission and kept. As an <img>,
+// the browser paints the picture once and reuses it, where the same SVG put
+// straight into the page is painted again on every scroll and animation
+// frame (its blur and grain are slow on phones).
+const urls = new Map()
+export function coverUrl(m) {
+  const key = m?.id || m?.saga || 'none'
+  if (!urls.has(key)) urls.set(key, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(coverSvg(m))}`)
+  return urls.get(key)
+}

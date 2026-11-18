@@ -6,6 +6,7 @@ import {
 } from '../src/lib/engine/index.js'
 
 const ORIGIN = { lat: -33.9, lng: 151.15 } // inner west Sydney
+const SAMPLE_NOW = Date.UTC(2026, 10, 2) // the sample runs are from 1 November 2026: judge them as of the next day, so they never go stale
 const DAY = 86400000
 
 // A rectangular loop of w x h metres at a given speed, one point a second.
@@ -165,13 +166,13 @@ describe('load guardrail', () => {
 
 describe('processActivity', () => {
   it('runs the whole pipeline', () => {
-    const res = processActivity({ id: 'a1', userId: 'me', mode: 'run', points: rectRun() }, { cells: new Map(), zones: [], battles: [] })
+    const res = processActivity({ id: 'a1', userId: 'me', mode: 'run', points: rectRun() }, { cells: new Map(), zones: [], battles: [], now: SAMPLE_NOW })
     expect(res.activity.rejected).toBe(false)
     expect(res.activity.loops).toBe(1)
     expect(res.activity.claimed).toBeGreaterThan(10)
   })
   it('hides the start of a run inside a privacy zone', () => {
-    const res = processActivity({ id: 'a2', userId: 'me', points: rectRun() }, { cells: new Map(), zones: [{ ...ORIGIN, radiusM: 100 }], battles: [] })
+    const res = processActivity({ id: 'a2', userId: 'me', points: rectRun() }, { cells: new Map(), zones: [{ ...ORIGIN, radiusM: 100 }], battles: [], now: SAMPLE_NOW })
     expect(res.publicTrack.length).toBeLessThan(res.track.length)
   })
 })
