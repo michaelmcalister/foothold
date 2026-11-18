@@ -15,8 +15,11 @@
 import { uid, players, hit } from './db.js'
 import { spentToday, costAud, aiDailyCap } from './aiplan.js'
 import { kindOf, sameName, cleanLines, cleanLine, cleanLabel, pathKey, MOODS, kmBetween } from '../src/lib/storyMaker/core.js'
+import { reportError } from './sentry.js'
 
-const OVERPASS = 'https://overpass-api.de/api/interpreter'
+// Overpass servers, tried in turn: the main one is often busy, and a big
+// search can take longer than its own answer to a small one
+export const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']
 const WIKI = 'https://en.wikipedia.org/w/api.php'
 const UA = 'Foothold running app (foothold.com.au)'
 const API = 'https://api.anthropic.com/v1/messages'
@@ -32,7 +35,7 @@ export const areaKey = (lat, lng) => `${round2(lat).toFixed(2)},${round2(lng).to
 
 export function placesQuery(lat, lng) {
   const r = RADIUS_M
-  return `[out:json][timeout:20];
+  return `[out:json][timeout:25];
 (
   nwr[historic][name](around:${r},${lat},${lng});
   nwr[tourism~"^(viewpoint|artwork|museum|gallery|picnic_site|attraction)$"][name](around:${r},${lat},${lng});
@@ -106,20 +109,36 @@ export function mergeHistory({ suburb, places }, articles, here) {
   if (area) used.add(area.title)
   for (const a of articles) {
     if (used.has(a.title) || !PLACEISH.test(a.title) || /school|cemetery|gaol|prison|hospital/i.test(a.title)) continue
+    if (/\bis an? (suburb|locality|town|village|city|neighbourhood|rural|small town|region)\b/i.test(a.text)) continue // a whole suburb is no place to run to
     places.push({ id: `w${a.title.replace(/[^A-Za-z0-9]/g, '').slice(0, 30)}`, name: a.title.replace(/\s*\(.*\)$/, '').replace(/,.*$/, ''), kind: 'heritage', lat: a.lat, lng: a.lng, history: { text: a.text, url: a.url, title: a.title } })
   }
   const sorted = places.sort((a, b) => kmBetween(here, a) - kmBetween(here, b)).slice(0, MAX_PLACES)
   return { suburb, area: area ? { text: area.text, url: area.url, title: area.title } : null, places: sorted }
 }
 
-async function fetchJson(fetcher, url, init) {
-  const r = await fetcher(url, { ...init, signal: AbortSignal.timeout(14000) })
+async function fetchJson(fetcher, url, init, ms = 14000) {
+  const r = await fetcher(url, { ...init, signal: AbortSignal.timeout(ms) })
   if (!r.ok) throw new Error(`${r.status}`)
   return r.json()
 }
 
+/** The landmarks query, from the first Overpass server that answers. Throws with every server's reason. */
+export async function overpass(fetcher, query) {
+  const why = []
+  for (const url of OVERPASS) {
+    try {
+      const j = await fetchJson(fetcher, url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': UA, accept: 'application/json' }, body: 'data=' + encodeURIComponent(query) }, 28000)
+      if (Array.isArray(j?.elements)) return j
+      why.push(`${new URL(url).host}: no elements`)
+    } catch (e) {
+      why.push(`${new URL(url).host}: ${e?.name === 'TimeoutError' ? 'timed out' : e?.message}`)
+    }
+  }
+  throw new Error(`Overpass failed (${why.join('; ')})`)
+}
+
 /** The landmarks and history around a rounded point. Cached a week. */
-export async function findPlaces(lat, lng, { fetcher = fetch, cache = globalThis.caches?.default } = {}) {
+export async function findPlaces(lat, lng, { fetcher = fetch, cache = globalThis.caches?.default, env = null, ctx = null } = {}) {
   const key = areaKey(lat, lng)
   const [la, ln] = key.split(',').map(Number)
   const req = new Request(`https://storymaker.foothold.cache/places/v1/${key}`)
@@ -127,15 +146,15 @@ export async function findPlaces(lat, lng, { fetcher = fetch, cache = globalThis
   if (hitC) return hitC.json()
   const here = { lat: la, lng: ln }
   const [osm, wiki] = await Promise.all([
-    fetchJson(fetcher, OVERPASS, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': UA }, body: 'data=' + encodeURIComponent(placesQuery(la, ln)) })
+    overpass(fetcher, placesQuery(la, ln))
       .then((j) => toPlaces(j.elements, here))
-      .catch((e) => { console.error('storymaker osm', e?.message); return { suburb: null, places: [] } }),
+      .catch((e) => { console.error('storymaker osm', e?.message); reportError(env, ctx, e, 'storymaker places'); return { suburb: null, places: [] } }),
     fetchJson(fetcher, `${WIKI}?action=query&format=json&generator=geosearch&ggscoord=${la}|${ln}&ggsradius=10000&ggslimit=20&prop=extracts|coordinates|info&exintro=1&explaintext=1&exsentences=4&exlimit=20&inprop=url`, { headers: { 'user-agent': UA } })
       .then((j) => toArticles(j.query?.pages))
       .catch((e) => { console.error('storymaker wiki', e?.message); return [] }),
   ])
   const out = { key, ...mergeHistory(osm, wiki, here) }
-  if (cache && out.places.length) await cache.put(req, new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=604800' } })).catch(() => {})
+  if (cache && out.places.length >= 6) await cache.put(req, new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=604800' } })).catch(() => {})
   return out
 }
 
@@ -231,7 +250,7 @@ export function plainChapter({ stop, next, first, story }) {
 // What Claude is told about earlier chapters: where, and the gist
 const summaryOf = (ch, stopName, picked) => `${ch.arrive.join(' ').slice(0, 300)}${picked ? ` The runner chose ${picked}.` : ''}`
 
-async function writeChapter(env, args, { fetcher, now }) {
+async function writeChapter(env, args, { fetcher, now, ctx }) {
   const first = args.before.length === 0
   if (!env.ANTHROPIC_API_KEY) return { ch: plainChapter({ ...args, first }), ai: false }
   if ((await spentToday(env, now)) >= aiDailyCap(env)) return { ch: plainChapter({ ...args, first }), ai: false }
@@ -243,7 +262,11 @@ async function writeChapter(env, args, { fetcher, now }) {
       headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify(chapterRequest({ ...args, model })),
     })
-    if (!res.ok) throw new Error(String(res.status))
+    if (!res.ok) {
+      // Anthropic's own reason (never the key or the story): "model not found", "credit balance too low"...
+      const why = await res.json().then((j) => j?.error?.message || j?.error?.type).catch(() => '')
+      throw new Error(`Claude ${res.status}${why ? `: ${String(why).slice(0, 200)}` : ''}`)
+    }
     const data = await res.json()
     const tin = Number(data?.usage?.input_tokens) || 0
     const tout = Number(data?.usage?.output_tokens) || 0
@@ -252,8 +275,10 @@ async function writeChapter(env, args, { fetcher, now }) {
     const call = (data?.content || []).find((c) => c?.type === 'tool_use')
     const ch = cleanChapter(call?.input, { next: args.next, first })
     if (ch) return { ch, ai: true }
+    reportError(env, ctx, new Error('Claude sent a chapter that broke the house rules'), 'storymaker chapter')
   } catch (e) {
     console.error('storymaker write', e?.message) // never the places
+    reportError(env, ctx, e, 'storymaker chapter')
   }
   return { ch: plainChapter({ ...args, first }), ai: false }
 }
@@ -286,7 +311,7 @@ async function storyOut(env, s, viewer) {
 }
 
 /** The chapter for a path, from the store or freshly written (and kept). */
-async function chapterFor(env, s, ids, nextIds, { user, fetcher, now }) {
+async function chapterFor(env, s, ids, nextIds, { user, fetcher, now, ctx }) {
   const key = pathKey(ids)
   const kept = await env.DB.prepare('SELECT content FROM made_chapters WHERE story_id = ? AND path = ?').bind(s.id, key).first()
   if (kept) return { ...parse(kept.content, null), kept: true }
@@ -308,7 +333,7 @@ async function chapterFor(env, s, ids, nextIds, { user, fetcher, now }) {
     before.push({ stop: byId.get(ids[i - 1])?.name || 'a landmark', summary: summaryOf(ch, byId.get(ids[i - 1])?.name, picked) })
   }
   const story = { mood: s.mood, target_km: s.target_km, area: parse(s.area_history, null), suburb: s.suburb }
-  const { ch } = await writeChapter(env, { story, stop, next, before }, { fetcher, now })
+  const { ch } = await writeChapter(env, { story, stop, next, before }, { fetcher, now, ctx })
   ch.stop = { id: stop.id, name: stop.name, kind: stop.kind, lat: stop.lat, lng: stop.lng, source: stop.history?.url || null }
   if (ch.title && ids.length === 1 && !s.title) await env.DB.prepare('UPDATE made_stories SET title = ? WHERE id = ?').bind(ch.title, s.id).run()
   await env.DB.prepare('INSERT OR IGNORE INTO made_chapters (story_id, path, content, created_at) VALUES (?, ?, ?, ?)').bind(s.id, key, JSON.stringify(ch), now).run()
@@ -318,7 +343,7 @@ async function chapterFor(env, s, ids, nextIds, { user, fetcher, now }) {
 const cleanIds = (v) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 40)).filter(Boolean).slice(0, 8) : [])
 
 /** /api/storymaker/... Returns undefined for other paths. */
-export async function storyMakerRoute({ env, user, path, m, body, url, now, fetcher = fetch, cache = globalThis.caches?.default }) {
+export async function storyMakerRoute({ env, user, path, m, body, url, now, ctx = null, fetcher = fetch, cache = globalThis.caches?.default }) {
   if (!path.startsWith('/api/storymaker')) return undefined
 
   // The landmarks and history near you (rounded to about a kilometre)
@@ -328,7 +353,7 @@ export async function storyMakerRoute({ env, user, path, m, body, url, now, fetc
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return { status: 400, error: 'Send a latitude and longitude.' }
     const r = await hit(env, 'storyPlaces', user.id)
     if (!r.ok) return { status: 429, error: 'That’s a lot of looking around. Try again in a bit.' }
-    return findPlaces(lat, lng, { fetcher, cache })
+    return findPlaces(lat, lng, { fetcher, cache, env, ctx })
   }
 
   // Stories others made near you, most run first
@@ -354,7 +379,7 @@ export async function storyMakerRoute({ env, user, path, m, body, url, now, fetc
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { status: 400, error: 'Send a latitude and longitude.' }
     const r = await hit(env, 'storyMake', user.id)
     if (!r.ok) return { status: 429, error: 'You’ve made a few stories today. Run one of them again, or try one someone else made.' }
-    const found = await findPlaces(lat, lng, { fetcher, cache })
+    const found = await findPlaces(lat, lng, { fetcher, cache, env, ctx })
     const ids = cleanIds([body?.first])
     const first = found.places.find((p) => p.id === ids[0])
     if (!first) return { status: 400, error: 'Pick a first stop from the places near you.' }
@@ -365,7 +390,7 @@ export async function storyMakerRoute({ env, user, path, m, body, url, now, fetc
        VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 0, 0, 0, ?)`,
     ).bind(id, user.id, mood, targetKm, found.key, la, ln, found.suburb, JSON.stringify(found.area), JSON.stringify(found.places), first.id, now).run()
     const s = await storyRow(env, id)
-    const ch = await chapterFor(env, s, [first.id], cleanIds(body?.next), { user, fetcher, now })
+    const ch = await chapterFor(env, s, [first.id], cleanIds(body?.next), { user, fetcher, now, ctx })
     if (ch.error) return ch
     return { story: await storyOut(env, await storyRow(env, id), user.id), chapter: ch }
   }
@@ -389,7 +414,7 @@ export async function storyMakerRoute({ env, user, path, m, body, url, now, fetc
   if (action === 'chapter' && m === 'POST') {
     const ids = cleanIds(body?.path)
     if (!ids.length || ids[0] !== s.first_stop) return { status: 400, error: 'That path doesn’t start where the story starts.' }
-    return { chapter: await chapterFor(env, s, ids, cleanIds(body?.next), { user, fetcher, now }) }
+    return { chapter: await chapterFor(env, s, ids, cleanIds(body?.next), { user, fetcher, now, ctx }) }
   }
   if (action === 'share' && m === 'POST') {
     if (s.maker !== user.id) return { status: 403, error: 'Only the person who made it can share it.' }

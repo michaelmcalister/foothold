@@ -5,6 +5,7 @@
 // false when the app has no native player (an older build, or not the
 // iPhone app), so the caller plays it the web way instead.
 import { isIOSApp } from '../native.js'
+import { noteTrouble } from './trouble.js'
 
 let plugin = null
 let missing = false
@@ -25,16 +26,27 @@ export function toBase64(bytes) {
   return btoa(s)
 }
 
-/** Play a WAV or MP3 (bytes) on the phone itself. wait: false resolves as soon as it starts. */
+let proven = false // set once a sound has really played: until then every play is checked
+let fails = 0
+
+/**
+ * Play a WAV or MP3 (bytes) on the phone itself. wait: false resolves as soon
+ * as it starts, but only once the player has proven it works; until then (or
+ * after two failures in a row) the caller is told false and plays it the web way.
+ */
 export async function playNative(bytes, { volume = 1, timeoutMs = 15000, wait = true } = {}) {
   const p = await player()
   if (!p) return false
-  const done = p.play({ data: toBase64(bytes), volume }).catch((e) => {
-    // an app built before the native player: never ask again
-    if (/not implemented|UNIMPLEMENTED/i.test(String(e?.message || e?.code || e))) missing = true
-    throw e
-  })
-  if (!wait) { done.catch(() => {}); return true }
+  const done = p.play({ data: toBase64(bytes), volume }).then(
+    (r) => { proven = true; fails = 0; return r },
+    (e) => {
+      const why = String(e?.message || e?.code || e)
+      noteTrouble('phone player', why)
+      if (/not implemented|UNIMPLEMENTED/i.test(why) || ++fails >= 2) missing = true // fall back to the web view's sound for the rest of the session
+      throw e
+    },
+  )
+  if (!wait && proven) { done.catch(() => {}); return true }
   await Promise.race([done, new Promise((r) => setTimeout(r, timeoutMs))])
   return true
 }

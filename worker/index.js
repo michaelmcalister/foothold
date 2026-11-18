@@ -277,7 +277,7 @@ async function route(req, env, url, user, ctx) {
 
   // The Story Maker: stories written around where you run (worker/storymaker.js)
   if (path.startsWith('/api/storymaker')) {
-    const out = await storyMakerRoute({ env, user, path, m, body, url, now })
+    const out = await storyMakerRoute({ env, user, path, m, body, url, now, ctx })
     if (out !== undefined) return out.error ? err(out.error, out.status || 400) : json(out)
   }
 

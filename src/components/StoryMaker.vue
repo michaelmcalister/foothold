@@ -29,6 +29,10 @@ async function start() {
   if (!here.value) return toast('Waiting for your location. Try again in a moment.')
   if (!maker.places) await lookAround(here.value)
 }
+async function again() {
+  maker.places = null
+  if (here.value) await lookAround(here.value)
+}
 async function write() {
   if (!here.value) return toast('Waiting for your location.')
   await makeStory(here.value, { mood: mood.value, targetKm: km.value })
@@ -61,8 +65,29 @@ async function report(s) {
       <button class="btn quiet small" type="button" @click="dropStory">Choose another</button>
     </div>
     <button v-else-if="!open" class="opener" type="button" @click="start">
-      <span class="h">Make a story here</span>
-      <span class="small muted">A story written around the landmarks and history near you. It changes with every choice you make.</span>
+      <!-- a little map: contour lines, three landmarks, and the story's route drawing itself between them -->
+      <svg class="omap" viewBox="0 0 360 132" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g class="contours" fill="none" stroke-width="1">
+          <path d="M-10 108 C60 84 110 122 180 98 S300 64 370 86" />
+          <path d="M-10 84 C50 62 120 98 190 74 S310 40 370 60" />
+          <path d="M150 -10 C170 20 230 30 250 10 S330 -6 370 18" />
+          <path d="M210 140 C230 112 290 118 310 100 S360 92 380 104" />
+        </g>
+        <path class="route" d="M196 104 C224 92 228 64 252 58 S300 74 318 48 S332 20 296 22" pathLength="100" />
+        <path class="route glow" d="M196 104 C224 92 228 64 252 58 S300 74 318 48 S332 20 296 22" pathLength="100" />
+        <g class="pin p1"><circle cx="252" cy="58" r="5" /></g>
+        <g class="pin p2"><circle cx="318" cy="48" r="5" /></g>
+        <g class="pin p3"><circle cx="296" cy="22" r="5" /><path d="M296 22 v-16 l10 4 -10 4" class="flag" /></g>
+        <circle class="you" cx="196" cy="104" r="5" />
+        <circle class="youring" cx="196" cy="104" r="5" />
+      </svg>
+      <span class="oshade" aria-hidden="true" />
+      <span class="otext">
+        <span class="okick">New: written where you stand</span>
+        <span class="otitle">Make a story here</span>
+        <span class="ometa">Real landmarks and history near you. Every choice changes where it goes.</span>
+      </span>
+      <span class="ogo" aria-hidden="true">Write one</span>
     </button>
     <template v-else>
       <h2 id="sm-title" class="title">Make a story here</h2>
@@ -78,7 +103,8 @@ async function report(s) {
         <div class="row" role="group" aria-label="How far">
           <button v-for="n in LENGTHS" :key="n" type="button" class="pill" :aria-pressed="km === n" @click="km = n">{{ n }} km</button>
         </div>
-        <button class="btn" type="button" :disabled="!count" @click="write">Write my story</button>
+        <p v-if="count < 4" class="notice small">Only {{ count }} {{ count === 1 ? 'landmark' : 'landmarks' }} turned up just now. The map service may be busy. <button class="linkish" type="button" @click="again">Look again</button></p>
+        <button class="btn" type="button" :disabled="!count || !!maker.busy" @click="write">Write my story</button>
         <template v-if="maker.near.length">
           <h3 class="sub">Stories made near you</h3>
           <ul class="plain list">
@@ -101,8 +127,42 @@ async function report(s) {
 
 <style scoped>
 .sm { display: grid; gap: 8px; margin: 10px 0; }
-.opener { display: grid; gap: 2px; text-align: left; background: var(--soft); border: 0; border-radius: 14px; padding: 12px 14px; color: inherit; font: inherit; cursor: pointer; }
-.opener .h, .title { font-weight: 800; font-size: 1rem; margin: 0; }
+/* The opener: a dusk map with the story's route drawing itself in, once */
+.opener {
+  --amber: #FFC15E;
+  position: relative; display: block; width: 100%; height: 132px; padding: 0; border: 0; border-radius: 16px; overflow: hidden; isolation: isolate;
+  background: radial-gradient(120% 140% at 85% 20%, #2B4A5E 0%, #14283A 45%, #0B1622 100%);
+  color: #fff; font: inherit; text-align: left; cursor: pointer;
+}
+.opener:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
+.omap { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -2; }
+.contours { stroke: rgba(160, 205, 220, 0.16); }
+.route { fill: none; stroke: var(--amber); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 1.6s 0.25s cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+.route.glow { stroke-width: 10; opacity: 0.25; filter: blur(4px); }
+.pin circle { fill: #0B1622; stroke: var(--amber); stroke-width: 2.5; }
+.pin { opacity: 0; transform-box: fill-box; transform-origin: center; animation: pop 0.35s ease-out forwards; }
+.pin.p1 { animation-delay: 0.75s; }
+.pin.p2 { animation-delay: 1.15s; }
+.pin.p3 { animation-delay: 1.6s; }
+.flag { fill: var(--amber); stroke: var(--amber); stroke-width: 1.5; stroke-linejoin: round; }
+.you { fill: #6FB5FF; stroke: #fff; stroke-width: 2; }
+.youring { fill: none; stroke: #6FB5FF; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: ping 2.4s ease-out infinite; }
+.oshade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 16, 24, 0.92) 0%, rgba(8, 16, 24, 0.7) 45%, rgba(8, 16, 24, 0) 75%); }
+.otext { position: absolute; left: 16px; right: 16px; bottom: 14px; display: grid; gap: 3px; }
+.okick { font-size: 0.75rem; font-weight: 750; color: var(--amber); }
+.otitle { font-weight: 900; font-stretch: 62%; font-size: 1.85rem; line-height: 0.95; letter-spacing: 0.005em; }
+.ometa { font-size: 0.8rem; line-height: 1.3; opacity: 0.85; max-width: 62%; }
+.ogo { position: absolute; right: 12px; bottom: 14px; padding: 7px 12px; border-radius: 999px; background: var(--amber); color: #1A1206; font-weight: 800; font-size: 0.85rem; }
+.opener:active .ogo { transform: scale(0.96); }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+@keyframes ping { from { opacity: 0.9; transform: scale(1); } to { opacity: 0; transform: scale(3.2); } }
+@media (prefers-reduced-motion: reduce) {
+  .route { animation: none; stroke-dashoffset: 0; }
+  .pin { animation: none; opacity: 1; }
+  .youring { animation: none; opacity: 0; }
+}
+.title { font-weight: 800; font-size: 1rem; margin: 0; }
 .ready { display: grid; gap: 4px; background: var(--tint, var(--soft)); border-radius: 14px; padding: 12px 14px; }
 .ready p { margin: 0; }
 .ready .btn { justify-self: start; }
@@ -114,4 +174,5 @@ async function report(s) {
 .list li { display: flex; gap: 8px; align-items: center; }
 .story { flex: 1; min-width: 0; display: grid; gap: 2px; text-align: left; background: var(--soft); border: 0; border-radius: 12px; padding: 8px 12px; color: inherit; font: inherit; cursor: pointer; }
 p { margin: 0; }
+.linkish { border: 0; background: none; padding: 0; font: inherit; font-weight: 750; color: inherit; text-decoration: underline; cursor: pointer; }
 </style>

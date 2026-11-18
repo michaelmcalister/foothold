@@ -114,6 +114,20 @@ describe('Story Maker places and chapters', () => {
   })
 })
 
+describe('Story Maker lookups', () => {
+  it('tries the next Overpass server when one is busy, and never makes a suburb a stop', async () => {
+    const { overpass, OVERPASS } = await import('../worker/storymaker.js')
+    const asked = []
+    const f = async (url) => { asked.push(url); return asked.length === 1 ? new Response('busy', { status: 429 }) : new Response(JSON.stringify(OSM)) }
+    const j = await overpass(f, 'q')
+    expect(j.elements.length).toBeGreaterThan(0)
+    expect(asked).toEqual(OVERPASS.slice(0, 2))
+    await expect(overpass(async () => new Response('no', { status: 504 }), 'q')).rejects.toThrow(/504/)
+    const suburb = toArticles({ 1: { title: 'Cambridge Gardens, New South Wales', coordinates: [{ lat: HERE.lat, lon: HERE.lng }], extract: 'Cambridge Gardens is a suburb of Sydney.' } })
+    expect(mergeHistory({ suburb: null, places: [] }, suburb, HERE).places).toEqual([])
+  })
+})
+
 describe('Story Maker store', () => {
   let env, log
   const user = { id: 'maker-1' }
