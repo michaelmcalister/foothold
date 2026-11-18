@@ -1,7 +1,8 @@
 // Cover art for the ten Australia wide series and the season finale
 // (gathering.js) (missions/series/tiger.js,
 // mahogany.js, catalpa.js, minmin.js, opal.js, tunnels.js, canberra.js,
-// panther.js, hawkesbury.js and nugget.js). They share one layout: a sky,
+// panther.js, hawkesbury.js and nugget.js), Your Patch and The Breakwall
+// (yourpatch.js, breakwall.js). They share one layout: a sky,
 // a glow, layered hills, the series' own landmark, and the runner in
 // silhouette with a rim of the series colour. Drawn with the helpers
 // covers.js passes in, on its 300 by 375 canvas.
@@ -124,6 +125,17 @@ const yourpatch = scene({
     + '<path d="M200 110 l14 -16 l14 16 l-14 18 Z" fill="#E5484D"/><path d="M214 128 q-10 30 -40 60 q-20 20 -30 60" stroke="#F4EAD8" stroke-width="1.2" fill="none"/>',
 })
 
+// The Breakwall: Nobbys headland and its lighthouse at dawn, the long
+// convict breakwall running out to it, a brass tag glinting on a post
+const breakwall = scene({
+  sky: [[0, '#13243A'], [0.5, '#4A6A90'], [0.8, '#F2A65A'], [1, '#FFE0B0']], glow: '#FFE4B8', sun: [70, 215, 45],
+  hills: [], ground: [300, '#1A2A36'], rim: '#F2A65A',
+  mark: () => '<rect x="0" y="236" width="300" height="64" fill="#24496A"/>'
+    + '<path d="M150 236 q10 -40 46 -44 q34 0 44 44 Z" fill="#2A3A3A"/><rect x="200" y="166" width="10" height="28" fill="#F4EEE2"/><path d="M198 166 l7 -8 l7 8 Z" fill="#3A3A3A"/><circle cx="205" cy="172" r="12" fill="#FFF3C4" opacity="0.35"/>'
+    + '<path d="M0 262 l160 -24 l0 6 l-160 26 Z" fill="#8A8070"/>'
+    + '<rect x="40" y="226" width="3" height="30" fill="#5A4A3A"/><circle cx="41.5" cy="232" r="4" fill="#E8B04A"/>',
+})
+
 export const COVERS = [
   { saga: 'tiger', draw: tiger },
   { saga: 'mahogany', draw: mahogany },
@@ -137,4 +149,5 @@ export const COVERS = [
   { saga: 'nugget', draw: nugget },
   { saga: 'gathering', draw: gathering },
   { saga: 'yourpatch', draw: yourpatch },
+  { saga: 'breakwall', draw: breakwall },
 ]

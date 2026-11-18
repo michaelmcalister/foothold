@@ -22,5 +22,6 @@ import * as hawkesbury from './hawkesbury.js'
 import * as nugget from './nugget.js'
 import * as gathering from './gathering.js'
 import * as yourpatch from './yourpatch.js'
+import * as breakwall from './breakwall.js'
 
-export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch].filter((s) => s.EPISODES.length)
+export const SERIES = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, breakwall].filter((s) => s.EPISODES.length)
