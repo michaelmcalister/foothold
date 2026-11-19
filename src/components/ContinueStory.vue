@@ -29,7 +29,7 @@ function run() {
     <span class="shade" aria-hidden="true" />
     <div class="text">
       <p class="kicker">Continue your story</p>
-      <h2 id="cs-title" class="title">{{ next.title }}, episode {{ next.mission.episode }}</h2>
+      <h2 id="cs-title" class="title">{{ next.title }}, episode {{ next.episode }}</h2>
       <p class="ep">{{ next.mission.title }} · {{ missionMeta(next.mission) }}</p>
     </div>
     <p v-if="!playable(next.mission)" class="locked">Part of Foothold Plus</p>

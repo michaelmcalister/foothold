@@ -18,6 +18,9 @@ import FirstWeekCard from '../../components/FirstWeekCard.vue'
 import LoopFinder from '../../components/LoopFinder.vue'
 import ContinueStory from '../../components/ContinueStory.vue'
 import SeasonCard from '../../components/SeasonCard.vue'
+import { season, loadSeason } from '../../lib/seasonState.js'
+import { continueList } from '../../lib/missions/progress.js'
+import { lookFor } from '../../lib/missions/covers.js'
 import { syncProgress, loadProgress } from '../../lib/missions/progress.js'
 import { LngLatBounds } from 'maplibre-gl'
 import { loadJourney, freshSteps } from '../../lib/journey.js'
@@ -46,14 +49,28 @@ const pickedSh = ref(null)
 const hills = ref([])
 let t = 0
 
-// This week's quests, folded by default; the choice is remembered on this device
+// This week, as chips over the map: the next story episode, the season and
+// the quests. One opens at a time; the row can be hidden until tomorrow.
+// Both choices are remembered on this device.
 const quests = ref([])
-const questsOpen = ref(false)
-try { questsOpen.value = localStorage.getItem('fh-quests-open') === '1' } catch { /* fine */ }
-function toggleQuests() {
-  questsOpen.value = !questsOpen.value
-  play('fold', { open: questsOpen.value, wait: false })
-  try { localStorage.setItem('fh-quests-open', questsOpen.value ? '1' : '0') } catch { /* fine */ }
+const trayOpen = ref(null)
+const today = () => new Date().toLocaleDateString('en-CA')
+const trayHidden = ref(false)
+try { trayHidden.value = localStorage.getItem('fh-tray-hidden') === today() } catch { /* fine */ }
+function openTray(which) {
+  trayOpen.value = trayOpen.value === which ? null : which
+  play('fold', { open: !!trayOpen.value, wait: false })
+}
+function hideTray() {
+  trayHidden.value = true
+  trayOpen.value = null
+  play('fold', { open: false, wait: false })
+  try { localStorage.setItem('fh-tray-hidden', today()) } catch { /* fine */ }
+}
+function showTray() {
+  trayHidden.value = false
+  play('fold', { open: true, wait: false })
+  try { localStorage.removeItem('fh-tray-hidden') } catch { /* fine */ }
 }
 // The start card can fold down to just its buttons, to see more of the map.
 // Remembered on this device, like the quests.
@@ -68,7 +85,7 @@ const questsDone = computed(() => quests.value.filter((q) => q.done).length)
 async function loadQuests() {
   try {
     const q = (await api.quests()).quests
-    if (freshlyDone(q).length) questsOpen.value = true // a quest just finished: show its moment
+    if (freshlyDone(q).length) { trayHidden.value = false; trayOpen.value = 'quests' } // a quest just finished: show its moment
     quests.value = q
   } catch { quests.value = [] }
 }
@@ -148,6 +165,13 @@ watch(() => store.mode, () => { picked.value = null; suggestion.value = null; fi
 
 // Story progress: this phone's straight away, then merged with the account's
 const storyProgress = ref(loadProgress())
+const nextStory = computed(() => continueList(storyProgress.value || undefined)[0] || null)
+const storyLook = computed(() => lookFor(nextStory.value?.saga || 'trailkeepers'))
+loadSeason()
+const seasonOn = computed(() => !!season.value && !season.value.over && !showJourney.value) // new players: the first week card first
+const seasonLook = computed(() => lookFor(season.value?.featured || 'gathering'))
+const seasonPct = computed(() => (season.value ? Math.min(100, Math.round((season.value.km / season.value.goalKm) * 100)) : 0))
+const trayItems = computed(() => [nextStory.value && 'story', seasonOn.value && 'season', quests.value.length && 'quests'].filter(Boolean))
 onMounted(async () => {
   syncProgress().then((p) => { storyProgress.value = p })
   loadQuests()
@@ -267,17 +291,39 @@ onBeforeUnmount(() => sheetObs?.disconnect())
         </div>
       </div>
 
-      <ContinueStory :progress="storyProgress" />
-      <SeasonCard v-if="!showJourney" /><!-- new players: the first week card first, the season after -->
-
-      <div v-if="quests.length" class="questcard" :class="{ open: questsOpen }">
-        <button class="qhead" type="button" :aria-expanded="questsOpen" aria-controls="map-quests" @click="toggleQuests">
-          <span><strong>This week’s quests</strong> <span class="muted">{{ questsDone }} of {{ quests.length }} done</span></span>
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <!-- What's on this week, as small chips so the map stays clear. A chip
+           opens its card; the row can be hidden until tomorrow. -->
+      <div v-if="trayItems.length && !trayHidden" class="tray" role="group" aria-label="This week">
+        <button v-if="nextStory" type="button" class="chip story" :style="{ '--accent': storyLook.accent, '--deep': storyLook.deep }" :aria-expanded="trayOpen === 'story'" @click="openTray('story')">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
+          {{ nextStory.title }} {{ nextStory.episode }}
         </button>
-        <div v-show="questsOpen" id="map-quests" class="qbody">
-          <QuestList :quests="quests" compact />
-          <RouterLink class="small more" :to="{ name: 'week' }">Your week so far</RouterLink>
+        <button v-if="seasonOn" type="button" class="chip season" :style="{ '--accent': seasonLook.accent, '--deep': seasonLook.deep }" :aria-expanded="trayOpen === 'season'" @click="openTray('season')">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="3" /><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" :stroke-dasharray="`${seasonPct * 0.471} 47.1`" transform="rotate(-90 10 10)" /></svg>
+          {{ season.started ? `Week ${season.week} of 6` : 'Season soon' }}
+        </button>
+        <button v-if="quests.length" type="button" class="chip quests" :aria-expanded="trayOpen === 'quests'" @click="openTray('quests')">
+          <span class="qdots" aria-hidden="true"><i v-for="(q, i) in quests" :key="i" :class="{ on: q.done }" /></span>
+          Quests {{ questsDone }} of {{ quests.length }}
+        </button>
+        <button type="button" class="chip hide" aria-label="Hide these until tomorrow" @click="hideTray">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+      <button v-else-if="trayItems.length" type="button" class="chip showtray" @click="showTray">This week ({{ trayItems.length }})</button>
+
+      <div v-if="trayOpen && !trayHidden" class="traycard">
+        <button type="button" class="trayclose" aria-label="Close" @click="openTray(trayOpen)">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
+        </button>
+        <ContinueStory v-if="trayOpen === 'story'" :progress="storyProgress" />
+        <SeasonCard v-else-if="trayOpen === 'season'" />
+        <div v-else-if="trayOpen === 'quests'" id="map-quests" class="questcard open">
+          <p class="qhead"><strong>This week’s quests</strong> <span class="muted">{{ questsDone }} of {{ quests.length }} done</span></p>
+          <div class="qbody">
+            <QuestList :quests="quests" compact />
+            <RouterLink class="small more" :to="{ name: 'week' }">Your week so far</RouterLink>
+          </div>
         </div>
       </div>
 
@@ -440,6 +486,29 @@ onBeforeUnmount(() => sheetObs?.disconnect())
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
 .pick .hexdot { width: 20px; height: 18px; margin-top: 3px; }
+.tray { display: flex; gap: 6px; flex-wrap: wrap; max-width: 100%; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 17px;
+  background: var(--card-glass); color: var(--ink); font: inherit; font-size: 0.82rem; font-weight: 750; cursor: pointer;
+  box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.35); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chip:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
+.chip.story, .chip.season { background: var(--deep); color: #fff; }
+.chip.story svg, .chip.season svg { color: var(--accent); flex: none; }
+.chip.story { max-width: 58%; }
+.chip[aria-expanded='true'] { box-shadow: 0 0 0 2px var(--accent, var(--you)), 0 2px 10px -4px rgba(22, 48, 42, 0.35); }
+.chip.hide { width: 34px; padding: 0; justify-content: center; color: var(--ink-60); }
+.chip.showtray { color: var(--ink-60); }
+.qdots { display: inline-flex; gap: 3px; }
+.qdots i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-20, rgba(22, 48, 42, 0.2)); }
+.qdots i.on { background: var(--you); }
+.traycard { position: relative; width: 100%; max-width: 380px; }
+.traycard > :not(.trayclose) { width: 100%; }
+.trayclose {
+  position: absolute; top: 8px; right: 8px; z-index: 3; width: 32px; height: 32px; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: rgba(11, 22, 34, 0.55); color: #fff; cursor: pointer;
+}
+.traycard .questcard .qhead { margin: 0; cursor: default; padding-right: 48px; }
 .questcard, .explored {
   background: var(--card-glass); border-radius: 12px; max-width: 360px; width: 100%;
   box-shadow: 0 2px 10px -4px rgba(22, 48, 42, 0.35);

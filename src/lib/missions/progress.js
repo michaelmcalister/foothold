@@ -69,14 +69,14 @@ export async function syncProgress() {
   }
 }
 
-/** The next episode in each series you've started, most recent first: [{ saga, title, mission }]. Pure. */
+/** The next episode in each series you've started, most recent first: [{ saga, title, mission, episode }]. Pure. */
 export function continueList(progress = loadProgress()) {
   const out = []
   for (const [saga, chain] of Object.entries(CHAINS)) {
     if (!chain.some((id) => progress[id]?.tries)) continue
     const next = chain.find((id) => !progress[id]?.tries)
     if (!next) continue
-    out.push({ saga, title: SAGAS.find((g) => g.id === saga)?.title || '', mission: MISSIONS.find((m) => m.id === next), lastAt: Math.max(...chain.map((id) => progress[id]?.lastAt || 0)) })
+    out.push({ saga, title: SAGAS.find((g) => g.id === saga)?.title || '', mission: MISSIONS.find((m) => m.id === next), episode: chain.indexOf(next) + 1, lastAt: Math.max(...chain.map((id) => progress[id]?.lastAt || 0)) })
   }
   return out.sort((x, y) => y.lastAt - x.lastAt)
 }

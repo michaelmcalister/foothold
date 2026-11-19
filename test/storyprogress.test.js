@@ -38,6 +38,7 @@ describe('story progress', () => {
     const p = { [tiger[0]]: { tries: 1, lastAt: 10 }, [CHAINS.opal[0]]: { tries: 1, lastAt: 20 }, [CHAINS.opal[1]]: { tries: 1, lastAt: 30 } }
     const list = continueList(p)
     expect(list.map((x) => x.mission.id)).toEqual([CHAINS.opal[2], tiger[1]])
+    expect(list.map((x) => x.episode)).toEqual([3, 2]) // counted from the series, not the mission
     expect(nextEpisodes(p).map((x) => x.mission.id)).toEqual([CHAINS.opal[2], tiger[1]])
     expect(storyNudgeText(list[0])).toMatch(/^Episode 3 of Opal Town is waiting: .+\. Fancy a run\?$/)
   })

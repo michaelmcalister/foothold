@@ -2,15 +2,14 @@
 // The story season on the map (lib/storySeason.js, worker/storySeason.js):
 // this week's featured series, everyone's distance towards the goal, and
 // when the finale opens. Hidden once the season is over.
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '../lib/api/index.js'
+import { season as s, loadSeason } from '../lib/seasonState.js'
 import { metaById, CATALOGUE_SAGAS } from '../lib/missions/catalogue.js'
 import { lookFor } from '../lib/missions/covers.js'
 
 const router = useRouter()
-const s = ref(null)
-onMounted(async () => { s.value = await api.storySeason().catch(() => null) })
+onMounted(loadSeason)
 
 const featured = computed(() => CATALOGUE_SAGAS.find((g) => g.id === s.value?.featured) || null)
 const look = computed(() => lookFor(s.value?.featured || 'gathering'))
