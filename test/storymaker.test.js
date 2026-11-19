@@ -123,6 +123,13 @@ describe('Story Maker lookups', () => {
     expect(j.elements.length).toBeGreaterThan(0)
     expect(asked).toEqual(OVERPASS.slice(0, 2))
     await expect(overpass(async () => new Response('no', { status: 504 }), 'q')).rejects.toThrow(/504/)
+    // a slow server: the next one is asked after the stagger, and the first answer wins
+    const slow = []
+    const g = (url) => { slow.push(url); return slow.length === 1 ? new Promise(() => {}) : Promise.resolve(new Response(JSON.stringify(OSM))) }
+    const t = Date.now()
+    expect((await overpass(g, 'q', { stagger: 30 })).elements.length).toBeGreaterThan(0)
+    expect(Date.now() - t).toBeLessThan(1000)
+    expect(slow).toEqual(OVERPASS.slice(0, 2))
     const suburb = toArticles({ 1: { title: 'Cambridge Gardens, New South Wales', coordinates: [{ lat: HERE.lat, lon: HERE.lng }], extract: 'Cambridge Gardens is a suburb of Sydney.' } })
     expect(mergeHistory({ suburb: null, places: [] }, suburb, HERE).places).toEqual([])
   })
@@ -204,5 +211,17 @@ describe('Story Maker store', () => {
     expect((await call(other, 'DELETE', `/api/storymaker/stories/${made.story.id}`)).status).toBe(404)
     expect((await call(user, 'DELETE', `/api/storymaker/stories/${made.story.id}`)).ok).toBe(true)
     expect(env.DB.db.prepare('SELECT COUNT(*) AS n FROM made_chapters').get().n).toBe(0)
+  })
+})
+
+describe('Story Maker waiting lines', () => {
+  it('start plain, shuffle the rest and keep to the house rules', async () => {
+    const { QUIPS, quipsFor } = await import('../src/lib/storyMaker/quips.js')
+    for (const kind of Object.keys(QUIPS)) {
+      const list = quipsFor(kind, () => 0.5)
+      expect(list[0]).toBe(QUIPS[kind].first)
+      expect([...list].sort()).toEqual([QUIPS[kind].first, ...QUIPS[kind].rest].sort())
+      for (const l of list) expect(l).not.toMatch(/[—–]|--|kill|dead|die\b|scary|lazy|fail/i)
+    }
   })
 })

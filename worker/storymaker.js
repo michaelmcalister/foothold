@@ -122,19 +122,36 @@ async function fetchJson(fetcher, url, init, ms = 14000) {
   return r.json()
 }
 
-/** The landmarks query, from the first Overpass server that answers. Throws with every server's reason. */
-export async function overpass(fetcher, query) {
+/**
+ * The landmarks query, from the first Overpass server that answers. The next
+ * server is asked as soon as one fails, or after `stagger` ms if it is slow,
+ * so a busy server costs seconds, not the whole wait. Throws with every
+ * server's reason.
+ */
+export function overpass(fetcher, query, { stagger = 6000, ms = 20000 } = {}) {
   const why = []
-  for (const url of OVERPASS) {
-    try {
-      const j = await fetchJson(fetcher, url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': UA, accept: 'application/json' }, body: 'data=' + encodeURIComponent(query) }, 28000)
-      if (Array.isArray(j?.elements)) return j
-      why.push(`${new URL(url).host}: no elements`)
-    } catch (e) {
-      why.push(`${new URL(url).host}: ${e?.name === 'TimeoutError' ? 'timed out' : e?.message}`)
+  return new Promise((resolve, reject) => {
+    let i = 0
+    let left = OVERPASS.length
+    let done = false
+    let timer = 0
+    const next = () => {
+      clearTimeout(timer)
+      if (done || i >= OVERPASS.length) return
+      const url = OVERPASS[i++]
+      if (i < OVERPASS.length) timer = setTimeout(next, stagger)
+      fetchJson(fetcher, url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': UA, accept: 'application/json' }, body: 'data=' + encodeURIComponent(query) }, ms)
+        .then((j) => {
+          if (!Array.isArray(j?.elements)) throw new Error('no elements')
+          if (!done) { done = true; clearTimeout(timer); resolve(j) }
+        })
+        .catch((e) => {
+          why.push(`${new URL(url).host}: ${e?.name === 'TimeoutError' ? 'timed out' : e?.message}`)
+          if (--left === 0 && !done) { done = true; reject(new Error(`Overpass failed (${why.join('; ')})`)) } else next()
+        })
     }
-  }
-  throw new Error(`Overpass failed (${why.join('; ')})`)
+    next()
+  })
 }
 
 /** The landmarks and history around a rounded point. Cached a week. */

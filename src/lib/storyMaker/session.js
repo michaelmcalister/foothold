@@ -15,6 +15,7 @@ export const maker = reactive({
   places: null, // { suburb, area, places, key }
   near: [], // stories made near you
   busy: '', // what's happening, for the button
+  busyKind: '', // look, write or get: picks the silly lines shown while it waits (quips.js)
   error: '',
   ready: null, // { story, chapter }: the story the next run plays
   leg: null, // { ring, steps, name }: the way to the next stop
@@ -24,6 +25,7 @@ export const maker = reactive({
 export async function lookAround(here) {
   maker.error = ''
   maker.busy = 'Looking around'
+  maker.busyKind = 'look'
   try {
     const [places, near] = await Promise.all([api.storyPlaces(here.lat, here.lng), api.storiesNear(here.lat, here.lng).catch(() => ({ stories: [] }))])
     maker.places = places
@@ -46,6 +48,7 @@ export async function makeStory(here, { mood, targetKm }) {
   const open = openingStops(here, places, targetKm)
   if (!open) { maker.error = 'There aren’t enough landmarks close by for a story that long. Try a longer run, or look around somewhere else.'; return }
   maker.busy = 'Writing your story'
+  maker.busyKind = 'write'
   try {
     const out = await api.storyMake({ lat: here.lat, lng: here.lng, mood, targetKm, first: open.first.id, next: open.next.map((p) => p.id) })
     maker.ready = { story: out.story, chapter: out.chapter }
@@ -57,6 +60,7 @@ export async function makeStory(here, { mood, targetKm }) {
 export async function pickStory(id) {
   maker.error = ''
   maker.busy = 'Getting the story'
+  maker.busyKind = 'get'
   try {
     const { story } = await api.story(id)
     const { chapter } = await api.storyChapter(id, [story.first.id], [])

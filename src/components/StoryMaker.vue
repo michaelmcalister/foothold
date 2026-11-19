@@ -3,16 +3,32 @@
 // history around you, writes the opening of a story that sends you running
 // between them (lib/storyMaker), and lists the stories others made nearby.
 // The story starts with the next run's Start button.
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { store, toast } from '../lib/store.js'
 import { maker, lookAround, makeStory, pickStory, dropStory } from '../lib/storyMaker/session.js'
 import { MOODS, LENGTHS, kmBetween, directionTo } from '../lib/storyMaker/core.js'
 import { api } from '../lib/api/index.js'
+import { quipsFor } from '../lib/storyMaker/quips.js'
 
 const emit = defineEmits(['ready'])
 const open = ref(false)
 const mood = ref('mystery')
 const km = ref(3)
+
+// While it works: a new silly line every couple of seconds
+const quip = ref('')
+let quips = []
+let qi = 0
+let qtimer = 0
+watch(() => maker.busy, (b) => {
+  clearInterval(qtimer)
+  if (!b) { quip.value = ''; return }
+  quips = quipsFor(maker.busyKind)
+  qi = 0
+  quip.value = quips[0]
+  qtimer = setInterval(() => { qi = (qi + 1) % quips.length; quip.value = quips[qi] }, 2200)
+}, { immediate: true })
+onBeforeUnmount(() => clearInterval(qtimer))
 
 const here = computed(() => (store.located ? store.centre : null))
 const count = computed(() => maker.places?.places?.length || 0)
@@ -91,7 +107,11 @@ async function report(s) {
     </button>
     <template v-else>
       <h2 id="sm-title" class="title">Make a story here</h2>
-      <p v-if="maker.busy" class="small" aria-live="polite">{{ maker.busy }}…</p>
+      <div v-if="maker.busy" class="working">
+        <span class="sr-only" aria-live="polite">{{ maker.busy }}</span>
+        <span class="quill" aria-hidden="true"><i /><i /><i /></span>
+        <Transition name="quip" mode="out-in"><p :key="quip" class="quip" aria-hidden="true">{{ quip }}…</p></Transition>
+      </div>
       <template v-else-if="maker.places">
         <p class="small muted">
           {{ count }} {{ count === 1 ? 'landmark' : 'landmarks' }} near you<template v-if="withHistory">, {{ withHistory }} with real history</template><template v-if="maker.places.suburb"> around {{ maker.places.suburb }}</template>.
@@ -163,6 +183,21 @@ async function report(s) {
   .youring { animation: none; opacity: 0; }
 }
 .title { font-weight: 800; font-size: 1rem; margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.working { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px; border-radius: 14px; background: var(--soft); }
+.quip { font-weight: 700; font-size: 0.92rem; }
+.quill { display: inline-flex; gap: 4px; flex: none; }
+.quill i { width: 7px; height: 7px; border-radius: 50%; background: var(--you); animation: hop 1s ease-in-out infinite; }
+.quill i:nth-child(2) { animation-delay: 0.15s; }
+.quill i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes hop { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+.quip-enter-active, .quip-leave-active { transition: opacity 0.25s, transform 0.25s; }
+.quip-enter-from { opacity: 0; transform: translateY(6px); }
+.quip-leave-to { opacity: 0; transform: translateY(-6px); }
+@media (prefers-reduced-motion: reduce) {
+  .quill i { animation: none; opacity: 1; }
+  .quip-enter-active, .quip-leave-active { transition: none; }
+}
 .ready { display: grid; gap: 4px; background: var(--tint, var(--soft)); border-radius: 14px; padding: 12px 14px; }
 .ready p { margin: 0; }
 .ready .btn { justify-self: start; }

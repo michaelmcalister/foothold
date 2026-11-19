@@ -29,8 +29,9 @@ async function call(method, path, body) {
   const token = await tokenGetter()
   if (token) headers.Authorization = `Bearer ${token}`
   else headers['X-Device-Id'] = deviceId()
-  // a dead connection fails after 20 s (an upload gets a minute) rather than hanging forever
-  const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(path === '/api/activities' && method === 'POST' ? 60000 : 20000) : undefined
+  // a dead connection fails after 20 s rather than hanging forever (an upload, and the
+  // Story Maker looking up landmarks or writing a chapter, get a minute)
+  const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout((path === '/api/activities' && method === 'POST') || path.startsWith('/api/storymaker') ? 60000 : 20000) : undefined
   let res
   try {
     res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal })
