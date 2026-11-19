@@ -59,6 +59,15 @@ const firstAway = computed(() => {
   return `${m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m / 10) * 10 + ' m'} ${directionTo(here.value, first.value)}`
 })
 
+// Moved (an admin's Put me here, or back to you) with the panel open: the
+// old landmarks were cleared, so look around the new spot straight away
+watch(() => [open.value, here.value?.lat, here.value?.lng, !!maker.places], () => {
+  if (open.value && here.value && !maker.places && !maker.busy && !maker.ready) {
+    maker.error = ''
+    lookAround(here.value)
+  }
+})
+
 async function start() {
   open.value = true
   lastTry = start
