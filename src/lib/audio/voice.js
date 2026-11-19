@@ -372,7 +372,10 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
   if (Date.now() > serverPaused && (await serverVoices())) {
     try {
       const k = madeKey(who, text)
+      const asked = Date.now()
       const blob = (made.has(k) ? await made.get(k) : null) || (await fetchVoice(text, who, 15000)) // the expressive model can take a while on a long line
+      const waitS = Math.round((Date.now() - asked) / 1000)
+      if (waitS >= 4) logTest('Slow', `${c.name || who}'s line took ${waitS} s to arrive`)
       await playVoice(blob, text)
       return
     } catch (e) { trouble('server voice', e) /* fall back to the phone voice below */ }

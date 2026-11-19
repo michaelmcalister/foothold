@@ -71,7 +71,7 @@ const routeLine = computed(() => {
   if (!routeRing.value) return null
   if (!live.value) return ghostRoute.value
     ? `Racing your ghost${plannedRing.value ? ' instead of the planned loop' : ''}. The dashed line is the route it took.`
-    : `Following ${planned.route.name}. The dashed line is your route.`
+    : `Following ${planned.route?.name || 'your route'}. The dashed line is your route.`
   if (offRoute.value == null) return null
   return offRoute.value <= 25 ? 'On route.' : `${offRoute.value} m off route. Head back to the dashed line when you can.`
 })
@@ -255,6 +255,7 @@ async function autoBegin() {
   startAuto({ start: from, mode: mode.value, begin: () => begin({ sim: true }), leg: () => maker.leg?.ring || null, onDone: autoFinish })
 }
 function autoFinish() {
+  dropLegRoute()
   stopAuto()
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM }
   finishRun(totals)
@@ -332,6 +333,7 @@ function keepGoing() {
 onBeforeUnmount(() => clearInterval(finishTimer))
 
 async function finish() {
+  dropLegRoute()
   if (isSim()) return autoFinish()
   const totals = { elapsedS: rec.elapsedS, distanceM: rec.distanceM } // stop() clears these
   pendingGhost = ghostOutcome()
@@ -387,7 +389,14 @@ function dropLeftover() {
   leftover.value = null
 }
 
+// A Story Maker leg borrows the dashed line during a run: give it back after
+// (a run that ended on a leg left no planned route behind it, and the screen
+// went blank trying to name one)
+function dropLegRoute() {
+  if (plannedRing.value && !(here.query.route === 'planned' && planned.route)) { plannedRing.value = null; nav = null }
+}
 function cancel() {
+  dropLegRoute()
   if (isSim()) stopAuto()
   else if (rec.points.length > 20 && !confirm('Discard this activity? It won’t be saved.')) return
   discard()

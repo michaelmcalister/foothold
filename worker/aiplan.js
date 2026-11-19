@@ -211,8 +211,9 @@ export function buildRequest({ brief, answers, context, today, model }) {
     max_tokens: 1500,
     system: SYSTEM_PROMPT,
     tools: [TOOL],
-    tool_choice: { type: 'tool', name: TOOL.name },
-    messages: [{ role: 'user', content: text }],
+    // this model won't take a forced tool, so it's asked to use it instead
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: `${text}\n\nReply only by calling ${TOOL.name}.` }],
   }
 }
 

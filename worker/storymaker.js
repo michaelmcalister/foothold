@@ -224,8 +224,9 @@ export function chapterRequest({ story, stop, next, before, model = STORY_MODEL 
     max_tokens: 900,
     system: SYSTEM,
     tools: [TOOL],
-    tool_choice: { type: 'tool', name: TOOL.name },
-    messages: [{ role: 'user', content: lines.join('\n\n') }],
+    // this model won't take a forced tool, so it's asked to use it instead
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: `${lines.join('\n\n')}\n\nReply only by calling ${TOOL.name}.` }],
   }
 }
 

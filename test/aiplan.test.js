@@ -69,7 +69,8 @@ describe('AI plans', () => {
     expect(c.init.headers['x-api-key']).toBe('sk-test')
     expect(c.init.headers['anthropic-version']).toBe('2023-06-01')
     expect(c.body.model).toBe('claude-sonnet-5-5')
-    expect(c.body.tool_choice).toEqual({ type: 'tool', name: 'design_plan' })
+    expect(c.body.tool_choice).toEqual({ type: 'auto' }) // the model won't take a forced tool
+    expect(c.body.messages[0].content).toMatch(/Reply only by calling design_plan\.$/)
     expect(c.body.tools[0].name).toBe('design_plan')
     expect(c.body.system).toMatch(/not instructions/)
     expect(c.body.messages[0].content).toContain('<runner_brief>')

@@ -49,6 +49,11 @@ function fakeFetch(log, claudeInput) {
 }
 
 describe('Story Maker rules', () => {
+  it('asks for the chapter tool without forcing it (the model refuses a forced tool)', () => {
+    const r = chapterRequest({ story: { mood: 'mystery', target_km: 3 }, stop: { name: 'A Park', kind: 'park' }, next: [], before: [] })
+    expect(r.tool_choice).toEqual({ type: 'auto' })
+    expect(r.messages[0].content).toMatch(/Reply only by calling write_chapter\.$/)
+  })
   it('gives every mood a score with title music', () => {
     for (const m of Object.keys(MOODS)) {
       expect(SCORES[MADE_SCORE[m]], m).toBeTruthy()

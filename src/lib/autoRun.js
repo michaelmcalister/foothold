@@ -8,7 +8,7 @@
 // each stop; a series episode goes round a loop. Nothing is saved.
 import { reactive } from 'vue'
 import { rec, simStep } from './recorder.js'
-import { busy } from './audio/queue.js'
+import { busy, jobAge } from './audio/queue.js'
 import { missionLive, missionOffer, answerMission, answerOffer } from './audio/runAudio.js'
 import { stopListening, canListen } from './audio/listen.js'
 import { testLog, logTest } from './audio/testLog.js'
@@ -75,7 +75,6 @@ export function startAuto({ start, mode = 'run', begin = () => {}, leg = () => n
   // slow phone (or a sound mode that takes a while) never stops it starting
   const t0 = Date.now()
   let started = false
-  let busySince = 0
   let stuckSaid = false
   try {
     Promise.resolve(begin()).catch((e) => logTest('Problem', `Starting: ${e?.message || e}`))
@@ -113,12 +112,11 @@ export function startAuto({ start, mode = 'run', begin = () => {}, leg = () => n
       return
     }
     if (busy()) { // a line is being said (or the mic is open): hear it all
-      busySince ||= Date.now()
-      if (!stuckSaid && Date.now() - busySince > STUCK_MS) { stuckSaid = true; logTest('Problem', 'A sound has been playing for 45 seconds. It may be stuck') }
+      if (!stuckSaid && jobAge() > STUCK_MS) { stuckSaid = true; logTest('Problem', 'One sound has gone for 45 seconds. It may be stuck') }
       if (view.ask && audio.answerByVoice) auto.note = 'Listening: say your answer, or tap it'
       return
     }
-    busySince = 0
+    stuckSaid = false
     // a question: tap an answer, or the first one is picked
     if (view.ask) {
       askSince ||= Date.now()
