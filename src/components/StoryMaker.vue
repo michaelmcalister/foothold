@@ -50,6 +50,16 @@ watch(() => maker.busy, (b) => {
 onBeforeUnmount(() => { clearInterval(qtimer); clearInterval(btimer) })
 
 const here = computed(() => (store.located ? store.centre : null))
+const looking = computed(() => !!maker.busy && maker.busyKind === 'look')
+const writing = computed(() => !!maker.busy && maker.busyKind !== 'look')
+// Write tapped while it was still looking: write as soon as the landmarks are in
+const wantWrite = ref(false)
+watch(looking, (now, was) => {
+  if (was && !now && wantWrite.value) {
+    wantWrite.value = false
+    if (maker.places?.places?.length) write()
+  }
+})
 const count = computed(() => maker.places?.places?.length || 0)
 const withHistory = computed(() => (maker.places?.places || []).filter((p) => p.history).length)
 const first = computed(() => maker.ready?.chapter?.stop || null)
@@ -149,16 +159,8 @@ async function report(s) {
     </button>
     <template v-else>
       <h2 id="sm-title" class="title">Make a story here</h2>
-      <div v-if="maker.busy" class="working">
-        <span class="sr-only" aria-live="polite">{{ maker.busy }}</span>
-        <span class="quill" aria-hidden="true"><i /><i /><i /></span>
-        <Transition name="quip" mode="out-in"><p :key="quip" class="quip" aria-hidden="true">{{ quip }}…</p></Transition>
-        <span class="bar" role="progressbar" aria-label="Progress" :aria-valuenow="bar" aria-valuemin="0" aria-valuemax="100"><i :style="{ width: bar + '%' }" /></span>
-      </div>
-      <template v-else-if="maker.places">
-        <p class="small muted">
-          {{ count }} {{ count === 1 ? 'landmark' : 'landmarks' }} near you<template v-if="withHistory">, {{ withHistory }} with real history</template><template v-if="maker.places.suburb"> around {{ maker.places.suburb }}</template>.
-        </p>
+      <!-- the choices show straight away, while it looks around -->
+      <template v-if="!writing">
         <div class="row" role="group" aria-label="Kind of story">
           <button v-for="(m, k) in MOODS" :key="k" type="button" class="pill" :aria-pressed="mood === k" @click="mood = k">{{ m.label }}</button>
         </div>
@@ -166,8 +168,20 @@ async function report(s) {
         <div class="row" role="group" aria-label="How far">
           <button v-for="n in LENGTHS" :key="n" type="button" class="pill" :aria-pressed="km === n" @click="km = n">{{ n }} km</button>
         </div>
+      </template>
+      <div v-if="maker.busy" class="working">
+        <span class="sr-only" aria-live="polite">{{ maker.busy }}</span>
+        <span class="quill" aria-hidden="true"><i /><i /><i /></span>
+        <Transition name="quip" mode="out-in"><p :key="quip" class="quip" aria-hidden="true">{{ quip }}…</p></Transition>
+        <span class="bar" role="progressbar" aria-label="Progress" :aria-valuenow="bar" aria-valuemin="0" aria-valuemax="100"><i :style="{ width: bar + '%' }" /></span>
+      </div>
+      <button v-if="looking" class="btn" type="button" :aria-pressed="wantWrite" @click="wantWrite = !wantWrite">{{ wantWrite ? 'Writing it once the landmarks are in' : 'Write my story' }}</button>
+      <template v-if="maker.places && !maker.busy">
+        <p class="small muted">
+          {{ count }} {{ count === 1 ? 'landmark' : 'landmarks' }} near you<template v-if="withHistory">, {{ withHistory }} with real history</template><template v-if="maker.places.suburb"> around {{ maker.places.suburb }}</template>.
+        </p>
         <p v-if="count < 4" class="notice small">Only {{ count }} {{ count === 1 ? 'landmark' : 'landmarks' }} turned up just now. The map service may be busy. <button class="linkish" type="button" @click="again">Look again</button></p>
-        <button class="btn" type="button" :disabled="!count || !!maker.busy" @click="write">Write my story</button>
+        <button class="btn" type="button" :disabled="!count" @click="write">Write my story</button>
         <template v-if="maker.near.length">
           <h3 class="sub">Stories made near you</h3>
           <ul class="plain list">
