@@ -128,6 +128,34 @@ describe('Story Maker places and chapters', () => {
 })
 
 describe('Story Maker lookups', () => {
+  it('keeps each area for good, and uses an old copy when the map service is down', async () => {
+    const { findPlaces } = await import('../worker/storymaker.js')
+    const r2 = new Map()
+    const env = { AUDIO: { get: async (k) => (r2.has(k) ? { json: async () => JSON.parse(r2.get(k)) } : null), put: async (k, v) => { r2.set(k, v) } } }
+    const many = { elements: Array.from({ length: 8 }, (_, i) => ({ type: 'node', id: i + 1, ...ll(at(300 + i * 100, 0)), tags: { name: `Lookout ${i + 1}`, tourism: 'viewpoint' } })) }
+    let osmUp = true
+    let asked = 0
+    const f = async (url) => {
+      const u = String(url)
+      if (u.includes('wikipedia')) return new Response(JSON.stringify({ query: { pages: {} } }))
+      asked++
+      return osmUp ? new Response(JSON.stringify(many)) : new Response('down', { status: 504 })
+    }
+    const t0 = Date.UTC(2026, 10, 1)
+    const first = await findPlaces(HERE.lat, HERE.lng, { fetcher: f, cache: null, env, now: t0 })
+    expect(first.places.length).toBe(8)
+    expect(r2.size).toBe(1)
+    // a week later: the kept copy, no map service needed
+    asked = 0
+    expect((await findPlaces(HERE.lat, HERE.lng, { fetcher: f, cache: null, env, now: t0 + 7 * 86400000 })).places.length).toBe(8)
+    expect(asked).toBe(0)
+    // two months later and the map service is down: the old copy still works
+    osmUp = false
+    const later = await findPlaces(HERE.lat, HERE.lng, { fetcher: f, cache: null, env, now: t0 + 60 * 86400000 })
+    expect(later.places.length).toBe(8)
+    expect(later.at).toBeUndefined()
+  }, 15000)
+
   it('tries the next Overpass server when one is busy, and never makes a suburb a stop', async () => {
     const { overpass, OVERPASS } = await import('../worker/storymaker.js')
     const asked = []

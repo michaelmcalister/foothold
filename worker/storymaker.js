@@ -19,7 +19,14 @@ import { reportError } from './sentry.js'
 
 // Overpass servers, tried in turn: the main one is often busy, and a big
 // search can take longer than its own answer to a small one
-export const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']
+// The public Overpass servers, asked in turn (see overpass()). Kumi is a big
+// mirror that is often up when the main one is busy.
+export const OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+]
 const WIKI = 'https://en.wikipedia.org/w/api.php'
 const UA = 'Foothold running app (foothold.com.au)'
 const API = 'https://api.anthropic.com/v1/messages'
@@ -35,18 +42,21 @@ export const areaKey = (lat, lng) => `${round2(lat).toFixed(2)},${round2(lng).to
 
 export function placesQuery(lat, lng) {
   const r = RADIUS_M
-  return `[out:json][timeout:25];
+  // Light enough for a busy server: parks (big shapes, slow to search) only
+  // nearer in, and no more than 300 answers
+  const near = Math.round(r * 0.7)
+  return `[out:json][timeout:15];
 (
   nwr[historic][name](around:${r},${lat},${lng});
   nwr[tourism~"^(viewpoint|artwork|museum|gallery|picnic_site|attraction)$"][name](around:${r},${lat},${lng});
   nwr[amenity~"^(library|fountain|townhall|community_centre|place_of_worship|clock)$"][name](around:${r},${lat},${lng});
   nwr[man_made~"^(tower|water_tower|lighthouse|windmill|obelisk|bridge)$"][name](around:${r},${lat},${lng});
-  nwr[leisure~"^(park|garden|nature_reserve)$"][name](around:${r},${lat},${lng});
-  nwr[railway=station][name](around:${r},${lat},${lng});
+  way[leisure~"^(park|garden|nature_reserve)$"][name](around:${near},${lat},${lng});
+  node[railway=station][name](around:${r},${lat},${lng});
   node[natural=peak][name](around:${r},${lat},${lng});
   node[place~"^(suburb|town|village|neighbourhood)$"][name](around:${r},${lat},${lng});
 );
-out tags center 500;`
+out tags center qt 300;`
 }
 
 /** OpenStreetMap elements into named places, one per name. Pure. */
@@ -128,7 +138,7 @@ async function fetchJson(fetcher, url, init, ms = 14000) {
  * so a busy server costs seconds, not the whole wait. Throws with every
  * server's reason.
  */
-export function overpass(fetcher, query, { stagger = 6000, ms = 20000 } = {}) {
+export function overpass(fetcher, query, { stagger = 4000, ms = 18000 } = {}) {
   const why = []
   return new Promise((resolve, reject) => {
     let i = 0
@@ -154,24 +164,44 @@ export function overpass(fetcher, query, { stagger = 6000, ms = 20000 } = {}) {
   })
 }
 
-/** The landmarks and history around a rounded point. Cached a week. */
-export async function findPlaces(lat, lng, { fetcher = fetch, cache = globalThis.caches?.default, env = null, ctx = null } = {}) {
+// Each area's landmarks are also kept for good (R2), so a busy map service
+// never stops a story where someone has looked before: a copy under a month
+// old is used as it is, an older one only when the map service is down.
+const KEPT_FRESH_MS = 30 * 86400000
+const keptPath = (key) => `storymaker/places/${key}.json`
+async function readKept(env, key) {
+  try {
+    const o = await env?.AUDIO?.get(keptPath(key))
+    return o ? await o.json() : null
+  } catch { return null }
+}
+
+/** The landmarks and history around a rounded point. Cached a week, kept for good. */
+export async function findPlaces(lat, lng, { fetcher = fetch, cache = globalThis.caches?.default, env = null, ctx = null, now = Date.now() } = {}) {
   const key = areaKey(lat, lng)
   const [la, ln] = key.split(',').map(Number)
   const req = new Request(`https://storymaker.foothold.cache/places/v1/${key}`)
   const hitC = cache ? await cache.match(req).catch(() => null) : null
   if (hitC) return hitC.json()
+  const kept = await readKept(env, key)
+  if (kept && now - (kept.at || 0) < KEPT_FRESH_MS) { const { at: _a, ...out } = kept; return out }
   const here = { lat: la, lng: ln }
+  let osmDown = false
   const [osm, wiki] = await Promise.all([
     overpass(fetcher, placesQuery(la, ln))
       .then((j) => toPlaces(j.elements, here))
-      .catch((e) => { console.error('storymaker osm', e?.message); reportError(env, ctx, e, 'storymaker places'); return { suburb: null, places: [] } }),
+      .catch((e) => { osmDown = true; console.error('storymaker osm', e?.message); reportError(env, ctx, e, 'storymaker places'); return { suburb: null, places: [] } }),
     fetchJson(fetcher, `${WIKI}?action=query&format=json&generator=geosearch&ggscoord=${la}|${ln}&ggsradius=10000&ggslimit=20&prop=extracts|coordinates|info&exintro=1&explaintext=1&exsentences=4&exlimit=20&inprop=url`, { headers: { 'user-agent': UA } })
       .then((j) => toArticles(j.query?.pages))
       .catch((e) => { console.error('storymaker wiki', e?.message); return [] }),
   ])
+  // the map service is down: an older copy beats a handful of Wikipedia pages
+  if (osmDown && kept?.places?.length) { const { at: _a, ...old } = kept; return old }
   const out = { key, ...mergeHistory(osm, wiki, here) }
-  if (cache && out.places.length >= 6) await cache.put(req, new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=604800' } })).catch(() => {})
+  if (out.places.length >= 6) {
+    if (cache) await cache.put(req, new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=604800' } })).catch(() => {})
+    if (!osmDown && env?.AUDIO) await env.AUDIO.put(keptPath(key), JSON.stringify({ ...out, at: now }), { httpMetadata: { contentType: 'application/json' } }).catch(() => {})
+  }
   return out
 }
 
