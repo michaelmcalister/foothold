@@ -367,6 +367,7 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
   if (!text) return
   const c = CAST[who]
   if (!c) return speak(stripTags(text), { coachVoice, voiceName })
+  logTest(c.name || 'Said', stripTags(text))
   if (Date.now() <= serverPaused) trouble('server voice', 'paused after the server said no')
   if (Date.now() > serverPaused && (await serverVoices())) {
     try {

@@ -611,6 +611,7 @@ onBeforeUnmount(() => {})
 .testlog .effect b { color: #FFC15E; }
 .testlog .mic b { color: #6FB5FF; }
 .testlog .problem b { color: #FF8A7A; }
+.testlog li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aim { position: absolute; left: 50%; top: 50%; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; stroke: #0B1622; fill: #0B1622; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9)); }
 .aim.set { stroke: #E8590C; fill: #E8590C; }
 .putme {
