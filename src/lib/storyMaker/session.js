@@ -84,6 +84,7 @@ export function walkFor(mode) {
     onLeg: (from, to) => routeLeg(from, to, mode),
   })
   walk.shared = r.story.status === 'shared'
+  walk.mood = r.story.mood // picks its score (audio/runAudio.js MADE_SCORE)
   return walk
 }
 

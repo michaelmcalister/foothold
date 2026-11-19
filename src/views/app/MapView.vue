@@ -443,7 +443,7 @@ onBeforeUnmount(() => sheetObs?.disconnect())
 .mapview { position: relative; height: calc(100dvh - var(--top-h) - env(safe-area-inset-top) - var(--bar-h) - env(safe-area-inset-bottom)); }
 .map { position: absolute; inset: 0; }
 .topstack {
-  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 2;
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 3; /* above the map buttons, so an open card is never covered */
   display: grid; gap: 8px; justify-items: start; pointer-events: none;
 }
 .topstack > * { pointer-events: auto; }

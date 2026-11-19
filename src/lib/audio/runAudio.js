@@ -26,6 +26,7 @@ import { createMission, missionById, recordTry, sagaById, CHAINS } from '../miss
 import { personalise, wordsFrom } from '../missions/local.js'
 import { CAST, stripTags } from '../missions/cast.js'
 import { createSoundscape, intensityFor, STINGS } from './soundscape.js'
+import { MADE_SCORE } from '../storyMaker/core.js'
 import { listenFor, stopListening as stopMic, canListen, primeListening, optionsPrompt } from './listen.js'
 import { loadBuffer, createRunMusic } from './recorded.js'
 import { CHASE_TRACK, AMBIENCE } from './library.js'
@@ -486,6 +487,11 @@ export async function beginRun(mode, { onError = () => {}, missionId = null, wal
     mission = walk
     setPrivateLines(!walk.shared) // lines naming places near you are only kept once the story is shared
     track('story_started', { mission: 'made', saga: 'storymaker', crew: false })
+    // a made story gets a score too, picked by its mood, with its own cold open
+    scapeScene = null
+    scape = startScape({ id: 'storymaker', score: MADE_SCORE[walk.mood] || 'ember' })
+    const s = scape
+    if (s) enqueue(() => s.intro())
   }
   // no thriller score: Foothold's own tracks, unless Spotify is playing yours
   if (!scape) runMusic = startRunMusic()
@@ -539,7 +545,7 @@ export async function beginRun(mode, { onError = () => {}, missionId = null, wal
           // the end of an episode: the end theme, then a teaser for the next one
           if (out.events.some((e) => e.type === 'finale')) {
             const s = scape
-            if (narrator && s) enqueue(() => s.outro())
+            if (s && (narrator || mission.script.made)) enqueue(() => s.outro())
             if (narrator) sayLine(episode?.next)
             offerNext(mission.script) // and ask if they'd like to keep going
           }

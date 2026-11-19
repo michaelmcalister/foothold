@@ -9,6 +9,7 @@
 // score sits out when Spotify is playing your own music; the scene sounds
 // and effects stay. Pure parts (the patterns, levels, random event timing)
 // are exported for tests; the voices take any AudioContext-like object.
+import { logTest } from './testLog.js'
 import { note, tone, noise, pluck, bell, kick, pad, swell, noiseBuffer, SILENT } from './synth.js'
 import { loopBuffer } from './recorded.js'
 import { playSpatial, radioStatic, SPATIAL } from './spatial.js'
@@ -1211,6 +1212,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
      * after the big hit); the music carries on underneath.
      */
     intro() {
+      logTest('Effect', 'title music (story score)')
       const t = ctx.currentTime + 0.05
       const voiceAt = scheduleIntro(ctx, stingBus, score, t)
       quietUntil = t + INTRO_S
@@ -1228,6 +1230,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
     sting(name) {
       const s = STINGS[name]
       if (!s) return Promise.resolve()
+      logTest('Effect', `${name} (story score)`)
       const t = ctx.currentTime + 0.02
       s.build(ctx, stingBus, t)
       return new Promise((res) => setTimeout(res, s.dur * 1000))

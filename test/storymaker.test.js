@@ -5,7 +5,8 @@
 // runner started.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { fakeD1 } from './fakes.js'
-import { cleanLine, cleanLabel, kindOf, sameName, nextStops, guideLine, stopsFor, estM } from '../src/lib/storyMaker/core.js'
+import { cleanLine, cleanLabel, kindOf, sameName, nextStops, guideLine, stopsFor, estM, MOODS, MADE_SCORE } from '../src/lib/storyMaker/core.js'
+import { SCORES, THEMES } from '../src/lib/audio/soundscape.js'
 import { toPlaces, toArticles, mergeHistory, storyMakerRoute, chapterRequest, cleanChapter, plainChapter, areaKey } from '../worker/storymaker.js'
 
 const HERE = { lat: -33.7331, lng: 150.7214 }
@@ -48,6 +49,13 @@ function fakeFetch(log, claudeInput) {
 }
 
 describe('Story Maker rules', () => {
+  it('gives every mood a score with title music', () => {
+    for (const m of Object.keys(MOODS)) {
+      expect(SCORES[MADE_SCORE[m]], m).toBeTruthy()
+      expect(THEMES[MADE_SCORE[m]], m).toBeTruthy()
+    }
+  })
+
   it('keeps every line to the house rules', () => {
     expect(cleanLine('Run — now -- quickly')).toBe('Run, now, quickly')
     expect(cleanLine('The miller was dead tired')).toBe(null)

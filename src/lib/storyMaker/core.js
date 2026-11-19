@@ -14,6 +14,8 @@ export const MOODS = {
   history: { label: 'History', about: 'The true past of where you are' },
   silly: { label: 'Silly', about: 'Daft, light and funny' },
 }
+// The score a story plays under, by its mood (audio/soundscape.js SCORES)
+export const MADE_SCORE = { mystery: 'heist', adventure: 'ember', history: 'signal', silly: 'quiz' }
 export const LENGTHS = [2, 3, 5, 8] // km
 export const ARRIVE_M = 40 // close enough to count as there
 export const MAX_STOPS = 6

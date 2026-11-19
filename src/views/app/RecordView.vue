@@ -249,8 +249,7 @@ const canAuto = computed(() => !!store.user?.admin && mode.value !== 'ride' && s
 async function autoBegin() {
   if (!maker.ready && !missionId.value) return toast('Pick a story first (or make one), then Play it through.')
   const from = { lat: store.centre.lat, lng: store.centre.lng }
-  await begin({ sim: true })
-  startAuto({ start: from, mode: mode.value, leg: () => maker.leg?.ring || null, onDone: autoFinish })
+  startAuto({ start: from, mode: mode.value, begin: () => begin({ sim: true }), leg: () => maker.leg?.ring || null, onDone: autoFinish })
 }
 function autoFinish() {
   stopAuto()

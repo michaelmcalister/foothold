@@ -28,7 +28,21 @@ watch(() => maker.busy, (b) => {
   quip.value = quips[0]
   qtimer = setInterval(() => { qi = (qi + 1) % quips.length; quip.value = quips[qi] }, 2200)
 }, { immediate: true })
-onBeforeUnmount(() => clearInterval(qtimer))
+
+// The bar: creeps towards 95% over the usual wait for this step (it slows as
+// it goes, so a slow day never looks stuck at full), then fills when done.
+const USUAL_S = { look: 12, write: 30, get: 15 }
+const bar = ref(0)
+let btimer = 0
+watch(() => maker.busy, (b) => {
+  clearInterval(btimer)
+  if (!b) { bar.value = 0; return }
+  const started = Date.now()
+  const usual = USUAL_S[maker.busyKind] || 20
+  bar.value = 2
+  btimer = setInterval(() => { bar.value = Math.round(95 * (1 - Math.exp(-((Date.now() - started) / 1000) / (usual / 2)))) }, 250)
+}, { immediate: true })
+onBeforeUnmount(() => { clearInterval(qtimer); clearInterval(btimer) })
 
 const here = computed(() => (store.located ? store.centre : null))
 const count = computed(() => maker.places?.places?.length || 0)
@@ -111,6 +125,7 @@ async function report(s) {
         <span class="sr-only" aria-live="polite">{{ maker.busy }}</span>
         <span class="quill" aria-hidden="true"><i /><i /><i /></span>
         <Transition name="quip" mode="out-in"><p :key="quip" class="quip" aria-hidden="true">{{ quip }}…</p></Transition>
+        <span class="bar" role="progressbar" aria-label="Progress" :aria-valuenow="bar" aria-valuemin="0" aria-valuemax="100"><i :style="{ width: bar + '%' }" /></span>
       </div>
       <template v-else-if="maker.places">
         <p class="small muted">
@@ -184,7 +199,9 @@ async function report(s) {
 }
 .title { font-weight: 800; font-size: 1rem; margin: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.working { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px; border-radius: 14px; background: var(--soft); }
+.working { position: relative; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px 16px; border-radius: 14px; background: var(--soft); overflow: hidden; }
+.bar { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 5px; border-radius: 3px; background: rgba(22, 48, 42, 0.12); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--you), #FFC15E); transition: width 0.25s linear; }
 .quip { font-weight: 700; font-size: 0.92rem; }
 .quill { display: inline-flex; gap: 4px; flex: none; }
 .quill i { width: 7px; height: 7px; border-radius: 50%; background: var(--you); animation: hop 1s ease-in-out infinite; }

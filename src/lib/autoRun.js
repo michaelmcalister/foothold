@@ -11,7 +11,7 @@ import { rec, simStep } from './recorder.js'
 import { busy } from './audio/queue.js'
 import { missionLive, missionOffer, answerMission, answerOffer } from './audio/runAudio.js'
 import { stopListening, canListen } from './audio/listen.js'
-import { testLog } from './audio/testLog.js'
+import { testLog, logTest } from './audio/testLog.js'
 import { audio } from './audio/settings.js'
 import { distance } from './engine/geo.js'
 
@@ -22,6 +22,8 @@ const STEP_S = 4 // run time per tick when nothing is being said
 const SPEED = { run: 3.3, walk: 1.5, ride: 6.5 } // metres a second
 const ASK_TAP_MS = 6000 // time to tap an answer before the first one is picked
 const MAX_M = 25000
+const START_MS = 20000 // how long the story has to get going
+const STUCK_MS = 45000 // a sound this long is probably stuck
 
 /** The point d metres along a line of [lng, lat] pairs (the last point past the end). Pure. */
 export function along(line, d) {
@@ -53,11 +55,13 @@ let timer = 0
 let voiceWas = null
 
 /**
- * Start moving. start: { lat, lng }. leg(): the Story Maker leg's line, or
- * null for an episode's loop. onDone(): called once the story ends and the
- * last word is said (or after MAX_M).
+ * Start moving. start: { lat, lng }. begin(): starts the pretend run and its
+ * story (called here, once the log and microphone are set up; may return a
+ * promise). leg(): the Story Maker leg's line, or null for an episode's loop.
+ * onDone(): called once the story ends and the last word is said (or after
+ * MAX_M, or if the story never starts).
  */
-export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
+export function startAuto({ start, mode = 'run', begin = () => {}, leg = () => null, onDone }) {
   stopAuto()
   // the microphone stays on (when the phone can listen), so answering out loud gets tested too
   voiceWas = audio.answerByVoice
@@ -65,7 +69,17 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
   testLog.items.splice(0)
   testLog.on = true
   auto.on = true
-  auto.note = 'Playing it through: skipping the quiet bits'
+  auto.note = 'Starting the story'
+  logTest('Start', `Play it through, microphone ${audio.answerByVoice ? 'on' : 'off on this phone'}`)
+  // the story starts in the background: the ticks below wait for it, so a
+  // slow phone (or a sound mode that takes a while) never stops it starting
+  const t0 = Date.now()
+  let started = false
+  let busySince = 0
+  let stuckSaid = false
+  try {
+    Promise.resolve(begin()).catch((e) => logTest('Problem', `Starting: ${e?.message || e}`))
+  } catch (e) { logTest('Problem', `Starting: ${e?.message || e}`) }
   const speed = SPEED[mode] || SPEED.run
   let t = 0
   let loopD = 0
@@ -75,8 +89,18 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
   let endingSince = 0
   simStep(start, 0)
   timer = setInterval(() => {
-    if (rec.status !== 'recording') return
     const view = missionLive.value
+    if (!started) {
+      if (view && rec.status === 'recording') { started = true; logTest('Start', 'Story running'); auto.note = 'Playing it through: skipping the quiet bits' }
+      else if (Date.now() - t0 > START_MS) {
+        logTest('Problem', rec.status !== 'recording' ? 'The pretend run never started' : 'The story never started')
+        auto.note = 'The story didn’t start. See the log'
+        clearInterval(timer)
+        return
+      }
+      return
+    }
+    if (rec.status !== 'recording') return
     // the end: wait for the last words, then finish
     if (!view || view.done || rec.distanceM > MAX_M) {
       // "play the next episode?" gets a quiet no: one story at a time
@@ -88,7 +112,13 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
       onDone?.()
       return
     }
-    if (busy()) { if (view.ask && audio.answerByVoice) auto.note = 'Listening: say your answer, or tap it'; return } // a line is being said (or the mic is open): hear it all
+    if (busy()) { // a line is being said (or the mic is open): hear it all
+      busySince ||= Date.now()
+      if (!stuckSaid && Date.now() - busySince > STUCK_MS) { stuckSaid = true; logTest('Problem', 'A sound has been playing for 45 seconds. It may be stuck') }
+      if (view.ask && audio.answerByVoice) auto.note = 'Listening: say your answer, or tap it'
+      return
+    }
+    busySince = 0
     // a question: tap an answer, or the first one is picked
     if (view.ask) {
       askSince ||= Date.now()
