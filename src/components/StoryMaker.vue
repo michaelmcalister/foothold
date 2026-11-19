@@ -26,7 +26,12 @@ watch(() => maker.busy, (b) => {
   quips = quipsFor(maker.busyKind)
   qi = 0
   quip.value = quips[0]
-  qtimer = setInterval(() => { qi = (qi + 1) % quips.length; quip.value = quips[qi] }, 2200)
+  // after the last one, a fresh shuffle (without the plain first line), so it never loops in the same order
+  qtimer = setInterval(() => {
+    qi++
+    if (qi >= quips.length) { quips = quipsFor(maker.busyKind).slice(1); qi = 0 }
+    quip.value = quips[qi]
+  }, 2200)
 }, { immediate: true })
 
 // The bar: creeps towards 95% over the usual wait for this step (it slows as
@@ -56,19 +61,33 @@ const firstAway = computed(() => {
 
 async function start() {
   open.value = true
-  if (!here.value) return toast('Waiting for your location. Try again in a moment.')
+  lastTry = start
+  if (!here.value) { maker.error = 'Still waiting for your location. Try again in a moment.'; return }
   if (!maker.places) await lookAround(here.value)
 }
 async function again() {
+  lastTry = again
   maker.places = null
   if (here.value) await lookAround(here.value)
 }
 async function write() {
+  lastTry = write
   if (!here.value) return toast('Waiting for your location.')
   await makeStory(here.value, { mood: mood.value, targetKm: km.value })
   if (maker.ready) emit('ready')
 }
+// After a problem: look around again if that's what failed, else write again
+let lastTry = () => start()
+function retry() {
+  maker.error = ''
+  return lastTry()
+}
+function close() {
+  maker.error = ''
+  open.value = false
+}
 async function pick(id) {
+  lastTry = () => pick(id)
   await pickStory(id)
   if (maker.ready) emit('ready')
 }
@@ -155,7 +174,13 @@ async function report(s) {
         </template>
         <p class="small muted">Stories are written by AI from public places and Wikipedia, and kept so others can run them. Stay on paths and look out for traffic.</p>
       </template>
-      <p v-if="maker.error" class="notice bad small">{{ maker.error }}</p>
+      <div v-if="maker.error && !maker.busy" class="notice bad small oops">
+        <p>{{ maker.error }}</p>
+        <div class="row">
+          <button class="btn small" type="button" @click="retry">Try again</button>
+          <button class="btn quiet small" type="button" @click="close">Close</button>
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -226,5 +251,6 @@ async function report(s) {
 .list li { display: flex; gap: 8px; align-items: center; }
 .story { flex: 1; min-width: 0; display: grid; gap: 2px; text-align: left; background: var(--soft); border: 0; border-radius: 12px; padding: 8px 12px; color: inherit; font: inherit; cursor: pointer; }
 p { margin: 0; }
+.oops { display: grid; gap: 8px; }
 .linkish { border: 0; background: none; padding: 0; font: inherit; font-weight: 750; color: inherit; text-decoration: underline; cursor: pointer; }
 </style>
