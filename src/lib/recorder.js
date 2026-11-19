@@ -122,8 +122,16 @@ export function bridgeGaps(points, { gapM = 25, stepM = 10, mode = 'run' } = {})
   return out
 }
 
+let shiftTo = null // see start(): an admin testing from somewhere else
+let shift = null
 function onPosition(pos) {
-  const { latitude: lat, longitude: lng, accuracy, altitude } = pos.coords
+  let { latitude: lat, longitude: lng } = pos.coords
+  const { accuracy, altitude } = pos.coords
+  if (shiftTo) {
+    shift ||= { lat: shiftTo.lat - lat, lng: shiftTo.lng - lng }
+    lat += shift.lat
+    lng += shift.lng
+  }
   rec.accuracy = Math.round(accuracy)
   rec.error = null // a fix came through, so any earlier GPS trouble is over
   if (rec.status === 'acquiring' && accuracy <= 35) {
@@ -147,7 +155,7 @@ function onPosition(pos) {
     rec.distanceM += d
   }
   rec.points.push(p)
-  if (rec.points.length % 5 === 1) persist()
+  if (rec.points.length % 5 === 1 && !sim) persist()
   rec.toStartM = rec.points.length > 1 ? Math.round(distance(rec.points[0], p)) : null
   const s = summarise(rec.points.slice(-60))
   rec.paceSPerKm = s.paceSPerKm
@@ -198,7 +206,16 @@ function park() {
   try { parkRun(localStorage) } catch { /* storage unavailable */ }
 }
 
-export function start(mode = 'run') {
+/**
+ * Start recording. at: an admin's pretend spot (Put me here). The run then
+ * starts there and your real steps move you from it (each fix shifted by
+ * where you really were at the first one), and like a pretend run it's
+ * never kept or saved.
+ */
+export function start(mode = 'run', { at = null } = {}) {
+  sim = !!at
+  shiftTo = at ? { lat: at.lat, lng: at.lng } : null
+  shift = null
   if (isNativeApp()) {
     Object.assign(rec, { status: 'acquiring', mode, points: [], startedAt: null, elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null, rough: false, acquiringSince: Date.now() })
     park()
@@ -288,6 +305,7 @@ export function stop() {
   const out = { mode: rec.mode, points, startedAt: rec.startedAt, distanceM: rec.distanceM, simulated: sim }
   if (points.length > 1 && !sim) persist() // kept until it's saved or discarded, in case saving fails
   sim = false
+  shiftTo = shift = null
   Object.assign(rec, { status: 'idle', points: [], elapsedS: 0, distanceM: 0, toStartM: null, paceSPerKm: null, notice: null, lastFixAt: null })
   return out
 }

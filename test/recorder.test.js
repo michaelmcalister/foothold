@@ -40,3 +40,27 @@ describe('joining GPS gaps', () => {
     expect(findLoops(out).length).toBe(1)
   })
 })
+
+describe('testing from a pretend spot', () => {
+  it('starts at the spot, moves with your real steps and is never kept', async () => {
+    let send = null
+    const store = new Map()
+    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) }
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { geolocation: { watchPosition: (fn) => { send = fn; return 1 }, clearWatch: () => {} } } })
+    const { start, stop, rec, isSim } = await import('../src/lib/recorder.js')
+    const real = { lat: -33.70, lng: 150.70 }
+    const there = { lat: -42.88, lng: 147.33 } // Hobart
+    start('run', { at: there })
+    expect(isSim()).toBe(true)
+    const fix = (p) => send({ coords: { latitude: p.lat, longitude: p.lng, accuracy: 5 }, timestamp: Date.now() })
+    fix(real)
+    const moved = offset(real, 0, 100) // 100 m north for real
+    fix(moved)
+    expect(distance(rec.points[0], there)).toBeLessThan(1)
+    expect(rec.distanceM).toBeGreaterThan(95)
+    expect(rec.distanceM).toBeLessThan(105)
+    const out = stop()
+    expect(out.simulated).toBe(true)
+    expect([...store.keys()].some((k) => /unfinished|recording/i.test(k))).toBe(false)
+  })
+})

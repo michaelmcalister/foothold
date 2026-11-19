@@ -216,7 +216,10 @@ function begin({ sim = false } = {}) {
   error.value = null
   resetGhostRace()
   if (sim) startSim(mode.value)
-  else start(mode.value)
+  else {
+    start(mode.value, { at: store.pretend })
+    if (store.pretend) toast('Testing from the crosshairs: your real steps move you from there. Nothing is saved.')
+  }
   // Same tap starts the music and wakes the voice (phones need a tap for sound)
   const walk = mode.value !== 'ride' && maker.ready ? walkFor(mode.value) : null // a Story Maker story
   const ready = beginRun(mode.value, { onError: (msg) => toast(msg), missionId: mode.value === 'ride' || walk ? null : missionId.value, walk })
@@ -257,7 +260,7 @@ function autoFinish() {
   finishRun(totals)
   maker.leg = null // the story stays ready, to hear again
   discard() // a pretend run is never saved
-  toast('Auto run finished. Nothing was saved.')
+  toast('Test run finished. Nothing was saved.')
 }
 const audioLine = computed(() => {
   const parts = []
