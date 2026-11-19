@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
 const yes = async () => true // a signed-in player
-import { handleTts, ttsConfig, VOICES, isScriptLine } from '../worker/tts.js'
+import { handleTts, ttsConfig, VOICES, isScriptLine, sayable } from '../worker/tts.js'
 import { missionById } from '../src/lib/missions/index.js'
 import { LIMITS } from '../worker/db.js'
 
@@ -117,5 +117,14 @@ describe('paid limits', () => {
     expect((await hit(broken, 'tts', '1.2.3.4')).ok).toBe(false)
     expect((await hit(broken, 'aiPlanUser', 'u1')).ok).toBe(false)
     expect((await hit(broken, 'comment', 'u1')).ok).toBe(true)
+  })
+})
+
+describe('words as the voice says them', () => {
+  it('sends metres the way Australians say them, and leaves the rest alone', () => {
+    expect(sayable('2 kilometres. 400 metres to go. 1 Kilometre.')).toBe('2 kilometers. 400 meters to go. 1 Kilometer.')
+    expect(sayable('Ten centimetres, a metre and a millimetre')).toBe('Ten centimeters, a meter and a millimeter')
+    expect(sayable('Metres ahead')).toBe('Meters ahead')
+    expect(sayable('Colour, organise and a metronome')).toBe('Colour, organise and a metronome')
   })
 })

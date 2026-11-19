@@ -62,6 +62,16 @@ export function isScriptLine(text) {
   return scriptLines.has(text)
 }
 
+/**
+ * The words as the voice should read them. The lines are written in
+ * Australian spelling, but the voices read "kilometres" letter by letter
+ * (kilome-tres). The American spelling sounds the same as we say it, so
+ * only what is sent to the voice changes. Pure.
+ */
+export function sayable(text) {
+  return String(text).replace(/\b(kilo|centi|milli)?(m)etre(s?)\b/gi, (_, pre = '', m, plural) => `${pre}${m}eter${plural}`)
+}
+
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 
 async function sha(text) {
@@ -79,12 +89,15 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   if (!text) return json({ error: 'Nothing to say.', code: 'bad_request' }, 400)
   if (text.length > MAX_CHARS) return json({ error: 'That line is too long to speak.', code: 'bad_request' }, 400)
 
-  // Same line, same voice: serve the copy we already made
-  const key = new Request(`https://tts.foothold.cache/${voiceKey}/${await sha(text)}.mp3`)
+  // Same line, same voice: serve the copy we already made. Kept by the words
+  // as said, so a line said wrongly before (kilometres) is made again.
+  const words = sayable(text)
+  const hash = await sha(words)
+  const key = new Request(`https://tts.foothold.cache/${voiceKey}/${hash}.mp3`)
   const cached = cache ? await cache.match(key) : null
   if (cached) return cached
   // Made before, by anyone: serve the copy kept in R2 (free, no rate limit)
-  const stored = `tts/${voiceId}/${await sha(text)}.mp3`
+  const stored = `tts/${voiceId}/${hash}.mp3`
   const kept = env.AUDIO ? await env.AUDIO.get(stored).catch(() => null) : null
   if (kept) return keep(new Response(await kept.arrayBuffer(), { headers: AUDIO_HEADERS }), key, cache)
 
@@ -104,12 +117,12 @@ export async function handleTts(req, env, { fetcher = fetch, cache = globalThis.
   })
   let res
   if (story) {
-    res = await ask(STORY_MODEL, text, { stability: 0.5, similarity_boost: 0.8 })
+    res = await ask(STORY_MODEL, words, { stability: 0.5, similarity_boost: 0.8 })
     if (!res.ok && res.status >= 400 && res.status < 500 && res.status !== 401 && res.status !== 429) {
-      res = await ask(STORY_FALLBACK, stripTags(text), { stability: 0.45, similarity_boost: 0.8, style: 0.35 })
+      res = await ask(STORY_FALLBACK, stripTags(words), { stability: 0.45, similarity_boost: 0.8, style: 0.35 })
     }
   } else {
-    res = await ask(MODEL, text, { stability: 0.5, similarity_boost: 0.8, style: 0.2, speed: 1.05 })
+    res = await ask(MODEL, words, { stability: 0.5, similarity_boost: 0.8, style: 0.2, speed: 1.05 })
   }
   if (!res.ok) {
     console.error('tts', res.status) // never log the text or the key
