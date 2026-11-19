@@ -12,6 +12,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
+import { testLog } from './testLog.js'
 import { inCrew, voteAndWait, sendProgress, crewLine, crew } from '../groupRun.js'
 import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker, setPrivateLines } from './voice.js'
 import { enqueue, clear } from './queue.js'
@@ -172,7 +173,7 @@ function askAloud() {
     micOpen = true // hands off the phone's sound until the answer is in (see shouldWake)
     let key = null
     try {
-      key = await listenFor(now.options, { timeoutMs: Math.max(5000, (now.remainingS - 1) * 1000) })
+      key = await listenFor(now.options, { timeoutMs: testLog.on ? 10000 : Math.max(5000, (now.remainingS - 1) * 1000) }) // an admin play through: 10 seconds to say it
     } finally {
       micOpen = false
     }
