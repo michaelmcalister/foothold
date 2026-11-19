@@ -7,6 +7,7 @@
 //
 // Browsers can't tell when a phone is on silent. On iPhone, Web Audio usually
 // follows the ring/silent switch; elsewhere it follows the media volume.
+import { logTest } from './testLog.js'
 import { reactive, watch } from 'vue'
 import { audio } from './settings.js'
 import { enqueue } from './queue.js'
@@ -471,12 +472,14 @@ export async function play(name, opts = {}) {
       const bytes = await rendered(name, opts)
       const volume = Math.max(0, Math.min(1, audio.sfxVolume)) * (opts.quiet ? 0.65 : 1)
       if (bytes && (await playNative(bytes, { volume, wait: false }))) {
+        logTest('Effect', `${name} (phone player)`)
         if (opts.wait !== false) await wait(EFFECTS[name].dur)
         return true
       }
     } catch { /* the web way below */ }
   }
-  if (!(await resume())) return false
+  if (!(await resume())) { logTest('Effect', `${name}: no sound, the web audio is asleep`); return false }
+  if (name !== 'tap') logTest('Effect', `${name} (web audio)`)
   try {
     const out = opts.quiet ? quietBus() : sfxBus
     scheduleEffect(ctx, out, name, ctx.currentTime + 0.01, opts)

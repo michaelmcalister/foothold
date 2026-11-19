@@ -14,6 +14,7 @@ import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import { rec, start, startSim, isSim, startAnyway, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
 import { auto, startAuto, stopAuto } from '../../lib/autoRun.js'
+import { testLog } from '../../lib/audio/testLog.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -244,8 +245,9 @@ async function backToReal() {
 }
 
 // ---- admins: hear a whole story without running it (lib/autoRun.js) ----
-const canAuto = computed(() => !!store.user?.admin && mode.value !== 'ride' && !!(maker.ready || missionId.value) && store.located)
+const canAuto = computed(() => !!store.user?.admin && mode.value !== 'ride' && store.located)
 async function autoBegin() {
+  if (!maker.ready && !missionId.value) return toast('Pick a story first (or make one), then Play it through.')
   const from = { lat: store.centre.lat, lng: store.centre.lng }
   await begin({ sim: true })
   startAuto({ start: from, mode: mode.value, leg: () => maker.leg?.ring || null, onDone: autoFinish })
@@ -518,7 +520,10 @@ onBeforeUnmount(() => {})
         <div v-if="error" class="notice bad">{{ error }}</div>
         <div v-else-if="rec.error" class="notice bad">{{ rec.error }}</div>
         <button class="btn block go" type="button" @click="begin()">Start {{ mode }}</button>
-        <button v-if="canAuto" class="btn quiet small autobtn" type="button" @click="autoBegin">Auto run this story (admin): hear it all without running</button>
+        <button v-if="canAuto" class="playthru" type="button" @click="autoBegin">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 4l9 8-9 8zM15 4l6 8-6 8" fill="currentColor" /></svg>
+          <span><strong>Play it through</strong><span class="small">Admin: the whole story, no running, trivia, mic and effects</span></span>
+        </button>
         <RouterLink class="audioline small" to="/app/settings">{{ audioLine }}. Change</RouterLink>
         <div class="alt">
           <button class="btn quiet small" type="button" @click="fileInput.click()">Import from a watch or app (GPX, TCX, FIT)</button>
@@ -575,7 +580,12 @@ onBeforeUnmount(() => {})
           <button v-if="finishing" class="btn" type="button" @click="keepGoing">Keep going</button>
           <button v-else class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="askFinish">Finish</button>
         </div>
-        <p v-if="auto.on" class="finishing small" aria-live="polite">{{ auto.note }}. Nothing is saved.</p>
+        <template v-if="auto.on">
+          <p class="finishing small" aria-live="polite">{{ auto.note }}. Nothing is saved.</p>
+          <ol class="testlog" aria-label="What just played">
+            <li v-for="(it, i) in testLog.items" :key="it.at + '-' + i" :class="it.kind.toLowerCase()"><b>{{ it.kind }}</b> {{ it.text }}</li>
+          </ol>
+        </template>
         <p v-if="finishing" class="finishing small" aria-live="assertive">Finishing in {{ finishing }}. Tap Keep going if you're not done.</p>
         <button v-if="rec.status !== 'acquiring'" class="discard" type="button" @click="cancel">Discard</button>
       </template>
@@ -588,7 +598,19 @@ onBeforeUnmount(() => {})
 .maparea { position: relative; min-height: 0; }
 .maparea > :first-child { position: absolute; inset: 0; }
 .finishing { text-align: center; margin: 6px 0 0; font-weight: 700; }
-.autobtn { justify-self: center; margin-top: 6px; }
+.playthru {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 8px; padding: 10px 14px; border-radius: 14px;
+  border: 1.5px dashed #FFC15E; background: #0B1622; color: #fff; font: inherit; text-align: left; cursor: pointer;
+}
+.playthru svg { color: #FFC15E; flex: none; }
+.playthru > span { display: grid; gap: 1px; }
+.playthru .small { opacity: 0.75; }
+.playthru:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
+.testlog { list-style: none; margin: 6px 0 0; padding: 8px 10px; border-radius: 12px; background: #0B1622; color: #E8EEF4; font-size: 0.78rem; display: grid; gap: 3px; max-height: 9.5em; overflow: hidden; }
+.testlog b { display: inline-block; min-width: 52px; color: #9FB4C6; font-weight: 750; }
+.testlog .effect b { color: #FFC15E; }
+.testlog .mic b { color: #6FB5FF; }
+.testlog .problem b { color: #FF8A7A; }
 .aim { position: absolute; left: 50%; top: 50%; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; stroke: #0B1622; fill: #0B1622; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9)); }
 .aim.set { stroke: #E8590C; fill: #E8590C; }
 .putme {

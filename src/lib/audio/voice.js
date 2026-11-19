@@ -3,6 +3,7 @@
 // voices otherwise or whenever the server voice can't answer. Lines queue
 // so they never talk over each other; speak() resolves when the line ends.
 
+import { logTest } from './testLog.js'
 import { CAST, isCast, stripTags } from '../missions/cast.js'
 import { watch } from 'vue'
 import { noteTrouble } from './trouble.js'
@@ -385,6 +386,7 @@ export async function speakAs(text, who, { coachVoice = 'charlie', voiceName = '
  */
 export async function speak(text, { coachVoice = 'charlie', voiceName = '', keep = true } = {}) {
   if (!text) return
+  logTest('Said', text)
   if (coachVoice !== 'phone' && Date.now() <= serverPaused) trouble('server voice', 'paused after the server said no')
   if (coachVoice !== 'phone' && Date.now() > serverPaused && (await serverVoices())) {
     try {

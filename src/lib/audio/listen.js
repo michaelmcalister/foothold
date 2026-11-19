@@ -7,6 +7,7 @@
 // In the iPhone app the browser's speech recognition isn't available, so it
 // uses the phone's own through a native plugin (native.js).
 
+import { logTest } from './testLog.js'
 import { ref } from 'vue'
 import { isNativeApp } from '../native.js'
 import { noteTrouble } from './trouble.js'
@@ -103,6 +104,7 @@ function listenNative(options, { timeoutMs, lang }) {
       errHandle?.remove?.()
       speech?.stop().catch(() => {})
       if (!key) noteTrouble('microphone', heard ? `heard "${heard.slice(0, 60)}" but it didn't match an answer` : 'heard nothing before the question closed')
+      else logTest('Mic', `heard "${heard.slice(0, 50)}", answer ${key}`)
       resolve(key)
     }
     const timer = setTimeout(() => finish(null), timeoutMs)
@@ -129,6 +131,7 @@ function listenNative(options, { timeoutMs, lang }) {
       })
       if (done) return handle.remove()
       listening.value = true
+      logTest('Mic', 'listening (phone speech recognition)')
       await s.start({ language: lang, maxResults: 3, partialResults: true, popup: false })
     }).catch((e) => { noteTrouble('microphone', e); finish(null) })
   })
@@ -172,7 +175,7 @@ export function listenFor(options, { timeoutMs = 12000, lang = 'en-AU' } = {}) {
         for (let i = e.resultIndex; i < e.results.length; i++) {
           for (let j = 0; j < e.results[i].length; j++) {
             const key = matchAnswer(e.results[i][j].transcript, options)
-            if (key) { listenProblem.value = null; return finish(key) }
+            if (key) { logTest('Mic', `heard "${e.results[i][j].transcript.slice(0, 50)}", answer ${key}`); listenProblem.value = null; return finish(key) }
           }
         }
       }
@@ -181,7 +184,7 @@ export function listenFor(options, { timeoutMs = 12000, lang = 'en-AU' } = {}) {
         // 'no-speech' and 'aborted' just mean try again
       }
       r.onend = () => { if (!done) setTimeout(begin, 120) }
-      try { r.start(); listening.value = true } catch { setTimeout(begin, 300) }
+      try { r.start(); listening.value = true; if (tries === 1) logTest('Mic', 'listening (browser speech recognition)') } catch { setTimeout(begin, 300) }
     }
     begin()
   })

@@ -1,14 +1,17 @@
-// The admin auto run: hear a whole story at your desk. A pretend runner
+// The admin play through: hear a whole story at your desk. A pretend runner
 // moves through the run in fast-forward (a few seconds of run time for each
 // fifth of a real second), stops while anything is being said so no line is
-// skipped, and waits at each question for a tap (or picks the first answer
-// after a few seconds). A Story Maker story is followed along the route to
+// skipped, and waits at each question for a spoken or tapped answer (or picks
+// the first after a few seconds). The microphone stays on so answering out
+// loud is tested too, and a live log (audio/testLog.js) shows each line,
+// effect and what the microphone heard. A Story Maker story is followed along the route to
 // each stop; a series episode goes round a loop. Nothing is saved.
 import { reactive } from 'vue'
 import { rec, simStep } from './recorder.js'
 import { busy } from './audio/queue.js'
 import { missionLive, missionOffer, answerMission, answerOffer } from './audio/runAudio.js'
-import { stopListening } from './audio/listen.js'
+import { stopListening, canListen } from './audio/listen.js'
+import { testLog } from './audio/testLog.js'
 import { audio } from './audio/settings.js'
 import { distance } from './engine/geo.js'
 
@@ -56,11 +59,13 @@ let voiceWas = null
  */
 export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
   stopAuto()
-  // answers are tapped, not spoken: the microphone would hold the story up
+  // the microphone stays on (when the phone can listen), so answering out loud gets tested too
   voiceWas = audio.answerByVoice
-  audio.answerByVoice = false
+  audio.answerByVoice = canListen()
+  testLog.items.splice(0)
+  testLog.on = true
   auto.on = true
-  auto.note = 'Auto run: skipping the quiet bits'
+  auto.note = 'Playing it through: skipping the quiet bits'
   const speed = SPEED[mode] || SPEED.run
   let t = 0
   let loopD = 0
@@ -83,16 +88,16 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
       onDone?.()
       return
     }
-    if (busy()) return // a line is being said: hear it all
+    if (busy()) { if (view.ask && audio.answerByVoice) auto.note = 'Listening: say your answer, or tap it'; return } // a line is being said (or the mic is open): hear it all
     // a question: tap an answer, or the first one is picked
     if (view.ask) {
       askSince ||= Date.now()
-      auto.note = 'Tap an answer, or the first one is picked'
+      auto.note = audio.answerByVoice ? 'Say or tap an answer. The first one is picked after a few seconds' : 'Tap an answer, or the first one is picked'
       if (Date.now() - askSince > ASK_TAP_MS) answerMission(view.ask.options[0].key)
       return
     }
     askSince = 0
-    auto.note = 'Auto run: skipping the quiet bits'
+    auto.note = 'Playing it through: skipping the quiet bits'
     t += STEP_S
     const step = speed * STEP_S * (view.kind === 'surge' ? 1.3 : 1)
     const now = leg()
@@ -113,6 +118,7 @@ export function startAuto({ start, mode = 'run', leg = () => null, onDone }) {
 export function stopAuto() {
   clearInterval(timer)
   if (voiceWas !== null) { audio.answerByVoice = voiceWas; voiceWas = null }
+  testLog.on = false
   auto.on = false
   auto.note = ''
 }
