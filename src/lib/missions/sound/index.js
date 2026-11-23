@@ -34,8 +34,11 @@ import { SHEET as yourpatch } from './yourpatch.js'
 import { SHEET as ember } from './ember.js'
 import { SHEET as heist } from './heist.js'
 import { SHEET as signal } from './signal.js'
+import { SHEET as deepcover } from './deepcover.js'
+import { SHEET as timerunners } from './timerunners.js'
+import { SHEET as velocity } from './velocity.js'
 
-export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, ember, heist, signal]
+export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, ember, heist, signal, deepcover, timerunners, velocity]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each
