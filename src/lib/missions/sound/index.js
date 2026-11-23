@@ -18,8 +18,9 @@
 import { SHEET as bondi } from './bondi.js'
 import { SHEET as druitt } from './druitt.js'
 import { SHEET as sydney } from './sydney.js'
+import { SHEET as penrith } from './penrith.js'
 
-export const SHEETS = [bondi, druitt, sydney]
+export const SHEETS = [bondi, druitt, sydney, penrith]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each

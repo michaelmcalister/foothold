@@ -138,7 +138,7 @@ export const EPISODES = [
     loop: line('pr-sarge', 'You ran a loop. Like the River Run. Over one bridge, back over the other. Very tidy.'),
     early: line('pr-dot', 'Stopping there is fine, dear. The mystery will keep. So will the supper.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Saturday evening', scene: 'harbour', say: 'Penrith, on a warm Saturday evening. The Nepean glows orange under Victoria Bridge, and you are out on the River Run. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Saturday evening', scene: 'harbour', say: 'Penrith, a warm Saturday evening. The Nepean glows orange, and at Emu Hall, the pretend victim of a murder mystery has really vanished. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', spatial: 'bird', say: 'This is Dharug Country. The Dharug name for this river is Yandhai. A rowing eight glides past, and cockatoos squabble in the river gums.' },
       { at: 105, kind: 'story', who: 'pr-dot', fx: 'squelch', say: 'Hello? Is that the runner? Dot Haverly here. I am running the heritage murder mystery night at Emu Hall, across the river. We have a problem.' },
       { at: 165, kind: 'story', who: 'pr-dot', say: 'Our pretend victim, Gus, was meant to faint on the rug at the start of act two. Very dramatic. Instead he has vanished. Properly vanished.' },
@@ -216,7 +216,7 @@ export const EPISODES = [
     loop: line('pr-sarge', 'A loop! Up and back. The old trains would be proud. Well, they went forwards and backwards. Close enough.'),
     early: line('pr-dot', 'That is plenty for tonight, dear. The ghosts will still be there tomorrow.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Lennox Bridge', scene: 'cutting', say: 'Glenbrook, on a cool spring night. You start at the foot of Mitchell’s Pass, beside a small stone bridge over a creek. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Lennox Bridge', scene: 'cutting', say: 'Glenbrook, a cool spring night. Drivers on the M4 swear they keep seeing lanterns on a railway hill where no train has run since 1892. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', spatial: 'owl', say: 'This is Lennox Bridge. Convicts built it in 1833 for David Lennox, a Scottish stonemason. His name is still carved into the keystone.' },
       { at: 105, kind: 'story', who: 'pr-dot', fx: 'squelch', say: 'Hello, dear, Dot again. The heritage group has a puzzle. Drivers on the M4 keep seeing lanterns moving along the old Zig Zag railway. At night.' },
       { at: 160, kind: 'story', who: 'pr-dot', say: '[whispers] The trains stopped running up there in 1892. Kev says it is a ghost train. Kev says a lot of things.' },
@@ -283,7 +283,7 @@ export const EPISODES = [
     loop: line('pr-tash', 'You closed a loop! Nan says Pop used to run loops round the factory at lunch. Probably to show off.'),
     early: line('pr-dot', 'That will do for today, dear. The letter has waited this long. It can wait a little more.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Queen Street', scene: 'suburb', say: 'St Marys, on a warm Saturday afternoon. Lorikeets screech in the trees along Queen Street. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Queen Street', scene: 'suburb', say: 'St Marys, a warm Saturday afternoon. A tin box under an old cottage floor holds a wartime love letter nobody has read in eighty years. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', spatial: 'lorikeets', say: 'Long before St Marys was a suburb, this was South Creek. Farms lined the water. The name St Marys came later, from a church built around 1840.' },
       { at: 105, kind: 'story', who: 'pr-tash', fx: 'squelch', say: 'Tash here! Big news. My nan was fixing up her old cottage and found a tin box under the floor. Inside, a letter from 1943. And a tiny key.' },
       { at: 160, kind: 'story', who: 'pr-dot', say: 'It is a Duration Cottage, dear. They were built for the munitions workers in the war. Thousands of people worked at the factory here.' },
@@ -352,7 +352,7 @@ export const EPISODES = [
     loop: line('pr-ranger', 'You ran a loop. Very tidy. The roos do the same thing every evening, you know. Same track, every night.'),
     early: line('pr-dot', 'That is plenty, dear. The mob will still be there tomorrow. They are not going anywhere.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Jordan Springs', scene: 'suburb', say: 'Jordan Springs, late on a summer afternoon. Past the last row of houses, the bush begins. Wianamatta Regional Park. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Jordan Springs', scene: 'suburb', say: 'Jordan Springs, late on a summer afternoon. Past the last row of houses is a bush full of secrets, kangaroos and a green brass tag from 1959. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', spatial: 'kookaburra', say: 'Wianamatta is the Dharug name for South Creek. It means mother place. For fifty years, this bush sat behind a high wire fence.' },
       { at: 105, kind: 'story', who: 'pr-tash', fx: 'squelch', say: 'Tash here! Guess what I found by the Luxfords trail. An old brass tag, all green. It says Red, number 7, 1959. Red what?' },
       { at: 160, kind: 'story', who: 'pr-sarge', say: 'Kev here. Red kangaroo, I reckon. My dad worked at the munitions factory out there. He used to talk about the orphan roos.' },
@@ -420,7 +420,7 @@ export const EPISODES = [
     loop: line('pr-tash', 'A loop! Like the whitewater course. Round and round, and the water never stops.'),
     early: line('pr-dot', 'That is all right, dear. Tash will race either way. We will save you a seat.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Penrith Lakes', scene: 'harbour', say: 'Penrith Lakes, on a bright Saturday morning. Rowers glide across flat water, and somewhere ahead, rapids roar. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Penrith Lakes', scene: 'harbour', say: 'Penrith Lakes, a bright Saturday morning. The Olympic whitewater is roaring, Tash races in an hour, and her lucky paddle has vanished. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', who: 'pr-tash', fx: 'squelch', say: '[sighs] Tash here. Disaster. My race is in an hour, and my lucky paddle is gone. It was right here on the rack. Now it is not.' },
       { at: 105, kind: 'story', who: 'pr-dot', say: 'Don’t you worry, dear. River Town is on the case. I have rung everyone. Kev, Col, Ranger Mick, Priya. All of them.' },
       { at: 160, kind: 'quiz', who: 'pr-dot', say: 'While they come. These calm lakes were once something very different. What?',
