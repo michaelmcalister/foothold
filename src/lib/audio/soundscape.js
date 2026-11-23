@@ -1156,7 +1156,8 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       timer = setInterval(tick, 250)
       if (recorded && chase) recorded.track(chase).then((b) => { chaseBuf = b }).catch(() => {})
       // the recorded one-shots, for the sounds that move around you
-      if (recorded?.sfx) for (const id of new Set(Object.values(SPATIAL).map((d) => d.recorded).filter(Boolean))) recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b) }).catch(() => {})
+      // (only the map's: each story asks for its own with preload, so a run doesn't fetch every recording there is)
+      api.preload(Object.values(NEARBY).flatMap((l) => l.map((a) => a.name)))
     },
     setScene(name) {
       if (!SCENES[name] || name === sceneName) return
@@ -1236,9 +1237,17 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
     canSting: (name) => canSting(name),
     /** Get recorded cues ready (a beat's fx that names a recorded sound). */
     preload(ids) {
-      for (const id of new Set(ids)) {
-        if (!SFX[id] || sfxBufs.has(id) || !recorded?.sfx) continue
-        recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b) }).catch(() => {})
+      // cue ids, or spatial sound names (their recording), or scene names (the sounds that pass in them)
+      const want = new Set()
+      for (const id of ids) {
+        if (SCENES[id]) for (const a of AROUND[id] || []) { if (SPATIAL[a.name]?.recorded) want.add(SPATIAL[a.name].recorded) }
+        else if (SPATIAL[id]?.recorded) want.add(SPATIAL[id].recorded)
+        else if (SFX[id]) want.add(id)
+      }
+      for (const id of want) {
+        if (sfxBufs.has(id) || !recorded?.sfx) continue
+        sfxBufs.set(id, null) // asked for
+        recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b); else sfxBufs.delete(id) }).catch(() => sfxBufs.delete(id))
       }
     },
     /** Play an effect now; resolves when it's done. */

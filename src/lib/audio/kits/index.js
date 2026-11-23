@@ -6,5 +6,6 @@ import { KIT as timerunners } from './timerunners.js'
 import { KIT as velocity } from './velocity.js'
 import { KIT as twocities } from './twocities.js'
 import { KIT as locals } from './locals.js'
+import { KIT as designed } from './designed.js'
 
-export const KITS = [deepcover, timerunners, velocity, twocities, locals]
+export const KITS = [deepcover, timerunners, velocity, twocities, locals, designed]

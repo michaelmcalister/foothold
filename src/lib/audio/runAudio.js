@@ -376,7 +376,7 @@ function startMission(script) {
     // get the episode's recorded scenes ready while the title music plays
     const ctx = sfx.context()
     if (scape && ctx) for (const n of new Set(script.beats.map((b) => b.scene).filter((x) => x && AMBIENCE[x]))) loadBuffer(ctx, 'ambience', n)
-    scape?.preload(beatFx(script)) // and its recorded cues
+    scape?.preload([...beatFx(script), ...script.beats.flatMap((b) => [b.spatial, b.scene]).filter(Boolean)]) // and its recorded cues and passing sounds
     episode = episodeLines(script, saga)
     // the cold open: title music, the episode's title, and what happened last time
     const s = scape

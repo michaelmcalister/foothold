@@ -80,7 +80,7 @@ export const EPISODES = [
     loop: line('bd-nikki', 'You ran a loop! Like a lifesaver’s patrol. Up the beach, back again. Nice.'),
     early: line('bd-nikki', 'Calling it there is fine. Grab a coffee on the promenade. The whale tail can wait.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'First light', scene: 'surfdawn', say: 'Bondi Beach, twenty to six in the morning. The sun is climbing out of the ocean, and the first swimmers are already in. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'First light', scene: 'surfdawn', say: 'Bondi, twenty to six. The sun is rising out of the Pacific, and two hundred kilos of bronze have vanished off the coast walk overnight. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', say: 'Bondi is about a kilometre of golden sand. Its name comes from a Dharawal word for a loud thud, like waves breaking over rocks.' },
       { at: 100, kind: 'story', who: 'bd-nikki', fx: 'whistle', say: 'Morning! Nikki, Bondi lifesavers, dawn patrol. Got a weird one for you. A sculpture has gone missing. A big one.' },
       { at: 155, kind: 'story', who: 'bd-nikki', say: 'It is Sculpture by the Sea week. The coast walk is full of art. And overnight, a giant bronze whale tail disappeared from Tamarama.' },
@@ -142,7 +142,7 @@ export const EPISODES = [
     loop: line('bd-nikki', 'A loop! Up the coast, back again. Proper patrol work.'),
     early: line('bd-nikki', 'All good, stop there. Grab a coffee at Bronte. The bell can ring without you.'),
     guide: 'bd-nikki', results: RESULTS['bd-nikki'], easy: EASY,
-    open: { scene: 'surfdawn', chapter: 'Coast walk', text: 'The Bondi to Bronte coast walk, just after sunrise. Sandstone cliffs, a salty breeze, and joggers everywhere. Start with an easy walk or jog.' },
+    open: { scene: 'surfdawn', chapter: 'Coast walk', text: 'Dawn on the coast walk to Bronte. Salt spray, sandstone, and a club bell older than anyone on the beach. By swim time, it has to ring. Start with an easy walk or jog.' },
     steps: [
       say('bd-nikki', '[sighs] Nikki here. Bad news from Bronte. Their old brass club bell has vanished. Today is the big swim between our clubs.'),
       say('bd-stan', 'Stan here. That bell is older than me, and I am very old. If Bronte think Bondi took it, there will be a row on the sand.'),
@@ -183,7 +183,7 @@ export const EPISODES = [
     loop: line('bd-nikki', 'A loop! Like laps of the baths. Steady strokes.'),
     early: line('bd-nikki', 'Stop there, no worries. Go and float in the baths for a bit.'),
     guide: 'bd-nikki', results: RESULTS['bd-nikki'], easy: EASY,
-    open: { scene: 'surfdawn', chapter: 'Coogee', text: 'Coogee Beach, early on a bright morning. Norfolk pines, a long arc of sand, and old pools carved into the rocks. Start with an easy walk or jog.' },
+    open: { scene: 'surfdawn', chapter: 'Coogee', text: 'Coogee, early and bright. The ocean pours into pools older than your great grandparents, and an Olympic medal has just gone missing. Start with an easy walk or jog.' },
     steps: [
       say('bd-nikki', 'Nikki here, down at Coogee for training. And of course, we have a mystery. Leo is here too. He is a junior now.'),
       say('bd-leo', '[excited] Hi! At Wylie’s Baths there is a copy of an Olympic medal in a glass case. This morning the case was open, and the medal was gone.'),
@@ -223,7 +223,7 @@ export const EPISODES = [
     loop: line('bd-nikki', 'A loop! Like the beam of the light, round and round.'),
     early: line('bd-nikki', 'Stop there, all good. Watch the sun come up. That never gets old.'),
     guide: 'bd-nikki', results: RESULTS['bd-nikki'], easy: EASY,
-    open: { scene: 'night', chapter: 'Cliff tops', text: 'The cliff tops north of Bondi, just before dawn. The sea is dark, the sky is going grey, and the lighthouse beam sweeps over the water. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'Cliff tops', text: 'The cliffs north of Bondi, before dawn. The lighthouse beam sweeps the dark sea, and under it, a tiny light is blinking a secret. Start with an easy walk or jog.' },
     steps: [
       say('bd-nikki', '[curious] Nikki here, early shift. Something odd. Look at the lighthouse. Under the main beam, there is a little light blinking. Short, short, long.'),
       say('bd-stan', 'Stan here. I was a sailor once. That is not the lighthouse. That is someone with a torch, sending Morse code.'),
@@ -262,7 +262,7 @@ export const EPISODES = [
     loop: line('bd-nikki', 'A loop! Like catching a wave and paddling back out.'),
     early: line('bd-nikki', 'Stop there, no stress. Watch the paddle out from the sand.'),
     guide: 'bd-nikki', results: RESULTS['bd-nikki'], easy: EASY,
-    open: { scene: 'surfdawn', chapter: 'Freshwater', text: 'Freshwater Beach, on Sydney’s northern beaches. A small bay, golden cliffs, and a crowd gathering on the sand. Start with an easy walk or jog.' },
+    open: { scene: 'surfdawn', chapter: 'Freshwater', text: 'Freshwater Beach. Every surf club on the coast is gathering, and the most famous board in Australia has gone from the wall. Start with an easy walk or jog.' },
     steps: [
       say('bd-nikki', '[excited] Nikki here! Big day. Every club on the coast is here for the paddle out. Bondi, Bronte, Coogee. Even Leo, Tilly and Sam.'),
       say('bd-stan', 'Stan here. And trouble. The old board on the club wall is gone. The one from 1914. It was meant to lead the paddle out.'),
