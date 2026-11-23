@@ -60,7 +60,7 @@ export const EPISODES = [
     place: { name: 'Katoomba, Blue Mountains', lat: -33.7320, lng: 150.3120 },
     loop: line('pn-sunny', 'A loop! Big cats walk loops round their territory. Or so they say.'),
     early: line('pn-sunny', 'Stop there, no worries. Grab a hot chocolate in Katoomba.'),
-    open: { scene: 'ranges', chapter: 'Katoomba', text: 'Katoomba, high in the Blue Mountains. Cold air, a blue haze over the valley, and three tall rock towers glowing in the morning sun. Start with an easy walk or jog.' },
+    open: { scene: 'ranges', chapter: 'Katoomba', text: 'Katoomba, high in the Blue Mountains. Cold air, a blue haze over the valley, and last night, a bushwalker filmed something black and very big. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is Gundungurra Country, and lower down, Darug Country. People have walked these ridges for many thousands of years.'),
       say('pn-sunny', 'Hi! Sunny here. I lead the Saturday bushwalking club. Last night, one of our walkers sent me a video. You need to see this.'),
@@ -97,7 +97,7 @@ export const EPISODES = [
     place: { name: 'Jamison Valley, Katoomba', lat: -33.7300, lng: 150.3000 },
     loop: line('pn-sunny', 'A loop! Down into the valley, and back up again.'),
     early: line('pn-sunny', 'Stop there, all good. The valley will keep.'),
-    open: { scene: 'bush', chapter: 'The valley', text: 'The floor of the Jamison Valley. Giant tree ferns, mossy rocks, a creek trickling, and cliffs rising far overhead. Start with an easy walk or jog.' },
+    open: { scene: 'bush', chapter: 'The valley', text: 'The floor of the Jamison Valley. Giant tree ferns, mossy rocks, a whipbird cracking in the gloom, and a tuft of black hair on its way to a lab. Start with an easy walk or jog.' },
     steps: [
       say('pn-hart', 'Doctor Hart, vet. I have the hair. It goes to a lab in Sydney. It will take a while. Meanwhile, let us look for more.'),
       quiz('pn-sunny', 'The Scenic Railway brought us down here. How steep is it at its steepest?', ['52 degrees', '5 degrees', '90 degrees'], 'Fifty two degrees. You lean back in your seat, and the valley comes up to meet you.'),
@@ -132,7 +132,7 @@ export const EPISODES = [
     place: { name: 'Lithgow', lat: -33.4820, lng: 150.1570 },
     loop: line('pn-sunny', 'A loop! Like an old zig zag railway. Back and forth, round and up.'),
     early: line('pn-sunny', 'Stop there, all good. Lithgow has great pies.'),
-    open: { scene: 'ranges', chapter: 'Lithgow', text: 'Lithgow, on the western edge of the mountains. An old steel and coal town, cold and bright, with steep hills and big skies. Start with an easy walk or jog.' },
+    open: { scene: 'ranges', chapter: 'Lithgow', text: 'Lithgow, on the western edge of the mountains. An old steel and coal town, a mechanic with a wartime yarn, and a cat that might be a legend. Start with an easy walk or jog.' },
     steps: [
       say('pn-ray', 'G’day. Ray. Mechanic, forty years. My grandad said in the war, some Yank soldiers had a black cat as their mascot. A big one. When they left, so did the cat. Into the bush.'),
       quiz('pn-gwen', 'The Blue Mountains panther has another name. What is it?', ['The Lithgow panther', 'The Sydney tiger', 'The Bathurst lion'], 'The Lithgow panther. Lithgow claims it. So does Penrith. Everyone wants a panther.'),
@@ -168,7 +168,7 @@ export const EPISODES = [
     place: { name: 'Grose Valley, Blackheath', lat: -33.6330, lng: 150.3100 },
     loop: line('pn-sunny', 'A loop! Like a night patrol. Round the camp, quietly.'),
     early: line('pn-sunny', 'Stop there, all good. Hot drinks in the car.'),
-    open: { scene: 'night', chapter: 'Nightfall', text: 'A lookout above the Grose Valley at nightfall. Cliffs drop into blackness. Stars burn overhead. Everyone whispers. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'Nightfall', text: 'A lookout above the Grose Valley at nightfall. Cliffs drop into blackness, a thermal camera hums, and tonight, something warm is out there. Start with an easy walk or jog.' },
     steps: [
       say('pn-sunny', '[whispers] Sunny here. Thermal camera on. Anything warm shows up white. Trees are dark. Animals glow. We stay on the track. We watch. That is all.'),
       say('pn-tyler', '[whispers] White dot. Moving. Hopping. A wallaby. Another one. And a possum up a tree, looking at us.'),
@@ -203,7 +203,7 @@ export const EPISODES = [
     place: { name: 'Three Sisters, Katoomba', lat: -33.7320, lng: 150.3120 },
     loop: line('pn-sunny', 'A loop. Back to Katoomba, where it started.'),
     early: line('pn-sunny', 'Stop there, all good. The Sisters will be here tomorrow.'),
-    open: { scene: 'ranges', chapter: 'The Sisters', text: 'The lookout by the Three Sisters, at sunset. The rock towers glow orange. The valley below is filling with blue shadow. Start with an easy walk or jog.' },
+    open: { scene: 'ranges', chapter: 'The Sisters', text: 'The Three Sisters at sunset. The rock towers glow orange, the lab result is in, and only you can decide what is out in those gullies. Start with an easy walk or jog.' },
     steps: [
       say('pn-sunny', 'Sunny here. Everyone is here. Gwen, Doctor Hart, Tyler, Ray. And Mrs Lee from the café, with Shadow on a lead. Shadow is not impressed.'),
       say('pn-hart', '[curious] The lab result. The hair is from a domestic cat. A feral one. A very big one, by the thickness. Not a panther.'),

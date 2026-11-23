@@ -60,7 +60,7 @@ export const EPISODES = [
     place: { name: 'Anzac Parade, Canberra', lat: -35.2900, lng: 149.1440 },
     loop: line('cb-ash', 'A loop! Griffin loved circles too. The whole city is full of them.'),
     early: line('cb-ash', 'Stop there, no worries. The clues will wait.'),
-    open: { scene: 'city', chapter: 'Anzac Parade', text: 'Canberra, on a crisp spring morning. A wide red avenue runs straight towards the lake, with a mountain behind and a hill with a flagpole ahead. Start with an easy walk or jog.' },
+    open: { scene: 'city', chapter: 'Anzac Parade', text: 'Canberra, a crisp spring morning. A red avenue runs straight as a ruler to the lake, and a retired teacher has hidden a puzzle all along it. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is Ngunnawal Country. Long before any plan was drawn, people met and travelled across these plains and hills.'),
       say('cb-ash', 'Hi! Ash here. I study maps. This week there is a puzzle hunt for charity, set by a retired surveyor called Marg. Five clues. The first is in my hand.'),
@@ -97,7 +97,7 @@ export const EPISODES = [
     place: { name: 'Lake Burley Griffin, Canberra', lat: -35.2950, lng: 149.1180 },
     loop: line('cb-ash', 'A loop! The lake has a path all the way round. Perfect.'),
     early: line('cb-ash', 'Stop there, all good. Sit and watch the rowers.'),
-    open: { scene: 'bayside', chapter: 'The lake', text: 'Lake Burley Griffin, early morning. Mist on the water, rowing boats sliding past, and black swans paddling by the shore. Start with an easy walk or jog.' },
+    open: { scene: 'bayside', chapter: 'The lake', text: 'Lake Burley Griffin, early morning. Mist on the water, rowing boats sliding through it, and a clue that only works from the middle of the lake. Start with an easy walk or jog.' },
     steps: [
       say('cb-ash', 'Ash here. The plate said 310 and pointed west. Nina has a theory.'),
       say('cb-nina', '[excited] 310 metres! That is how long the bridge is! So walk west 310 metres from the end of it!'),
@@ -132,7 +132,7 @@ export const EPISODES = [
     place: { name: 'National Carillon, Canberra', lat: -35.2980, lng: 149.1390 },
     loop: line('cb-ash', 'A loop! Like a peal of bells. Round and round.'),
     early: line('cb-ash', 'Stop there, all good. The bells play again tomorrow.'),
-    open: { scene: 'bayside', chapter: 'The island', text: 'A footbridge to a small island in Lake Burley Griffin. A tall white tower rises above the trees, and a bell ringer waves from the top. Start with an easy walk or jog.' },
+    open: { scene: 'bayside', chapter: 'The island', text: 'A footbridge to a little island in the lake. A tall white tower full of bells, and at noon, they will play a tune that is really a code. Start with an easy walk or jog.' },
     steps: [
       say('cb-ash', 'Ash here. Marg says, the bells will tell you how many. How many what? Nina?'),
       quiz('cb-nina', 'How many bells are in the National Carillon?', ['53', '5', '530'], 'Fifty three bronze bells. A gift from the British Government in 1970.'),
@@ -169,7 +169,7 @@ export const EPISODES = [
     place: { name: 'Captain Cook Memorial Jet, Canberra', lat: -35.2915, lng: 149.1290 },
     loop: line('cb-ash', 'A loop! Like water going up, and coming back down.'),
     early: line('cb-ash', 'Stop there, no worries. Stay dry.'),
-    open: { scene: 'bayside', chapter: 'Regatta Point', text: 'Regatta Point, on the lake shore. Out in the water, a huge white jet shoots straight up into the sky and falls back as mist. Start with an easy walk or jog.' },
+    open: { scene: 'bayside', chapter: 'Regatta Point', text: 'Regatta Point. Out on the lake, a giant jet of water shoots higher than a tower, the wind is turning, and the next clue sits right under the spray. Start with an easy walk or jog.' },
     steps: [
       say('cb-ash', 'Ash here. The jet. And the wind is blowing straight at us. This is going to be wet.'),
       quiz('cb-ash', 'The Captain Cook Memorial Jet was built in which year?', ['1970', '1770', '1913'], '1970. Two hundred years after Captain Cook sailed up the east coast.'),
@@ -205,7 +205,7 @@ export const EPISODES = [
     place: { name: 'Capital Hill, Canberra', lat: -35.3082, lng: 149.1244 },
     loop: line('cb-ash', 'A loop. Griffin would be proud. Everything comes back round.'),
     early: line('cb-ash', 'Stop there, all good. The view will wait.'),
-    open: { scene: 'city', chapter: 'Capital Hill', text: 'Capital Hill, Canberra. A huge flagpole, a grassy roof you can walk on, and teams in puzzle hunt shirts gathering on the lawns. Start with an easy walk or jog.' },
+    open: { scene: 'city', chapter: 'Capital Hill', text: 'Capital Hill, Canberra. A giant flagpole, a grassy roof you can walk on, every team in the hunt, and the last clue of the Griffin Code. Start with an easy walk or jog.' },
     steps: [
       say('cb-marg', '[laughs] Welcome, everyone! Marg here. Last clue. Stand where the name was spoken. Look north, along the line. Tell me what you see.'),
       say('cb-ash', 'Ash here. Look north. Straight down the land axis. Over the lake. Up the red avenue. To the War Memorial. And Mount Ainslie behind.'),
