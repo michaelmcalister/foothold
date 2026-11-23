@@ -61,7 +61,7 @@ export const EPISODES = [
     place: { name: 'Boulia, Queensland', lat: -22.9120, lng: 139.9090 },
     loop: line('mm-lila', 'A loop! Like the light. Seen here, then there, then back.'),
     early: line('mm-lila', 'Stop there, all good. Find some shade and a cold drink.'),
-    open: { scene: 'outback', chapter: 'Boulia', text: 'Boulia, in the far west of Queensland. Red earth, a wide sky, and a main street where everyone waves. Start with an easy walk or jog.' },
+    open: { scene: 'outback', chapter: 'Boulia', text: 'Boulia, far western Queensland. Red earth, a sky that never ends, and a light that followed the mail truck for twenty kilometres last night. Start with an easy walk or jog.' },
     steps: [
       say(null, 'The town’s name comes from bool-yo, a waterhole in the Pitta Pitta language. Their Country, and their stories, go back a very long way.'),
       say('mm-lila', 'Hi! Lila here. I study stars at uni. I have a van, six cameras and a lot of questions. People say there is a light out here. I want to see it.'),
@@ -99,7 +99,7 @@ export const EPISODES = [
     place: { name: 'Burke River, Boulia', lat: -22.9050, lng: 139.9000 },
     loop: line('mm-lila', 'A loop! Like the river channels. They wind around and join up.'),
     early: line('mm-lila', 'Stop there, all good. The river is not going anywhere. Well, it is. Slowly.'),
-    open: { scene: 'outback', chapter: 'The Burke River', text: 'The Burke River, by Boulia. Usually a string of dry channels and waterholes. Today, brown water creeps along, and the birds have gone wild. Start with an easy walk or jog.' },
+    open: { scene: 'outback', chapter: 'The Burke River', text: 'The Burke River at Boulia. Dry channels are filling with floodwater, and a nine year old swears a green light bounced over the far bank. Start with an easy walk or jog.' },
     steps: [
       say('mm-lila', 'Lila here. Meet Jack. He is nine. He lives on a station two hours out. He does school by computer, and he saw a light.'),
       say('mm-jack', '[excited] Hi! It was over the river. Green and white. It bounced. Then it went out. Mum said go to bed. I did not.'),
@@ -137,7 +137,7 @@ export const EPISODES = [
     place: { name: 'Boulia race track', lat: -22.9200, lng: 139.9150 },
     loop: line('mm-lila', 'A loop! Like the race track. Camels go round, you go round.'),
     early: line('mm-lila', 'Stop there, all good. Come watch the camels.'),
-    open: { scene: 'festival', chapter: 'Race day', text: 'Camel race weekend in Boulia. Dust, music, a crowd ten times the size of the town, and camels grumbling in the yards. Start with an easy walk or jog.' },
+    open: { scene: 'festival', chapter: 'Race day', text: 'Camel race weekend in Boulia. Dust, a crowd ten times the size of the town, a grumpy camel called Doris, and six cameras on the sky. Start with an easy walk or jog.' },
     steps: [
       say('mm-lila', '[excited] Lila here! The town is packed. And I have six cameras on the track. If the light comes tonight, we will catch it.'),
       say('mm-vern', 'G’day, Vern. I train camels. This is Doris. She is fast, she is grumpy, and she spits. Stand to the side, love.'),
@@ -175,7 +175,7 @@ export const EPISODES = [
     place: { name: 'Boulia plain', lat: -22.9300, lng: 139.8800 },
     loop: line('mm-lila', 'A loop! Like light bending round and coming back.'),
     early: line('mm-lila', 'Stop there, all good. Grab a jumper. Desert nights are cold.'),
-    open: { scene: 'night', chapter: 'The plain', text: 'The plain outside Boulia, just after sunset. The day was baking. Now the air is cold and very, very still. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'The plain', text: 'The plain outside Boulia, just after sunset. Hot ground, cold air, no wind. Tonight, the Min Min might just show itself on purpose. Start with an easy walk or jog.' },
     steps: [
       say('mm-lila', 'Lila here. Tonight is perfect for my idea. Hot ground, cold air on top, no wind. Light can bend in air like that.'),
       quiz('mm-lila', 'A mirage that lifts far away things above the horizon has an Italian name. What is it?', ['Fata Morgana', 'Spaghetti Lux', 'Bella Notte'], 'Fata Morgana. Named after a sorceress from old legends. Sailors saw ships floating in the sky.'),
@@ -212,7 +212,7 @@ export const EPISODES = [
     place: { name: 'Min Min Encounter, Boulia', lat: -22.9110, lng: 139.9100 },
     loop: line('mm-lila', 'A loop. Like a story told around a campfire. It always comes back.'),
     early: line('mm-lila', 'Stop there, all good. The sky will be here tomorrow night.'),
-    open: { scene: 'night', chapter: 'Last night', text: 'The edge of Boulia, on the last night. A campfire, a ring of camp chairs, Doris in her yard, and a sky so full of stars it looks like spilt sugar. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'Last night', text: 'The edge of Boulia, the last night. A campfire, a ring of camp chairs, a sky full of stars, and one light nobody can explain. Start with an easy walk or jog.' },
     steps: [
       say('mm-lila', 'Lila here. Thank you, everyone. Col, Jack, Vern, Doris, Bree and Kai. Here is what we learned.'),
       say('mm-lila', 'A far truck. A solar pump. A drone. And a mirage that can lift headlights over the horizon. Four lights, four answers.'),

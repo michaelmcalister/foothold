@@ -62,7 +62,7 @@ export const EPISODES = [
     place: { name: 'Fremantle Prison', lat: -32.0551, lng: 115.7531 },
     loop: line('ct-niamh', 'A loop! Like the exercise yard. Round and round.'),
     early: line('ct-niamh', 'Stop there, no bother. The walls will still be here tomorrow.'),
-    open: { scene: 'city', chapter: 'The prison', text: 'Fremantle, Western Australia. High pale limestone walls, a gatehouse with a clock, and a warm morning breeze. Start with an easy walk or jog.' },
+    open: { scene: 'city', chapter: 'The prison', text: 'Fremantle Prison at opening time. In 1876, six Irish prisoners walked out of these limestone walls and sailed away. Today, the trail starts here. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is Walyalup, Whadjuk Noongar Country. In 1876, six Irish prisoners walked out of these walls and into one of the boldest escapes in history.'),
       say('ct-niamh', 'Hello, Runner! Niamh here. I give tours of the prison. This week it is the escape’s anniversary, and Mr Doyle has set a treasure trail. Five clues.'),
@@ -100,7 +100,7 @@ export const EPISODES = [
     place: { name: 'The Round House, Fremantle', lat: -32.0566, lng: 115.7413 },
     loop: line('ct-niamh', 'A loop! Like the Round House. No corners to hide in.'),
     early: line('ct-niamh', 'Stop there, no bother. Get a coffee on the Cappuccino Strip.'),
-    open: { scene: 'harbour', chapter: 'The Round House', text: 'Arthur Head, Fremantle. A small stone building with many sides sits on the headland. Below it, the sea glitters. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'The Round House', text: 'Arthur Head, Fremantle. A little stone jail with twelve sides, a tunnel cut through the rock below it, and a clue hidden in between. Start with an easy walk or jog.' },
     steps: [
       say('ct-niamh', 'Niamh here. The Round House. It was a jail too, long before the big prison. Eight cells, and a jailer’s house.'),
       quiz('ct-grace', 'The Round House is the oldest building left in Western Australia. When was it built?', ['1830 to 1831', '1930 to 1931', '1876'], 'Just a year or two after the colony began. Older than anything else still standing here.'),
@@ -137,7 +137,7 @@ export const EPISODES = [
     place: { name: 'Rockingham Beach', lat: -32.2770, lng: 115.7290 },
     loop: line('ct-niamh', 'A loop! Like a rowing crew coming back to the beach.'),
     early: line('ct-niamh', 'Stop there, no bother. Watch the boats from the sand.'),
-    open: { scene: 'beachdawn', chapter: 'Rockingham', text: 'Rockingham Beach, south of Fremantle. Calm blue water, a long jetty, and wooden rowing boats lined up on the sand. Start with an easy walk or jog.' },
+    open: { scene: 'beachdawn', chapter: 'Rockingham', text: 'Rockingham Beach. Calm blue water, a long jetty, and six whaleboats lined up to race, just like the morning of the escape in 1876. Start with an easy walk or jog.' },
     steps: [
       say('ct-niamh', 'Niamh here. This is where the six men were brought on the morning of the escape. A whaleboat was waiting.'),
       say('ct-tommo', 'G’day. Tommo, rowing club. Today we race replica whaleboats out to a buoy and back. Mr Doyle’s fourth clue is with the winning crew.'),
@@ -174,7 +174,7 @@ export const EPISODES = [
     place: { name: 'Fremantle Fishing Boat Harbour', lat: -32.0600, lng: 115.7470 },
     loop: line('ct-niamh', 'A loop! Like a yacht tacking back and forth.'),
     early: line('ct-niamh', 'Stop there, no bother. The boats will be out all afternoon.'),
-    open: { scene: 'harbour', chapter: 'The boat harbour', text: 'Fremantle’s fishing boat harbour. Masts clink, gulls wheel, and out in the bay two old boats get ready to race. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'The boat harbour', text: 'Fremantle’s fishing boat harbour. Masts clinking, gulls wheeling, and two boats about to replay a chase from 1876, warning shot and all. Start with an easy walk or jog.' },
     steps: [
       say('ct-niamh', 'Niamh here. Two boats. One plays the Catalpa, a tall sailing ship. One plays the Georgette, an old steamer. It is all in fun.'),
       quiz('ct-grace', 'The real Georgette chased the Catalpa on which date in 1876?', ['19 April', '17 August', '1 January'], 'The 19th of April. Two days after the escape. It fired a warning shot across the bow.'),
@@ -210,7 +210,7 @@ export const EPISODES = [
     place: { name: 'Victoria Quay, Fremantle', lat: -32.0530, lng: 115.7430 },
     loop: line('ct-niamh', 'A loop! Every trail comes home.'),
     early: line('ct-niamh', 'Stop there, all good. Come for the party later.'),
-    open: { scene: 'festival', chapter: 'Victoria Quay', text: 'Victoria Quay, Fremantle, at sunset. A crowd, a stage, a fiddle band tuning up, and the smell of fish and chips. Start with an easy walk or jog.' },
+    open: { scene: 'festival', chapter: 'Victoria Quay', text: 'Victoria Quay at sunset. A crowd, a stage, a fiddle band tuning up, and two rival teams racing for the last clue of the Catalpa trail. Start with an easy walk or jog.' },
     steps: [
       say('ct-niamh', '[curious] Niamh here. The Irish words say, where the six sailed past at last, the old man waits with the green and gold.'),
       say('ct-grace', 'Green and gold. A flag? But where did they sail past at last?'),

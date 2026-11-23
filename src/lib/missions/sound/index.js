@@ -21,8 +21,10 @@ import { SHEET as sydney } from './sydney.js'
 import { SHEET as penrith } from './penrith.js'
 import { SHEET as tiger } from './tiger.js'
 import { SHEET as mahogany } from './mahogany.js'
+import { SHEET as catalpa } from './catalpa.js'
+import { SHEET as minmin } from './minmin.js'
 
-export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany]
+export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each
