@@ -17,8 +17,9 @@
 //   episodes  { episodeId: { beatIndex: { scene, fx, spatial } } }
 import { SHEET as bondi } from './bondi.js'
 import { SHEET as druitt } from './druitt.js'
+import { SHEET as sydney } from './sydney.js'
 
-export const SHEETS = [bondi, druitt]
+export const SHEETS = [bondi, druitt, sydney]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each

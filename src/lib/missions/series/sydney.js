@@ -107,7 +107,7 @@ export const EPISODES = [
     loop: line('sd-ivy', 'A loop! Bradfield wanted the trains to run in loops under here too. You finished yours.'),
     early: line('sd-ivy', 'Stopping there is fine. The tunnels have kept their secrets for a hundred years. They can wait.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Hyde Park', scene: 'city', say: 'Sydney, near midnight. The fig trees in Hyde Park are full of fruit bats, and the city hums. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Hyde Park', scene: 'city', say: 'Sydney, near midnight. Fruit bats squabble in the Hyde Park figs, and from somewhere under the city, a bell is ringing where no one can reach it. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'Hi, it is Ivy, from the Under Sydney podcast. I need a runner tonight. Three nights in a row, people on Macquarie Street have heard a bell. At midnight. Underground.' },
       { at: 110, kind: 'story', who: 'sd-ivy', say: '[whispers] There is nothing down there but old railway tunnels. Sealed. Nobody goes in. So who is ringing the bell?' },
       { at: 165, kind: 'quiz', who: 'sd-ivy', say: 'Warm up question. St James station opened in 1926. What was it, along with Museum?',
@@ -169,7 +169,7 @@ export const EPISODES = [
     loop: line('sd-sam', 'You ran a loop, mate. Like a ferry. Out and back, every time.'),
     early: line('sd-ivy', 'That is fine to stop there. The harbour has waited eighty years for this story. It can wait a day.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Bradleys Head', scene: 'harbour', say: 'Mosman, on a still winter night. From Bradleys Head, the Opera House and the Bridge glitter across the black water. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Bradleys Head', scene: 'harbour', say: 'Mosman, a still winter night. The Bridge glitters across the water, and out there, in 1942, a midget submarine slipped in and vanished. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'Ivy again. New episode. On the night of 31 May 1942, three tiny Japanese submarines crept into Sydney Harbour. One of them was never seen again.' },
       { at: 110, kind: 'story', who: 'sd-sam', fx: 'horn', say: 'G’day! Sam, deckhand on the Manly ferry. Ivy says you are a runner. I am a talker. Between us we will get this done.' },
       { at: 165, kind: 'story', who: 'sd-ivy', say: 'That submarine was called M24. It slipped in behind a Manly ferry, right through the harbour defences. Right past where you are running.' },
@@ -230,7 +230,7 @@ export const EPISODES = [
     loop: line('sd-ivy', 'A loop! Round and back, like a rat with a button. Very efficient.'),
     early: line('sd-june', 'Rest up, love. Bridget has waited a long time. She can wait a little more.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Macquarie Street', scene: 'city', say: 'Macquarie Street, on a warm night. The old sandstone of the Hyde Park Barracks glows under the streetlights. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Macquarie Street', scene: 'city', say: 'Macquarie Street, a warm night. Under the floors of the old convict barracks, rats hid a secret for over a hundred years. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'Ivy here. Last episode. Tonight’s mystery was hidden by rats. Lots of rats. For over a hundred years.' },
       { at: 105, kind: 'story', who: 'sd-june', say: 'Hello, dear. June. I volunteer at the Barracks. In 1979, builders lifted the old floorboards here, and found a treasure trove. In the rats’ nests.' },
       { at: 160, kind: 'quiz', who: 'sd-june', say: 'Guess how many things came out from under those floors?',
@@ -291,7 +291,7 @@ export const EPISODES = [
     loop: line('sd-sam', 'A loop! Like the ferry. Manly and back, all day long.'),
     early: line('sd-ivy', 'That is fine to stop there. The rocks have kept these messages for nearly two hundred years.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Manly', scene: 'harbour', say: 'Manly, at dusk. The last ferries churn in and out, and North Head rises dark against the sea. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Manly', scene: 'harbour', say: 'Manly at dusk. The last ferries churn past North Head, where a thousand messages are carved in the rock, and one is waiting for you. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', who: 'sd-sam', fx: 'horn', say: 'Sam here! Off shift, and I need your legs. My family has a legend. Great grandad Joe carved a kangaroo on a rock at North Head. In 1919.' },
       { at: 110, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'And I need a story. North Head was Sydney’s quarantine station. Ships with sickness on board stopped here, and everyone waited it out.' },
       { at: 165, kind: 'quiz', who: 'sd-ivy', say: 'Warm up. The quarantine station opened in 1832. When did it finally close?',
@@ -354,7 +354,7 @@ export const EPISODES = [
     loop: line('sd-ivy', 'You closed a loop. Round the harbour and home. Perfect finale.'),
     early: line('sd-ivy', 'Stopping there is fine. The fort has stood since 1857. It will wait for you.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'Farm Cove', scene: 'harbour', say: 'The Royal Botanic Garden, near midnight. Across Farm Cove, the Opera House glows, and out in the water sits a small stone fort. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'Farm Cove', scene: 'harbour', say: 'The Botanic Garden, near midnight. The Opera House glows across Farm Cove, and out on Pinchgut, an old fort is about to wake the whole city. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', fx: 'boom', say: 'Then, from the harbour, a deep BOOM. It rolls off the water and rattles the windows along the shore. Every bat in the garden takes off.' },
       { at: 100, kind: 'story', who: 'sd-ivy', fx: 'squelch', say: 'Ivy! Did you hear that? That came from Fort Denison. Our finale just walked in the door. Run to Mrs Macquarie’s Chair and tell me what you see.' },
       { at: 160, kind: 'quiz', who: 'sd-ivy', say: 'While you go. Fort Denison has an old nickname from 1788, when a convict was left there on bread and water. What is it?',
