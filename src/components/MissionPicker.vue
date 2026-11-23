@@ -19,7 +19,7 @@ import { placeOf, storiesNear, distanceLabel, locateMe } from '../lib/missions/p
 import StoryRequest from './StoryRequest.vue'
 import CoverArt from './CoverArt.vue'
 import { playable, plusBadge, canSell, startCheckout } from '../lib/plus.js'
-import { toast } from '../lib/store.js'
+import { toast, store } from '../lib/store.js'
 import { STORY_SEASON } from '../lib/storySeason.js'
 
 const model = defineModel({ type: String, default: null })
@@ -28,7 +28,16 @@ const progress = ref(loadProgress())
 // The season finale opens for everyone together (lib/storySeason.js)
 const seasonInfo = ref(null)
 api.storySeason?.().then((x) => { seasonInfo.value = x }).catch(() => {})
+// Admins can open every story, to test it (and Play it through from here)
+const admin = computed(() => !!store.user?.admin)
+const emit = defineEmits(['playthrough'])
+function playThrough(id) {
+  model.value = id
+  close()
+  emit('playthrough', id) // still inside the tap, so the phone lets the sound start
+}
 const unlocked = computed(() => {
+  if (admin.value) return new Set(MISSIONS.map((m) => m.id))
   const ids = unlockedIds(progress.value)
   if (!seasonInfo.value?.finaleOpen) ids.delete(STORY_SEASON.finaleMission)
   return ids
@@ -256,6 +265,10 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
                   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" /></svg>
                   {{ model === preview.id ? 'Keep this mission' : 'Run this mission' }}
                 </button>
+                <button v-if="admin" type="button" class="mb-play mb-auto" @click="playThrough(preview.id)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5v14l8-7zm8 0v14l8-7z" fill="currentColor" /></svg>
+                  Play it through
+                </button>
                 <p v-else class="mb-locked">
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 10V8a5 5 0 0110 0v2h1v10H6V10zm2 0h6V8a3 3 0 00-6 0z" fill="currentColor" /></svg>
                   <template v-if="preview.id === STORY_SEASON.finaleMission">{{ finaleNote }}</template>
@@ -428,6 +441,7 @@ const teaser = [missionById('ember-wind'), missionById('heist-gala'), missionByI
   background: #fff; color: #0B0D12; font: inherit; font-weight: 850; font-size: 1.05rem; cursor: pointer;
 }
 .mb-play:active { transform: scale(0.98); }
+.mb-auto { background: rgba(255, 255, 255, 0.14); color: #fff; margin-top: 8px; }
 .mb-locked { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 52px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); font-weight: 700; }
 .norun {
   display: block; margin: 10px 16px 0; padding: 10px 0; border: 0; background: none; color: rgba(244, 246, 250, 0.75);

@@ -26,7 +26,7 @@ import { billingRoute, handleStripeWebhook, premiumConfig, premiumOn, planOf, ca
 import { pushRoute, pushConfig, pushWaiting, DEFAULT_PREFS as DEFAULT_PUSH } from './push.js'
 import { cleanRoute, MAX_ROUTES } from '../src/lib/planner.js'
 import { cleanCheckin } from '../src/lib/coach/checkin.js'
-import { handleAudio } from './audioLibrary.js'
+import { handleAudio, warmLibrary } from './audioLibrary.js'
 import { handleTts, ttsConfig } from './tts.js'
 import { handleElevation } from './elevation.js'
 import { handleRoute } from './routing.js'
@@ -761,7 +761,8 @@ export default {
   async scheduled(event, env, ctx) {
     const now = Number(event?.scheduledTime) || Date.now()
     // Every 15 minutes: push waiting notices. On the hour: the game's jobs first.
-    const jobs = event?.cron === '*/15 * * * *' ? Promise.resolve() : runCron(env, now)
+    // Every 15 minutes, a few new story sounds get made ahead of their first run
+    const jobs = event?.cron === '*/15 * * * *' ? warmLibrary(env).catch((e) => reportError(env, null, e, 'warm sounds')) : runCron(env, now)
     ctx.waitUntil(jobs.then(() => pushWaiting(env, now)).catch((e) => reportError(env, null, e, 'cron')))
   },
 }

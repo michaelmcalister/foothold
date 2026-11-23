@@ -2,6 +2,7 @@
 // up and unlock in order, every speaker, effect, scene and spatial sound
 // exists, the house rules for words, and its sound kit builds cleanly on a
 // fake AudioContext.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, unlockedBy, sagaById } from '../src/lib/missions/scripts.js'
 import { SAGA, EPISODES, CHAIN, CAST as VCAST, LIBRARY, LOOK } from '../src/lib/missions/series/velocity.js'
@@ -114,7 +115,7 @@ describe('Velocity: the series', () => {
     for (const m of eps) {
       for (const l of lines(m)) expect(isCast(l.who), `${m.id}: ${l.text}`).toBe(true)
       for (const b of m.beats) {
-        if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
+        if (b.fx) expect(canSting(b.fx), `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
         if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.at} ${b.scene}`).toBeTruthy()
         if (b.spatial) expect(SPATIAL[b.spatial], `${m.id} ${b.at} ${b.spatial}`).toBeTruthy()
       }

@@ -108,7 +108,7 @@ function sayLine(line) {
   const s = scape
   // Alongside Spotify the run's sound mode follows the silent switch, so a
   // line's effect plays inside the voice's announcement, which doesn't
-  if (fx && s && STINGS[fx]) enqueue(() => (runSessionKind() === 'ambient' ? asAnnouncement(() => s.sting(fx)) : s.sting(fx)))
+  if (fx && s && s.canSting(fx)) enqueue(() => (runSessionKind() === 'ambient' ? asAnnouncement(() => s.sting(fx)) : s.sting(fx)))
   if (!text || !audio.voice) return
   const radio = CAST[who]?.radio && s
   const play = async () => {
@@ -118,6 +118,18 @@ function sayLine(line) {
   }
   // alongside Spotify, the radio sounds share the voice's announcement (see above)
   enqueue(() => spotify.aroundSpeech(() => (radio && runSessionKind() === 'ambient' ? asAnnouncement(play) : play()), { how: audio.music, duckTo: audio.duckTo }))
+}
+
+/** Every effect an episode's beats and answers can call for. Pure. */
+export function beatFx(script) {
+  const out = []
+  const add = (l) => { if (l && typeof l === 'object' && l.fx) out.push(l.fx) }
+  for (const b of script?.beats || []) {
+    if (b.fx) out.push(b.fx)
+    for (const k of ['right', 'wrong', 'timeout', 'success', 'okay', 'half', 'say']) add(b[k])
+    for (const o of b.options || []) add(o.say)
+  }
+  return [...new Set(out)]
 }
 
 /** The title card, "Previously on" and "Next time on" lines for a thriller episode. */
@@ -364,6 +376,7 @@ function startMission(script) {
     // get the episode's recorded scenes ready while the title music plays
     const ctx = sfx.context()
     if (scape && ctx) for (const n of new Set(script.beats.map((b) => b.scene).filter((x) => x && AMBIENCE[x]))) loadBuffer(ctx, 'ambience', n)
+    scape?.preload(beatFx(script)) // and its recorded cues
     episode = episodeLines(script, saga)
     // the cold open: title music, the episode's title, and what happened last time
     const s = scape

@@ -78,3 +78,35 @@ export async function handleAudio(req, env, kind, id, { fetcher = fetch } = {}) 
   await env.AUDIO.put(key, audio, { httpMetadata: { contentType: 'audio/mpeg' } })
   return new Response(audio, { headers: audioHeaders })
 }
+
+/**
+ * The quarter-hour cron: make a few library sounds nobody has asked for yet,
+ * so a new story's ambience and effects are ready before its first run
+ * (each is made once, ever, and kept in R2). Returns the ids it made.
+ */
+export async function warmLibrary(env, { fetcher = fetch, max = 6 } = {}) {
+  if (!env.AUDIO || !env.ELEVENLABS_API_KEY) return []
+  const made = []
+  const want = [...Object.keys(AMBIENCE).map((id) => ['ambience', id]), ...Object.keys(SFX).map((id) => ['sfx', id]), ...Object.keys(TRACKS).map((id) => ['track', id])]
+  for (const [kind, id] of want) {
+    if (made.length >= max) break
+    const key = `${kind}/${id}.mp3`
+    if (await env.AUDIO.head(key)) continue
+    const pending = await env.AUDIO.head(`${key}.pending`)
+    if (pending && Date.now() - pending.uploaded.getTime() < PENDING_MS) continue
+    await env.AUDIO.put(`${key}.pending`, '1')
+    let audio = null
+    try {
+      audio = kind === 'track' ? await makeTrack(env, fetcher, id) : await makeAmbience(env, fetcher, id, kind === 'sfx')
+    } catch (e) {
+      await env.AUDIO.delete(`${key}.pending`)
+      if (e?.status === 401 || e?.status === 403) break // the key can't make sounds: stop for this run
+      continue
+    }
+    await env.AUDIO.delete(`${key}.pending`)
+    if (!audio) continue
+    await env.AUDIO.put(key, audio, { httpMetadata: { contentType: 'audio/mpeg' } })
+    made.push(`${kind}/${id}`)
+  }
+  return made
+}

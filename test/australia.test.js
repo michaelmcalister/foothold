@@ -3,6 +3,7 @@
 // recapped and teased, set in real places, full of trivia whose replies name
 // the answer, one choice per episode sending each branch to its own surge,
 // speakers and sounds that exist, kind surge lines, and a cover each.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, sagaById, unlockedBy } from '../src/lib/missions/scripts.js'
 import { CAST } from '../src/lib/missions/cast.js'
@@ -79,7 +80,7 @@ describe('the Australia wide series', () => {
           expect(m.beats.some((b) => b.spatial), m.id).toBe(true)
           for (const b of m.beats) {
             if (b.who) expect(CAST[b.who], `${m.id} ${b.who}`).toBeTruthy()
-            if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.fx}`).toBeTruthy()
+            if (b.fx) expect(canSting(b.fx), `${m.id} ${b.fx}`).toBeTruthy()
             if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.scene}`).toBeTruthy()
             if (b.spatial) expect(SPATIAL[b.spatial], `${m.id} ${b.spatial}`).toBeTruthy()
           }

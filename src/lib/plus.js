@@ -11,7 +11,7 @@ import { canPlay, needsPlus } from './plans.js'
 export const premium = () => serverConfig?.premium || null
 export const hasPlus = () => store.user?.plan === 'plus'
 /** Can this player run this mission now? */
-export const playable = (mission) => canPlay(mission, { premium: premium(), plan: store.user?.plan || 'free' })
+export const playable = (mission) => !!store.user?.admin || canPlay(mission, { premium: premium(), plan: store.user?.plan || 'free' }) // admins test everything
 /** Show the Plus badge on this mission? */
 export const plusBadge = (mission) => !!premium()?.on && needsPlus(mission) && !hasPlus()
 /** May this screen offer to sell Plus? Only on the website, and only when payments are set up. */

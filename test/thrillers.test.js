@@ -2,6 +2,7 @@
 // script rules, the engine passing speakers and effects through, the lines
 // gathered before a run, the server's cast voices, and the soundscape
 // (scenes, effects and the score) on a fake AudioContext.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -80,7 +81,7 @@ describe('thriller scripts', () => {
       expect(isCast(narrator)).toBe(true)
       for (const l of speakers(m)) expect(isCast(l.who || narrator), `${m.id}: ${l.text}`).toBe(true)
       for (const b of m.beats) {
-        if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
+        if (b.fx) expect(canSting(b.fx), `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
         if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.at} ${b.scene}`).toBeTruthy()
       }
       expect(m.beats[0].scene, `${m.id} sets a scene at the start`).toBeTruthy()

@@ -2,6 +2,7 @@
 // episodes that unlock in order and build up, every effect, scene and
 // spatial sound exists, every speaker is in the cast, the writing rules, and
 // the kit's stings and scenes build cleanly on a fake AudioContext.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, unlockedBy, sagaById } from '../src/lib/missions/scripts.js'
 import { lineText } from '../src/lib/missions/engine.js'
@@ -83,7 +84,7 @@ describe('Deep Cover', () => {
       expect(m.beats[0].scene, m.id).toBeTruthy()
       expect(m.beats.at(-1).kind, m.id).toBe('finale')
       for (const b of m.beats) {
-        if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
+        if (b.fx) expect(canSting(b.fx), `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
         if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.at} ${b.scene}`).toBeTruthy()
         if (b.spatial) expect(SPATIAL[b.spatial], `${m.id} ${b.at} ${b.spatial}`).toBeTruthy()
       }

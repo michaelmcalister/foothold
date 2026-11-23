@@ -254,6 +254,13 @@ async function autoBegin() {
   const from = { lat: store.centre.lat, lng: store.centre.lng }
   startAuto({ start: from, mode: mode.value, begin: () => begin({ sim: true }), leg: () => maker.leg?.ring || null, onDone: autoFinish })
 }
+// Play it through, straight from the story list (admins)
+function pickedPlayThrough(id) {
+  if (!store.located) return toast('Waiting for your location. Try again in a moment.')
+  maker.ready = null // a picked episode, not a made story
+  missionId.value = id
+  autoBegin()
+}
 function autoFinish() {
   dropLegRoute()
   stopAuto()
@@ -525,7 +532,7 @@ onBeforeUnmount(() => {})
           </div>
         </div>
         <StoryMaker v-if="mode !== 'ride' && !isLocal" />
-        <MissionPicker v-if="mode !== 'ride'" v-model="missionId" />
+        <MissionPicker v-if="mode !== 'ride'" v-model="missionId" @playthrough="pickedPlayThrough" />
         <GroupRun v-if="mode !== 'ride' && !isLocal && (missionId || groupCode)" v-model:mission-id="missionId" :join-code="groupCode" @go="begin" />
         <GhostPicker v-model="ghostPick" :mode="mode" :here="store.located ? store.centre : null" :route="plannedRing ? planned.route : null" :usual-pace="usual" />
         <div v-if="error" class="notice bad">{{ error }}</div>

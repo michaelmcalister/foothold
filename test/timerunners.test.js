@@ -3,6 +3,7 @@
 // they name exists, each episode opens and closes on the time warp jump, the
 // cast uses each voice once, the kit's stings, scenes and spatial sounds
 // build cleanly on a fake AudioContext, and the covers and recordings are in.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, sagaById, unlockedBy } from '../src/lib/missions/scripts.js'
 import { CAST, isCast } from '../src/lib/missions/cast.js'
@@ -93,7 +94,7 @@ describe('Time Runners: the episodes', () => {
   it('every sound, scene and speaker it names exists', () => {
     for (const m of eps) {
       for (const b of m.beats) {
-        if (b.fx) expect(STINGS[b.fx], `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
+        if (b.fx) expect(canSting(b.fx), `${m.id} ${b.at} ${b.fx}`).toBeTruthy()
         if (b.scene) expect(SCENES[b.scene], `${m.id} ${b.at} ${b.scene}`).toBeTruthy()
         if (b.spatial) expect(SPATIAL[b.spatial], `${m.id} ${b.at} ${b.spatial}`).toBeTruthy()
       }

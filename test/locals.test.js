@@ -4,6 +4,7 @@
 // chained, names only sounds, scenes and speakers that exist, is full of
 // trivia whose replies name the answer, sends each choice to exactly one
 // surge, records its new sounds, and has a cover and a look.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, sagaById, unlockedBy } from '../src/lib/missions/scripts.js'
 import { CAST } from '../src/lib/missions/cast.js'
@@ -55,7 +56,7 @@ describe('the Sydney local stories', () => {
 
   it('only use sounds, scenes and speakers that exist', () => {
     for (const id of NEW) for (const b of ep(id).beats) {
-      if (b.fx) expect(STINGS[b.fx], `${id} ${b.fx}`).toBeTruthy()
+      if (b.fx) expect(canSting(b.fx), `${id} ${b.fx}`).toBeTruthy()
       if (b.scene) expect(SCENES[b.scene], `${id} ${b.scene}`).toBeTruthy()
       if (b.spatial) expect(SPATIAL[b.spatial], `${id} ${b.spatial}`).toBeTruthy()
       if (b.who) expect(CAST[b.who], `${id} ${b.who}`).toBeTruthy()

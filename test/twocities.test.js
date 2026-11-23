@@ -3,6 +3,7 @@
 // exists, the trivia replies name the answer, each choice leads to exactly
 // one surge, the kit builds on a fake AudioContext, and the cover, look and
 // recordings are all in.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, sagaById, unlockedBy } from '../src/lib/missions/scripts.js'
 import { SAGA, EPISODES, CHAIN, CAST } from '../src/lib/missions/series/twocities.js'
@@ -56,7 +57,7 @@ describe('Two Cities: the episodes', () => {
 
   it('only uses sounds, scenes and speakers that exist', () => {
     for (const m of eps()) for (const b of m.beats) {
-      if (b.fx) expect(STINGS[b.fx], b.fx).toBeTruthy()
+      if (b.fx) expect(canSting(b.fx), b.fx).toBeTruthy()
       if (b.scene) expect(SCENES[b.scene], b.scene).toBeTruthy()
       if (b.spatial) expect(SPATIAL[b.spatial], b.spatial).toBeTruthy()
       if (b.who) expect(CAST[b.who], b.who).toBeTruthy()

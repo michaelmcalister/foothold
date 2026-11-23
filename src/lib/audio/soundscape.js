@@ -14,6 +14,7 @@ import { note, tone, noise, pluck, bell, kick, pad, swell, noiseBuffer, SILENT }
 import { loopBuffer } from './recorded.js'
 import { playSpatial, radioStatic, SPATIAL } from './spatial.js'
 import { KITS } from './kits/index.js'
+import { SFX } from './library.js'
 
 // ---- seeded randomness, so tests (and renders) are repeatable ----
 export function rng(seed = 1) {
@@ -1030,6 +1031,9 @@ export function playNote(ctx, out, t, n) {
  * track that plays during a surge. Until a recording arrives, or without
  * one, the synthesised sound plays.
  */
+/** Whether a beat's fx can play: a synthesised sting, or a recorded cue with a sting stand-in. Pure. */
+export const canSting = (name) => !!(STINGS[name] || (SFX[name]?.sting && STINGS[SFX[name].sting]))
+
 export function createSoundscape(ctx, out, { score = null, seed = 7, music = true, recorded = null, chase = null } = {}) {
   const r = rng(seed)
   const master = ctx.createGain()
@@ -1169,6 +1173,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       spotsUpTo = t + 1 // let the new scene fade in before its spots
       // swap to the recording once it arrives (if this is still the scene)
       recorded?.ambience(name).then((buf) => {
+        logTest('Scene', buf ? `${name} · recorded loop ambience/${name}.mp3` : `${name} · synth beds (no recording yet)`)
         if (!buf || sceneName !== name || !timer) return
         recLoop = loopBuffer(ctx, recBus, buf, { level: 1, fadeIn: 4 })
         recScene = name
@@ -1181,7 +1186,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       intensity = Math.max(0, Math.min(3, n | 0))
       if (intensity === 3) finaleUntil = ctx.currentTime + 14
       // the chase music comes in for a surge and goes when it ends
-      if (intensity === 2 && was !== 2 && chaseBuf && !chaseLoop) chaseLoop = loopBuffer(ctx, chaseBus, chaseBuf, { level: 1, fadeIn: 1.5, from: 0 })
+      if (intensity === 2 && was !== 2 && chaseBuf && !chaseLoop) { chaseLoop = loopBuffer(ctx, chaseBus, chaseBuf, { level: 1, fadeIn: 1.5, from: 0 }); logTest('Music', `chase · recorded track/${chase}.mp3`) }
       if (intensity !== 2 && chaseLoop) { chaseLoop.stop(3); chaseLoop = null; nextStepAt = ctx.currentTime + 3 }
     },
     get state() { return { scene: sceneName, intensity, ducked } },
@@ -1190,6 +1195,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       const def = SPATIAL[name]
       if (!def) return
       const buffer = def.recorded ? sfxBufs.get(def.recorded) : null
+      logTest('Passing', buffer ? `${name} · recorded sfx/${def.recorded}.mp3` : `${name} · synth ${def.synth}${def.recorded ? ` (sfx/${def.recorded}.mp3 not here yet)` : ''}`)
       playSpatial(ctx, spaceBus, name, ctx.currentTime + 0.05, { buffer, r })
       lastAround = ctx.currentTime + 0.05
     },
@@ -1226,12 +1232,36 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       quietUntil = end
       return new Promise((res) => setTimeout(res, (end - t - 3) * 1000))
     },
+    /** Whether this effect can play: a synthesised sting, or a recorded cue (library.js SFX with a sting stand-in). */
+    canSting: (name) => canSting(name),
+    /** Get recorded cues ready (a beat's fx that names a recorded sound). */
+    preload(ids) {
+      for (const id of new Set(ids)) {
+        if (!SFX[id] || sfxBufs.has(id) || !recorded?.sfx) continue
+        recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b) }).catch(() => {})
+      }
+    },
     /** Play an effect now; resolves when it's done. */
     sting(name) {
-      const s = STINGS[name]
-      if (!s) return Promise.resolve()
-      logTest('Effect', `${name} (story score)`)
       const t = ctx.currentTime + 0.02
+      // a recorded cue, once it has arrived; until then its synthesised stand-in
+      const cue = SFX[name]?.sting ? SFX[name] : null
+      const buf = cue ? sfxBufs.get(name) : null
+      if (buf) {
+        logTest('Effect', `${name} · recorded sfx/${name}.mp3`)
+        const src = ctx.createBufferSource()
+        src.buffer = buf
+        const g = ctx.createGain()
+        g.gain.value = cue.level ?? 0.8
+        src.connect(g)
+        g.connect(stingBus)
+        src.start(t)
+        return new Promise((res) => setTimeout(res, Math.min(buf.duration, cue.wait ?? 2.5) * 1000))
+      }
+      const id = cue ? cue.sting : name
+      const s = STINGS[id]
+      if (!s) return Promise.resolve()
+      logTest('Effect', cue ? `${name} · stand-in synth sting ${id} (sfx/${name}.mp3 not here yet)` : `${name} · synth sting`)
       s.build(ctx, stingBus, t)
       return new Promise((res) => setTimeout(res, s.dur * 1000))
     },

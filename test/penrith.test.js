@@ -2,6 +2,7 @@
 // in the missions list with its cover and look, every sound, scene and voice
 // it names exists, the trivia answers are spelt out in every reply, the
 // choice leads to exactly one surge, and nobody is hurt in the end.
+import { canSting } from '../src/lib/audio/soundscape.js'
 import { describe, it, expect } from 'vitest'
 import { MISSIONS, CHAINS, sagaById } from '../src/lib/missions/scripts.js'
 import { SAGA, EPISODES, CHAIN, CAST } from '../src/lib/missions/series/penrith.js'
@@ -23,7 +24,7 @@ describe('River Town: the Emu Hall Mystery', () => {
 
   it('only uses sounds, scenes and speakers that exist', () => {
     for (const b of ep().beats) {
-      if (b.fx) expect(STINGS[b.fx], b.fx).toBeTruthy()
+      if (b.fx) expect(canSting(b.fx), b.fx).toBeTruthy()
       if (b.scene) expect(SCENES[b.scene], b.scene).toBeTruthy()
       if (b.spatial) expect(SPATIAL[b.spatial], b.spatial).toBeTruthy()
       if (b.who) expect(CAST[b.who], b.who).toBeTruthy()

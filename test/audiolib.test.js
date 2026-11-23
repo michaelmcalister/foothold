@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
 import { AMBIENCE, TRACKS, RUN_PLAYLIST, CHASE_TRACK, shuffled } from '../src/lib/audio/library.js'
 import { SCENES } from '../src/lib/audio/soundscape.js'
-import { handleAudio } from '../worker/audioLibrary.js'
+import { handleAudio, warmLibrary } from '../worker/audioLibrary.js'
 
 function fakeDB() {
   const db = new DatabaseSync(':memory:')
@@ -87,5 +87,22 @@ describe('GET /api/audio', () => {
     expect(await no.text()).not.toMatch(/missing permission/)
     expect(env.AUDIO.m.has('ambience/rain.mp3.pending')).toBe(false)
     expect((await handleAudio(req(), { DB: fakeDB() }, 'ambience', 'rain')).status).toBe(503) // no storage set up
+  })
+})
+
+describe('making story sounds ahead of time', () => {
+  it('makes a few missing sounds each run, skips ones already kept, and stops on a refused key', async () => {
+    const AUDIO = fakeR2()
+    AUDIO.m.set(`ambience/${Object.keys(AMBIENCE)[0]}.mp3`, { v: 'x', at: new Date() })
+    const asked = []
+    const fetcher = async (url, init) => { asked.push(JSON.parse(init.body).text || 'track'); return new Response(new Uint8Array([1, 2]), { status: 200 }) }
+    const made = await warmLibrary({ AUDIO, ELEVENLABS_API_KEY: 'k' }, { fetcher, max: 3 })
+    expect(made).toHaveLength(3)
+    expect(made[0]).toBe(`ambience/${Object.keys(AMBIENCE)[1]}`) // the kept one is skipped
+    expect(made.every((k) => AUDIO.m.has(`${k}.mp3`))).toBe(true)
+    expect([...AUDIO.m.keys()].some((k) => k.endsWith('.pending'))).toBe(false)
+    const refused = await warmLibrary({ AUDIO, ELEVENLABS_API_KEY: 'k' }, { fetcher: async () => new Response('no', { status: 401 }), max: 3 })
+    expect(refused).toEqual([])
+    expect(await warmLibrary({ AUDIO }, { fetcher })).toEqual([]) // no key: nothing
   })
 })
