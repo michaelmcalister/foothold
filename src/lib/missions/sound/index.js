@@ -16,8 +16,9 @@
 //   cues      { id: { prompt, seconds, sting (synth stand-in), level, wait } }
 //   episodes  { episodeId: { beatIndex: { scene, fx, spatial } } }
 import { SHEET as bondi } from './bondi.js'
+import { SHEET as druitt } from './druitt.js'
 
-export const SHEETS = [bondi]
+export const SHEETS = [bondi, druitt]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each

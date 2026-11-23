@@ -83,7 +83,7 @@ export const EPISODES = [
     loop: line('md-mele', 'A loop! You basically ran the relay twice. Respect.'),
     early: line('md-mele', 'Stopping there is all good. Jayden will turn up. He always does. Eventually.'),
     beats: [
-      { at: 3, kind: 'recover', seconds: 200, chapter: 'The Manse', scene: 'suburb', say: 'Mount Druitt, on a hot Saturday morning. Outside The Manse, an old Georgian cottage, kids in bright bibs are warming up for a relay. Start with an easy walk or jog.' },
+      { at: 3, kind: 'recover', seconds: 200, chapter: 'The Manse', scene: 'suburb', say: 'Mount Druitt, a hot Saturday morning. Kids in bright bibs are warming up outside The Manse, and the anchor runner has just vanished. Start with an easy walk or jog.' },
       { at: 50, kind: 'story', spatial: 'lorikeets', say: 'This is Darug Country. In 1789, Watkin Tench’s party walked through this land. Later, a soldier called George Druitt arrived. You will hear about him.' },
       { at: 100, kind: 'story', who: 'md-mele', fx: 'squelch', say: 'Hey! Mele here, I run the heritage relay. You are our mystery runner? Brilliant. Tiny problem. Our anchor runner has gone missing. With the baton.' },
       { at: 155, kind: 'story', who: 'md-bruce', say: 'Bruce, from the historical society. The baton is a copy of an old surveyor’s marker. The Major built roads, you see. This whole place is named after him.' },
@@ -145,7 +145,7 @@ export const EPISODES = [
     loop: line('md-mele', 'A loop! Round and round like the water in the pipes. Nice.'),
     early: line('md-mele', 'All good, stop there. The drawing will be on the news tonight anyway.'),
     guide: 'md-mele', results: RESULTS['md-mele'], easy: EASY,
-    open: { scene: 'suburb', chapter: 'Prospect', text: 'Prospect, in Sydney’s west. A wide grassy wall holds back a huge lake of still water, with cockatoos screeching overhead. Start with an easy walk or jog.' },
+    open: { scene: 'suburb', chapter: 'Prospect', text: 'Prospect Reservoir at sunrise. A grass wall two kilometres long holds back a lake, and someone has drawn something huge on it overnight. Start with an easy walk or jog.' },
     steps: [
       say('md-mele', 'Mele here! Something strange. A plane spotter sent me a photo. Someone drew a giant picture in chalk on the grass by the reservoir. You can only see it from the sky.'),
       say('md-jayden', '[curious] Jayden here. It looks like a big birthday cake. With a number on it. Ninety something. Or a sixty upside down. I am not great with upside down.'),
@@ -185,7 +185,7 @@ export const EPISODES = [
     loop: line('md-mele', 'A loop! Like horses round a training ring. Trot on.'),
     early: line('md-mele', 'Stop there, no stress. The capsule has waited this long.'),
     guide: 'md-mele', results: RESULTS['md-mele'], easy: EASY,
-    open: { scene: 'suburb', chapter: 'Bungarribee', text: 'Bungarribee, near Doonside. Wide parkland, a creek lined with paperbarks, and grass that once fed some of the best horses in the colony. Start with an easy walk or jog.' },
+    open: { scene: 'suburb', chapter: 'Bungarribee', text: 'Bungarribee, near Doonside. Under this grass lies a box of secrets, buried by school kids in 1988, and nobody can find it. Start with an easy walk or jog.' },
     steps: [
       say('md-mele', 'Mele here. Big day. In 1988, local school kids buried a time capsule here. It is meant to be dug up today. And nobody can find it.'),
       say('md-jayden', '[sighs] My mum was one of the kids. She drew the map. She was ten. The map has a horse, a tree, and a big X. That is it.'),
@@ -225,7 +225,7 @@ export const EPISODES = [
     loop: line('md-mele', 'A loop! Like running the bases. First, second, third, home.'),
     early: line('md-mele', 'Stop there, all good. Come and watch the game.'),
     guide: 'md-mele', results: RESULTS['md-mele'], easy: EASY,
-    open: { scene: 'station', chapter: 'Blacktown station', text: 'Blacktown station on a Saturday morning. Trains in, trains out, and a team in green shirts looking very worried. Start with an easy walk or jog.' },
+    open: { scene: 'station', chapter: 'Blacktown station', text: 'Blacktown station, Saturday morning. Trains in, trains out, a softball final in an hour, and the team’s lucky ball is riding the rails. Start with an easy walk or jog.' },
     steps: [
       say('md-mele', '[sighs] Mele here. I also play softball. Big final today. Our lucky ball is gone. It has been signed by every team since 2001.'),
       say('md-jayden', 'Jayden here. I was in charge of the ball. And I left it on the train. I know. I know. I am working on it.'),
@@ -265,7 +265,7 @@ export const EPISODES = [
     loop: line('md-mele', 'A loop! Every relay comes home in the end.'),
     early: line('md-mele', 'Stop there, all good. There is food. So much food.'),
     guide: 'md-mele', results: RESULTS['md-mele'], easy: EASY,
-    open: { scene: 'suburb', chapter: 'Druitt Day', text: 'Druitt Day at The Manse. Bunting, a sausage sizzle, a Pacific Island dance group warming up, and the smell of Tita Joy’s bakery stall. Start with an easy walk or jog.' },
+    open: { scene: 'suburb', chapter: 'Druitt Day', text: 'Druitt Day at The Manse. Bunting, a sausage sizzle, a whole suburb out in the sun, and the relay prize has gone missing from its case. Start with an easy walk or jog.' },
     steps: [
       say('md-mele', '[excited] Mele here! Biggest relay ever. Every runner from every episode is here. Lola Nita, the vet, the honest kid. Everyone.'),
       say('md-bruce', '[sighs] Bruce here. One problem. The old brass compass, the relay’s finish line prize, is missing from its case.'),
