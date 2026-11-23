@@ -3,7 +3,7 @@
 // through its places with plenty going on.
 import { describe, it, expect } from 'vitest'
 import { SHEETS } from '../src/lib/missions/sound/index.js'
-import { SERIES } from '../src/lib/missions/series/index.js'
+import { MISSIONS } from '../src/lib/missions/index.js'
 import { SCENES, canSting } from '../src/lib/audio/soundscape.js'
 import { SPATIAL } from '../src/lib/audio/spatial.js'
 import { AMBIENCE, SFX } from '../src/lib/audio/library.js'
@@ -12,8 +12,7 @@ describe('sound sheets', () => {
   it('only use sounds that exist, each with a prompt and a stand-in', () => {
     const seen = new Set()
     for (const sh of SHEETS) {
-      const series = SERIES.find((s) => s.SAGA.id === sh.series)
-      expect(series, sh.series).toBeTruthy()
+      expect(MISSIONS.some((m) => m.saga === sh.series), sh.series).toBeTruthy()
       for (const [id, s] of [...Object.entries(sh.scenes), ...Object.entries(sh.passing), ...Object.entries(sh.cues)]) {
         expect(seen.has(id), `${id} is used twice`).toBe(false)
         seen.add(id)
@@ -43,8 +42,7 @@ describe('sound sheets', () => {
 
   it('give each episode several places, effects and passing sounds', () => {
     for (const sh of SHEETS) {
-      const series = SERIES.find((s) => s.SAGA.id === sh.series)
-      for (const ep of series.EPISODES) {
+      for (const ep of MISSIONS.filter((m) => m.saga === sh.series)) {
         expect(sh.episodes[ep.id], `${ep.id} is on its sheet`).toBeTruthy()
         const scenes = ep.beats.filter((b) => b.scene).map((b) => b.scene)
         for (const b of ep.beats) {

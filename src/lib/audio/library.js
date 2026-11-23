@@ -6,6 +6,7 @@
 // artist: everything here is original. Shared by the app and the worker.
 
 import { SERIES } from '../missions/series/index.js'
+import { SHEETS, libraryOf } from '../missions/sound/index.js'
 
 export const AMBIENCE = {
   bush: 'Australian bush on a scorching summer afternoon: loud pulsing cicada chorus, hot dry wind through gum trees, leaves rustling, a distant crow and magpie, no music, no voices',
@@ -94,6 +95,13 @@ for (const s of SERIES) {
   Object.assign(SFX, s.LIBRARY.sfx)
   Object.assign(TRACKS, s.LIBRARY.tracks)
   if (s.LIBRARY.chase) { CHASE_TRACK[s.SAGA.id] = s.LIBRARY.chase; RUN_PLAYLIST.push(s.LIBRARY.chase) }
+}
+
+// and every sound sheet's recordings (the first series have no LIBRARY of their own)
+for (const sh of SHEETS) {
+  const add = libraryOf(sh)
+  Object.assign(AMBIENCE, add.ambience)
+  Object.assign(SFX, add.sfx)
 }
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)

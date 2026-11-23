@@ -10,6 +10,7 @@
 
 import { THRILLERS, THRILLER_CHAINS, SAGAS as THRILLER_SAGAS } from './thrillers.js'
 import { GAMESHOW, GAMESHOW_CHAIN, QUIZ_SAGA } from './gameshow.js'
+import { SHEETS, marksOnto } from './sound/index.js'
 
 const WIN = 'You lost them. Brilliant running. Ease right back now.'
 const OKAY = 'You got away anyway. Nice work. Ease right back now.'
@@ -188,6 +189,8 @@ const TRAILKEEPERS = [
 
 /** Every mission: the Trailkeepers first, then the thriller series (thrillers.js). */
 export const MISSIONS = [...TRAILKEEPERS.map((m) => ({ saga: 'trailkeepers', ...m })), ...THRILLERS, ...GAMESHOW]
+// the first series' sound sheets too (missions/sound; the newer series get theirs in series/index.js)
+for (const sh of SHEETS) marksOnto(MISSIONS, sh)
 
 /** The series, in the order the picker shows them. */
 export const SAGAS = [

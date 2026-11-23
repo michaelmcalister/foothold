@@ -43,10 +43,16 @@ export function applySheet(series, sheet) {
   const lib = series.LIBRARY || {}
   lib.ambience ||= {}
   lib.sfx ||= {}
-  for (const [id, s] of Object.entries(sheet.scenes || {})) lib.ambience[id] = s.prompt
-  for (const [id, s] of Object.entries(sheet.passing || {})) lib.sfx[id] = { prompt: s.prompt, seconds: s.seconds || 5 }
-  for (const [id, s] of Object.entries(sheet.cues || {})) lib.sfx[id] = { prompt: s.prompt, seconds: s.seconds || 3, sting: s.sting, ...(s.level != null ? { level: s.level } : {}), ...(s.wait != null ? { wait: s.wait } : {}) }
-  for (const ep of series.EPISODES) {
+  const add = libraryOf(sheet)
+  Object.assign(lib.ambience, add.ambience)
+  Object.assign(lib.sfx, add.sfx)
+  marksOnto(series.EPISODES, sheet)
+  return series
+}
+
+/** Give each listed beat of these episodes its sounds (in place; safe to repeat). */
+export function marksOnto(episodes, sheet) {
+  for (const ep of episodes) {
     const marks = sheet.episodes?.[ep.id]
     if (!marks) continue
     for (const [i, sound] of Object.entries(marks)) {
@@ -58,5 +64,15 @@ export function applySheet(series, sheet) {
       }
     }
   }
-  return series
+  return episodes
+}
+
+/** A sheet's recordings, as library entries: { ambience, sfx }. Pure. */
+export function libraryOf(sheet) {
+  const ambience = {}
+  const sfx = {}
+  for (const [id, s] of Object.entries(sheet.scenes || {})) ambience[id] = s.prompt
+  for (const [id, s] of Object.entries(sheet.passing || {})) sfx[id] = { prompt: s.prompt, seconds: s.seconds || 5 }
+  for (const [id, s] of Object.entries(sheet.cues || {})) sfx[id] = { prompt: s.prompt, seconds: s.seconds || 3, sting: s.sting, ...(s.level != null ? { level: s.level } : {}), ...(s.wait != null ? { wait: s.wait } : {}) }
+  return { ambience, sfx }
 }
