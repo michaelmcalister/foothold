@@ -98,10 +98,13 @@ for (const s of SERIES) {
 }
 
 // and every sound sheet's recordings (the first series have no LIBRARY of their own)
+/** Loops shorter than the usual 30 seconds (the sheets' scenes are 20: plenty for a seamless loop, and a third cheaper to make). */
+export const LOOP_SECONDS = {}
 for (const sh of SHEETS) {
   const add = libraryOf(sh)
   Object.assign(AMBIENCE, add.ambience)
   Object.assign(SFX, add.sfx)
+  for (const id of Object.keys(add.ambience)) LOOP_SECONDS[id] = 20
 }
 
 export const isAmbience = (id) => Object.prototype.hasOwnProperty.call(AMBIENCE, id)

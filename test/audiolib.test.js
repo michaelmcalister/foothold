@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
-import { AMBIENCE, TRACKS, RUN_PLAYLIST, CHASE_TRACK, shuffled } from '../src/lib/audio/library.js'
+import { AMBIENCE, TRACKS, RUN_PLAYLIST, CHASE_TRACK, LOOP_SECONDS, shuffled } from '../src/lib/audio/library.js'
 import { SCENES } from '../src/lib/audio/soundscape.js'
 import { handleAudio, warmLibrary } from '../worker/audioLibrary.js'
 
@@ -91,6 +91,13 @@ describe('GET /api/audio', () => {
 })
 
 describe('making story sounds ahead of time', () => {
+  it('makes the sheet scenes as 20 second loops', async () => {
+    const AUDIO = fakeR2()
+    const bodies = []
+    const id = Object.keys(LOOP_SECONDS)[0]
+    await handleAudio(req('9.9.9.9'), { AUDIO, ELEVENLABS_API_KEY: 'k', DB: fakeDB() }, 'ambience', id, { fetcher: async (u, init) => { bodies.push(JSON.parse(init.body)); return new Response(new Uint8Array([1])) } })
+    expect(bodies[0].duration_seconds).toBe(20)
+  })
   it('makes a few missing sounds each run, skips ones already kept, and stops on a refused key', async () => {
     const AUDIO = fakeR2()
     AUDIO.m.set(`ambience/${Object.keys(AMBIENCE)[0]}.mp3`, { v: 'x', at: new Date() })

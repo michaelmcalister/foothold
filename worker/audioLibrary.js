@@ -7,7 +7,7 @@
 // permissions; without them this answers 503 and the app keeps its
 // synthesised sound.
 import { hit } from './db.js'
-import { AMBIENCE, TRACKS, SFX, isAmbience, isTrack, isSfx } from '../src/lib/audio/library.js'
+import { AMBIENCE, TRACKS, SFX, LOOP_SECONDS, isAmbience, isTrack, isSfx } from '../src/lib/audio/library.js'
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 const PENDING_MS = 4 * 60 * 1000 // someone else is making this one; ask again shortly
@@ -19,7 +19,7 @@ const audioHeaders = { 'content-type': 'audio/mpeg', 'cache-control': 'public, m
 async function makeAmbience(env, fetcher, id, oneShot = false) {
   const body = oneShot
     ? { text: SFX[id].prompt, duration_seconds: SFX[id].seconds, prompt_influence: 0.5 }
-    : { text: AMBIENCE[id], loop: true, duration_seconds: 30, prompt_influence: 0.45 }
+    : { text: AMBIENCE[id], loop: true, duration_seconds: LOOP_SECONDS[id] || 30, prompt_influence: 0.45 }
   for (const model of SFX_MODELS) {
     const res = await fetcher('https://api.elevenlabs.io/v1/sound-generation?output_format=mp3_44100_128', {
       method: 'POST',
@@ -82,9 +82,10 @@ export async function handleAudio(req, env, kind, id, { fetcher = fetch } = {}) 
 /**
  * The quarter-hour cron: make a few library sounds nobody has asked for yet,
  * so a new story's ambience and effects are ready before its first run
+ * (twenty a run: about eighty an hour, so a new set of sheets is made overnight)
  * (each is made once, ever, and kept in R2). Returns the ids it made.
  */
-export async function warmLibrary(env, { fetcher = fetch, max = 6 } = {}) {
+export async function warmLibrary(env, { fetcher = fetch, max = 20 } = {}) {
   if (!env.AUDIO || !env.ELEVENLABS_API_KEY) return []
   const made = []
   const want = [...Object.keys(AMBIENCE).map((id) => ['ambience', id]), ...Object.keys(SFX).map((id) => ['sfx', id]), ...Object.keys(TRACKS).map((id) => ['track', id])]
