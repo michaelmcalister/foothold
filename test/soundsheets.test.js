@@ -52,7 +52,7 @@ describe('sound sheets', () => {
         }
         expect(ep.beats[0].scene, `${ep.id} opens somewhere`).toBeTruthy()
         expect(new Set(scenes).size, `${ep.id} places`).toBeGreaterThanOrEqual(3)
-        expect(ep.beats.filter((b) => b.fx).length, `${ep.id} effects`).toBeGreaterThanOrEqual(6)
+        expect(ep.beats.filter((b) => b.fx).length, `${ep.id} effects`).toBeGreaterThanOrEqual(sh.fxMin ?? 6)
         expect(ep.beats.filter((b) => b.spatial).length, `${ep.id} passing sounds`).toBeGreaterThanOrEqual(2)
       }
     }

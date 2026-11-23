@@ -383,6 +383,11 @@ function startMission(script) {
     if (s) enqueue(() => s.intro())
     sayLine(episode.title)
     sayLine(episode.previously)
+  } else if (script?.beats.some((b) => b.scene)) {
+    // a coach led story with places of its own: their sound, but no score
+    scapeScene = null
+    scape = startScape({ ...saga, score: saga?.score || 'none' })
+    scape?.preload(script.beats.flatMap((b) => [b.spatial, b.scene]).filter(Boolean))
   }
   missionLive.value = mission ? mission.view() : null
 }
