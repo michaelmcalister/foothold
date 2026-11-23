@@ -60,7 +60,7 @@ export const EPISODES = [
     place: { name: 'Welcome Stranger monument, Moliagul', lat: -36.7600, lng: 143.6600 },
     loop: line('ng-cass', 'A loop! Like a gold pan, swirling round and round.'),
     early: line('ng-cass', 'Stop there, no worries. The goldfields have waited a long time.'),
-    open: { scene: 'goldfield', chapter: 'Moliagul', text: 'Moliagul, in central Victoria. Box trees, red dirt, old diggings in the bush, and a stone monument in a quiet clearing. Start with an easy walk or jog.' },
+    open: { scene: 'goldfield', chapter: 'Moliagul', text: 'Moliagul, central Victoria. Red dirt, box trees, and a school’s golden copy of the biggest nugget ever found has just gone missing. Start with an easy walk or jog.' },
     steps: [
       say('ng-cass', 'Hi! Cass here. I teach at the school in Dunolly. My class made a copy of the Welcome Stranger. Painted gold. Seventy kilos of plaster. And it has gone.'),
       say('ng-josh', '[sighs] Josh. Year seven. I carried it into the box last night. This morning, the box is empty. Just gold paint on the lid.'),
@@ -95,7 +95,7 @@ export const EPISODES = [
     place: { name: 'Dunolly', lat: -36.8590, lng: 143.7330 },
     loop: line('ng-cass', 'A loop! Like a horseshoe. Round, and back to the start.'),
     early: line('ng-cass', 'Stop there, all good. The bakery is just there.'),
-    open: { scene: 'goldfield', chapter: 'Dunolly', text: 'Dunolly, a small gold town. A wide main street, old verandahs, a bakery, and the sound of a hammer ringing on metal. Start with an easy walk or jog.' },
+    open: { scene: 'goldfield', chapter: 'Dunolly', text: 'Dunolly, a little gold town. A wide main street, old verandahs, and the clang of a blacksmith’s hammer from the shed where the nugget went. Start with an easy walk or jog.' },
     steps: [
       say('ng-alf', '[laughs] G’day! Alf. Blacksmith. Yes, I have your nugget. Do not panic. I am not splitting it. I am making it a stand.'),
       say('ng-alf', 'The relay organisers asked me to make an iron stand, so it does not roll off the trailer. I picked it up early. Sorry for the fright.'),
@@ -130,7 +130,7 @@ export const EPISODES = [
     place: { name: 'Ballarat', lat: -37.5620, lng: 143.8500 },
     loop: line('ng-cass', 'A loop! Like the parade, round the block and back.'),
     early: line('ng-cass', 'Stop there, all good. Watch the parade go by.'),
-    open: { scene: 'festival', chapter: 'Ballarat', text: 'Ballarat, the great gold city. Grand old buildings, a wide main street, and a parade of people in old gold rush costumes. Start with an easy walk or jog.' },
+    open: { scene: 'festival', chapter: 'Ballarat', text: 'Ballarat, the great gold city. Grand old banks, a parade in bonnets and miners’ hats, and a golden nugget riding on a trailer. For now. Start with an easy walk or jog.' },
     steps: [
       say('ng-cass', 'Cass here. The parade. People in bonnets, miners’ hats, a brass band. And at the back, on a little trailer, our golden nugget.'),
       say('ng-barry', '[laughs] Barry! Big hat! Sorry, Cass. I meant to ring. I will ring next time. Your nugget is the star of the show.'),
@@ -166,7 +166,7 @@ export const EPISODES = [
     place: { name: 'Golden Dragon Museum, Bendigo', lat: -36.7550, lng: 144.2830 },
     loop: line('ng-cass', 'A loop! Like a dragon chasing its tail.'),
     early: line('ng-cass', 'Stop there, all good. Go and see the dragons.'),
-    open: { scene: 'street', chapter: 'Bendigo', text: 'Bendigo, another great gold city. Red lanterns over a garden, a temple roof, and inside a museum, dragons that fill whole rooms. Start with an easy walk or jog.' },
+    open: { scene: 'street', chapter: 'Bendigo', text: 'Bendigo. Red lanterns over a garden, a museum full of dragons, and the golden nugget waiting beside the oldest one of all. Start with an easy walk or jog.' },
     steps: [
       say('ng-mei', '[laughs] Welcome! Mei here. Your nugget is safe, beside our oldest dragon, Loong. They look good together. Gold and red.'),
       quiz('ng-mei', 'Sun Loong, our famous dragon, is how long?', ['Over 100 metres', 'About 10 metres', 'About 1 metre'], 'Over a hundred metres! It took a big team of people to carry it in the Easter parade.'),
@@ -202,7 +202,7 @@ export const EPISODES = [
     place: { name: 'Castlemaine', lat: -37.0640, lng: 144.2170 },
     loop: line('ng-cass', 'A loop. Every relay comes home.'),
     early: line('ng-cass', 'Stop there, all good. Come to the finish for a pie.'),
-    open: { scene: 'goldfield', chapter: 'Castlemaine', text: 'Castlemaine, at the foot of Mount Alexander. Old stone buildings, a market hall, and a crowd lining the street for the relay finish. Start with an easy walk or jog.' },
+    open: { scene: 'goldfield', chapter: 'Castlemaine', text: 'Castlemaine, at the foot of Mount Alexander. Old stone buildings, a market hall, and the last leg of the relay, pushed in a wheelbarrow. Start with an easy walk or jog.' },
     steps: [
       say('ng-cass', '[excited] Cass here! Everyone came. Alf, Hilda, Barry in a new bigger hat, Mei with a little dragon, and my whole class.'),
       quiz('ng-hilda', 'Gold was found near here, at Mount Alexander, in which year?', ['1851', '1951', '1801'], 'July 1851. It became one of the richest goldfields in the world.'),

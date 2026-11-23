@@ -27,8 +27,10 @@ import { SHEET as opal } from './opal.js'
 import { SHEET as tunnels } from './tunnels.js'
 import { SHEET as canberra } from './canberra.js'
 import { SHEET as panther } from './panther.js'
+import { SHEET as hawkesbury } from './hawkesbury.js'
+import { SHEET as nugget } from './nugget.js'
 
-export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther]
+export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each

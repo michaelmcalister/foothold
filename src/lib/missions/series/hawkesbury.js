@@ -62,7 +62,7 @@ export const EPISODES = [
     place: { name: 'Brooklyn, Hawkesbury River', lat: -33.5470, lng: 151.2240 },
     loop: line('hk-tess', 'A loop! Like the ferry run. Out to the island and back.'),
     early: line('hk-tess', 'Stop there, no worries. Grab a fish and chips on the wharf.'),
-    open: { scene: 'harbour', chapter: 'Brooklyn', text: 'Brooklyn, on the Hawkesbury River, at dawn. Mist on the water, houseboats rocking, and steep green hills on every side. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Brooklyn', text: 'Brooklyn on the Hawkesbury, at dawn. Mist on flat water, and a long V cutting across the river with no boat at the front of it. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This river is Dyarubbin, its Dharug name. Governor Phillip named it the Hawkesbury in 1789. The river is far older than both names.'),
       say('hk-tess', 'Hi. Tess here. I work on the ferry. This morning, the river was flat as glass. Then a long wake cut straight across it. No boat. Nothing.'),
@@ -98,7 +98,7 @@ export const EPISODES = [
     place: { name: 'Hawkesbury River Railway Bridge', lat: -33.5400, lng: 151.2050 },
     loop: line('hk-tess', 'A loop! Round the island and back to the wharf.'),
     early: line('hk-tess', 'Stop there, all good. The bridge will be here tomorrow.'),
-    open: { scene: 'harbour', chapter: 'The bridge', text: 'The Hawkesbury River railway bridge. A long steel bridge across the water, and beside it, a row of old stone piers standing alone in the river. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'The bridge', text: 'The Hawkesbury River railway bridge. Steel spans, deep green water, and a scientist about to send sound into the dark to find the Beast. Start with an easy walk or jog.' },
     steps: [
       say('hk-prakash', 'Doctor Prakash. River scientist. My sonar sends sound under the water and listens for the echo. It draws a picture of the bottom.'),
       quiz('hk-prakash', 'Why is there a row of old stone piers next to the bridge?', ['From the first bridge', 'For decoration', 'For seagulls'], 'From the first bridge, opened in 1889. It was replaced in 1946. The old piers still stand in the river.'),
@@ -135,7 +135,7 @@ export const EPISODES = [
     place: { name: 'Wisemans Ferry', lat: -33.3830, lng: 150.9880 },
     loop: line('hk-tess', 'A loop! Like the cable ferry. Across and back, across and back.'),
     early: line('hk-tess', 'Stop there, all good. Watch the ferry go across.'),
-    open: { scene: 'night', chapter: 'Wisemans Ferry', text: 'Wisemans Ferry at dusk. A flat ferry crawls across the river on cables. Sandstone cliffs glow orange above the water. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'Wisemans Ferry', text: 'Wisemans Ferry at dusk. A flat ferry crawls across on its cables, frogs start up in the reeds, and something in the water is breathing. Start with an easy walk or jog.' },
     steps: [
       say('hk-tess', 'Tess here. I swapped shifts to be here. The cable ferry deckhand says every night this week, something by the ramp has been breathing. Loudly.'),
       quiz('hk-tess', 'The ferry here carries an old road across the river. Which road?', ['The Great North Road', 'The Hume Highway', 'The Stuart Highway'], 'The Great North Road. Built by convicts, long ago, to link Sydney with the north.'),
@@ -171,7 +171,7 @@ export const EPISODES = [
     place: { name: 'Thompson Square, Windsor', lat: -33.6060, lng: 150.8200 },
     loop: line('hk-tess', 'A loop! Round the square, like Macquarie’s planners intended.'),
     early: line('hk-tess', 'Stop there, all good. Windsor has great cafés.'),
-    open: { scene: 'street', chapter: 'Windsor', text: 'Windsor, on the upper Hawkesbury. Old brick buildings, a green square sloping down to the river, and a pub that has stood for a very long time. Start with an easy walk or jog.' },
+    open: { scene: 'street', chapter: 'Windsor', text: 'Windsor, on the upper Hawkesbury. Old brick pubs, a green square, and an iron horseshoe nailed far above your head to mark a great flood. Start with an easy walk or jog.' },
     steps: [
       say('hk-nell', 'Nell, historical society. Bill rang me. His grandad wrote down his Beast story. We have it here. It says it came with the big flood.'),
       quiz('hk-nell', 'Windsor was first called what?', ['Green Hills', 'Blue Hills', 'River Town'], 'Green Hills. Governor Macquarie named it Windsor in 1810, one of his five towns.'),
@@ -207,7 +207,7 @@ export const EPISODES = [
     place: { name: 'Dangar Island, Hawkesbury River', lat: -33.5380, lng: 151.2410 },
     loop: line('hk-tess', 'A loop. Back to the island, back where it began.'),
     early: line('hk-tess', 'Stop there, all good. Watch the boats roar past.'),
-    open: { scene: 'harbour', chapter: 'Race day', text: 'Race day on the Hawkesbury. Boats lined up by Dangar Island, engines rumbling, flags flying, and crowds on every wharf and bank. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Race day', text: 'Race day on the Hawkesbury. Ski boats lined up by Dangar Island, engines rumbling, and the Beast is saving one last surprise. Start with an easy walk or jog.' },
     steps: [
       say('hk-tess', '[excited] Tess here! The whole river is out. Bill, Maya, Nell, Doctor Prakash. And somewhere, I hope, Nugget the seal, staying out of the way.'),
       quiz('hk-tess', 'Warm up. The Bridge to Bridge race runs from Dangar Island up to which town?', ['Windsor', 'Brooklyn', 'Bondi'], 'Windsor. Up the river, round all those bends. Fast and loud.'),
