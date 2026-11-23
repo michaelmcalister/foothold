@@ -130,12 +130,23 @@ export async function setRunSession(kind, { fresh = false } = {}) {
     if (fresh && !was) { rebuildContext(); await resume() } // effects made before the switch go quiet: start them fresh (runs only, before any sound)
     return
   }
-  webSession(kind)
+  // A context made in the old mode can play nothing in the new one: at the
+  // start of a run (still inside the Start tap) the next sound makes a fresh one
+  if (webSession(kind) && fresh) rebuildContext()
+}
+// iPhone Safari: Web Audio made in one sound mode can play nothing after the
+// mode changes (until the phone is locked and unlocked). So outside a run a
+// change means the next effect gets a fresh context. Returns true if it changed.
+function setWebType(t) {
+  const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
+  if (!s || !('type' in s) || s.type === t) return false
+  try { s.type = t } catch { return false }
+  return true
 }
 function webSession(kind) {
   const s = typeof navigator !== 'undefined' ? navigator.audioSession : null
-  if (s && 'type' in s) { try { s.type = kind || 'auto' } catch { /* not allowed here */ } }
-  if (!s || !('type' in s)) holdSpeaker(kind === 'playback')
+  if (!s || !('type' in s)) { holdSpeaker(kind === 'playback'); return false }
+  return setWebType(kind || 'auto')
 }
 let sampleT = 0
 /**
@@ -145,9 +156,9 @@ let sampleT = 0
  */
 export function sampleSession(ms = 5000) {
   if (isIOSApp() || runSession) return
-  webSession('playback')
+  if (webSession('playback')) rebuildContext() // effects made in the old mode can be silent
   clearTimeout(sampleT)
-  sampleT = setTimeout(() => { if (!runSession) webSession(null) }, ms)
+  sampleT = setTimeout(() => { if (!runSession && webSession(null)) rebuildContext() }, ms)
 }
 /**
  * iPhone app: the microphone takes over the app's sound while it listens and
@@ -172,10 +183,11 @@ export async function asAnnouncement(fn) {
   if (!s || !('type' in s) || runSession === 'playback' || announcing) return fn()
   const was = s.type
   announcing++
-  try { s.type = 'transient' } catch { /* not allowed: carry on */ }
+  const changed = setWebType('transient')
   try { return await fn() } finally {
     announcing--
-    try { s.type = was === 'transient' ? 'auto' : was } catch { /* fine */ }
+    setWebType(was === 'transient' ? 'auto' : was)
+    if (changed && !runSession) rebuildContext() // the next effect starts fresh (see setWebType)
   }
 }
 
