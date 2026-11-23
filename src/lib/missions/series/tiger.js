@@ -59,7 +59,7 @@ export const EPISODES = [
     place: { name: 'Salamanca Place, Hobart', lat: -42.8869, lng: 147.3330 },
     loop: line('tg-kirra', 'A loop! Like a tiger’s territory. Round and round the same patch.'),
     early: line('tg-kirra', 'Stop there, no worries. The photo is not going anywhere.'),
-    open: { scene: 'harbour', chapter: 'Salamanca', text: 'Hobart, early on a cold Saturday. Old Georgian warehouses line Salamanca Place, and stallholders set up under a grey sky. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Salamanca', text: 'Hobart, a cold Saturday dawn. Salamanca’s stalls are going up, and a blurry photo taken at three this morning shows an animal that should not exist. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is nipaluna, the Muwinina name for this place. The city was settled in 1804, and the mountain behind it watches over everything.'),
       say('tg-kirra', '[curious] Hi. Kirra here. I study wildlife with hidden cameras. At three this morning someone emailed me a photo. No name. Just a photo.'),
@@ -98,7 +98,7 @@ export const EPISODES = [
     place: { name: 'kunanyi / Mount Wellington foothills', lat: -42.8960, lng: 147.2600 },
     loop: line('tg-kirra', 'A loop! The way animals walk their trails, again and again.'),
     early: line('tg-kirra', 'Stop there, all good. The mountain will be here tomorrow.'),
-    open: { scene: 'bush', chapter: 'The foothills', text: 'The lower slopes of kunanyi, Mount Wellington. Tall gums, tree ferns, and a cold breeze sliding down from the summit. Start with an easy walk or jog.' },
+    open: { scene: 'bush', chapter: 'The foothills', text: 'The lower slopes of kunanyi. Tall gums, tree ferns, mist in the gullies, and a plaster cast of a footprint nobody can explain. Start with an easy walk or jog.' },
     steps: [
       say('tg-kirra', 'Kirra here. Bob’s mate is called Hamish. He is shy, but he said yes. He will meet us at the fire trail with the plaster cast.'),
       quiz('tg-kirra', 'Warm up question. How high is kunanyi, Mount Wellington?', ['1,271 metres', '271 metres', '4,000 metres'], 'It often has snow on top, even when the city is sunny. Bring a jumper. Not a stripy one.'),
@@ -136,7 +136,7 @@ export const EPISODES = [
     place: { name: 'Battery Point, Hobart', lat: -42.8925, lng: 147.3335 },
     loop: line('tg-kirra', 'A loop! Like a keeper doing the rounds. Every enclosure, every morning.'),
     early: line('tg-kirra', 'Stop there, all good. Nan has put the kettle on anyway.'),
-    open: { scene: 'harbour', chapter: 'Battery Point', text: 'Battery Point, Hobart. Narrow lanes, little weatherboard cottages, and a view of the boats bobbing on the Derwent. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Battery Point', text: 'Battery Point, Hobart. Weatherboard cottages, crooked lanes, and a ninety year old with a zookeeper’s diary from 1936. Start with an easy walk or jog.' },
     steps: [
       say('tg-kirra', 'Kirra here. Hamish’s nan is called Elsie. She is ninety. She has a box and a lot of opinions. We are on our way.', { spatial: 'boat' }),
       say('tg-elsie', '[laughs] Come in, come in. Mind the cat. My grandad was a keeper at the zoo on the Domain. He fed the animals every morning.'),
@@ -175,7 +175,7 @@ export const EPISODES = [
     place: { name: 'Hobart Rivulet, South Hobart', lat: -42.8960, lng: 147.3080 },
     loop: line('tg-kirra', 'A loop! Like a night watch. Out, around, and back.'),
     early: line('tg-kirra', 'Stop there, no stress. I will send you the photos.'),
-    open: { scene: 'night', chapter: 'The rivulet', text: 'The Hobart Rivulet at dusk. A little creek winds through bush and backyards, past an old stone brewery glowing in the last of the light. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'The rivulet', text: 'The Hobart Rivulet at dusk. A creek slips through bush and backyards, and a girl’s hidden camera has caught stripes in the dark. Start with an easy walk or jog.' },
     steps: [
       say('tg-kirra', '[whispers] Kirra here. Quiet voices tonight. The camera belongs to a girl called Zoe. She is twelve. She is very serious about it.'),
       say('tg-zoe', 'Hi. Zoe. Two nights ago my camera caught this. Stripes. On the back half of something. I have watched it two hundred times.'),
@@ -211,7 +211,7 @@ export const EPISODES = [
     place: { name: 'Queen’s Domain, Hobart', lat: -42.8730, lng: 147.3310 },
     loop: line('tg-kirra', 'A loop. Full circle. Back where it all began.'),
     early: line('tg-kirra', 'Stop there, all good. The stalls are open all day.'),
-    open: { scene: 'bush', chapter: 'The Domain', text: 'The Queen’s Domain, on the seventh of September. Stalls, school groups, a stage, and the smell of sausages and wattle. Start with an easy walk or jog.' },
+    open: { scene: 'bush', chapter: 'The Domain', text: 'The Queen’s Domain, the seventh of September. Threatened Species Day, the whole town is here, and a new photo has just landed. Start with an easy walk or jog.' },
     steps: [
       say('tg-kirra', '[excited] Kirra here! Look at this. Bob and Duchess. Hamish. Elsie and the sketch. Zoe and her camera. Maggie and her jam. Everyone came.'),
       say('tg-maggie', '[laughs] Plum jam for every runner. And for the dog in the jumper.'),

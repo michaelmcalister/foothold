@@ -59,7 +59,7 @@ export const EPISODES = [
     place: { name: 'Armstrong Bay, Warrnambool', lat: -38.3990, lng: 142.4300 },
     loop: line('mh-jade', 'A loop! Like the tide. Out and back.'),
     early: line('mh-jade', 'Stop there, no worries. The dunes have kept their secret for a long time.'),
-    open: { scene: 'beachdawn', chapter: 'After the storm', text: 'The coast west of Warrnambool, the morning after a wild storm. Seaweed piled high, the wind still gusting, and the dunes looking freshly carved. Start with an easy walk or jog.' },
+    open: { scene: 'beachdawn', chapter: 'After the storm', text: 'West of Warrnambool, the morning after a wild storm. The sand has shifted, and something old and black is sticking out of the dunes. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is Dhauwurd Wurrung Country, the Gunditjmara people. The town’s name comes from Mount Warrnambool, an old volcano to the north.'),
       say('mh-jade', 'Hi! Jade here. I study the ocean at uni. A kid called Hugo just rang me. He was so excited I could not understand half of it.'),
@@ -97,7 +97,7 @@ export const EPISODES = [
     place: { name: 'Flagstaff Hill, Warrnambool', lat: -38.3890, lng: 142.4800 },
     loop: line('mh-jade', 'A loop! Like a lighthouse beam. Round and round.'),
     early: line('mh-jade', 'Stop there, all good. The museum opens again tomorrow.'),
-    open: { scene: 'harbour', chapter: 'Flagstaff Hill', text: 'Flagstaff Hill in Warrnambool. Old lighthouses, a rebuilt port village with tall ships, and the sea wind whistling through the rigging. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Flagstaff Hill', text: 'Flagstaff Hill, Warrnambool. Old lighthouses, ships’ wheels, anchors on the lawn, and a newspaper from 1847 that might name a lost ship. Start with an easy walk or jog.' },
     steps: [
       say('mh-jade', 'Jade here. We are meeting Dot. She volunteers at the museum. She knows every shipwreck on this coast by heart.'),
       say('mh-dot', '[laughs] Hello, love. Come in. Mind the anchors. Now, the photos. Iron bolts, round heads. Let us see what we have.'),
@@ -135,7 +135,7 @@ export const EPISODES = [
     place: { name: 'Logans Beach, Warrnambool', lat: -38.4030, lng: 142.5330 },
     loop: line('mh-jade', 'A loop! Like a whale cruising the bay. Slow and steady.'),
     early: line('mh-jade', 'Stop there, all good. Stay and watch the whales for a bit.'),
-    open: { scene: 'beachdawn', chapter: 'Logans Beach', text: 'Logans Beach, east of Warrnambool, on a calm winter morning. People line the platform with binoculars. Out in the bay, something huge breathes. Start with an easy walk or jog.' },
+    open: { scene: 'beachdawn', chapter: 'Logans Beach', text: 'Logans Beach on a calm winter morning. A whale and her calf rest just past the waves, and an old whalers’ tale waits to be tested. Start with an easy walk or jog.' },
     steps: [
       say('mh-jade', '[whispers] Jade here. Look, out past the waves. A whale mum and her calf. They come here every winter. We watch from the platform. Never closer.'),
       quiz('mh-jade', 'Which whales come to Logans Beach to have their calves?', ['Southern right whales', 'Blue whales', 'Killer whales'], 'Southern right whales. The mums arrive from late May, and leave with their calves by about September.'),
@@ -172,7 +172,7 @@ export const EPISODES = [
     place: { name: 'Middle Island, Warrnambool', lat: -38.4010, lng: 142.4900 },
     loop: line('mh-jade', 'A loop! Like a guard dog on patrol.'),
     early: line('mh-jade', 'Stop there, no worries. The penguins will be home at dusk.'),
-    open: { scene: 'beachdawn', chapter: 'Lady Bay', text: 'Lady Bay, in Warrnambool. A small rocky island sits just off the beach. On it, two big white dogs sit very still, watching. Start with an easy walk or jog.' },
+    open: { scene: 'beachdawn', chapter: 'Lady Bay', text: 'Lady Bay, Warrnambool. Just off the beach sits a rocky island guarded by two very serious dogs, and a ranger has found something green. Start with an easy walk or jog.' },
     steps: [
       say('mh-jade', 'Jade here. Meet the ranger, Tam. And the two guards. Maremma dogs. They live on the island to protect the little penguins from foxes.'),
       say('mh-tam', 'Hi. Tam. Do not pat the dogs, they are working. And do not go on the island. It is the penguins’ home. We will bring the brass to you.'),
@@ -209,7 +209,7 @@ export const EPISODES = [
     place: { name: 'Armstrong Bay dunes', lat: -38.4000, lng: 142.4250 },
     loop: line('mh-jade', 'A loop. Back where it all began.'),
     early: line('mh-jade', 'Stop there, all good. I will text you the results.'),
-    open: { scene: 'night', chapter: 'The night survey', text: 'Armstrong Bay at night. Torches, a van with a big screen, and the sound of surf in the dark. Stars everywhere. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'The night survey', text: 'Armstrong Bay at night. Torches in the dunes, a radar humming over the sand, and five theories about a ship nobody has ever found. Start with an easy walk or jog.' },
     steps: [
       say('mh-jade', '[whispers] Jade here. The radar team are walking the track with a machine like a lawnmower. It looks under the sand. Nobody digs.'),
       say('mh-ron', 'Ron here. Brought a thermos. And my theory. A Spanish galleon. Blown way off course.'),
