@@ -59,7 +59,7 @@ export const EPISODES = [
     place: { name: 'WWII Oil Storage Tunnels, Darwin', lat: -12.4672, lng: 130.8460 },
     loop: line('tn-amira', 'A loop! Like walking in and out of a tunnel. Same door, both ways.'),
     early: line('tn-amira', 'Stop there, no worries. It is cool in the tunnels. Come and cool down.'),
-    open: { scene: 'tunnel', chapter: 'Tunnel 5', text: 'Darwin, early morning. The air is already warm and thick. Below the cliffs, a door leads into a long, cool tunnel lined with old photos. Start with an easy walk or jog.' },
+    open: { scene: 'tunnel', chapter: 'Tunnel 5', text: 'Darwin, early morning. The air is already thick and warm, and under the city, a wartime tunnel has just given up a lunch tin from 1945. Start with an easy walk or jog.' },
     steps: [
       say(null, 'This is Larrakia Country. Their name for this place is Garramilla, meaning white stone, for the pale cliffs along the harbour.'),
       say('tn-amira', 'Hi, Runner. Amira here. I run tours in the tunnels. This morning, a panel came loose by the far wall. Behind it, a rusty lunch tin.'),
@@ -96,7 +96,7 @@ export const EPISODES = [
     place: { name: 'Mindil Beach, Darwin', lat: -12.4466, lng: 130.8329 },
     loop: line('tn-amira', 'A loop! Like the market crowd. Round and round the stalls.'),
     early: line('tn-amira', 'Stop there, all good. Grab a laksa and watch the sunset.'),
-    open: { scene: 'festival', chapter: 'Mindil Beach', text: 'Mindil Beach, an hour before sunset. Hundreds of stalls, smoke from satay grills, a didgeridoo player, and crowds heading for the sand. Start with an easy walk or jog.' },
+    open: { scene: 'festival', chapter: 'Mindil Beach', text: 'Mindil Beach, an hour before sunset. Smoke from a hundred stalls, crocodile burgers, laksa, and a recipe hidden in four pencilled numbers. Start with an easy walk or jog.' },
     steps: [
       say('tn-amira', 'Amira here. Ollie is with me. We are looking for June’s Laksa. Rose was her grandmother.'),
       quiz('tn-amira', 'The Mindil Beach Sunset Market runs in which season?', ['The dry season', 'The wet season', 'Winter only'], 'The dry season, roughly May to September. Thursdays and Sundays. Best sunsets in Australia, locals say.'),
@@ -132,7 +132,7 @@ export const EPISODES = [
     place: { name: 'East Point Reserve, Darwin', lat: -12.4110, lng: 130.8220 },
     loop: line('tn-amira', 'A loop! Like the bike track round the point.'),
     early: line('tn-amira', 'Stop there, no worries. Watch the wallabies for a while.'),
-    open: { scene: 'bush', chapter: 'East Point', text: 'East Point, at dawn. Long grass, monsoon forest, old concrete ruins from the war, and the sea all around. Start with an easy walk or jog.' },
+    open: { scene: 'bush', chapter: 'East Point', text: 'East Point at dawn. Wallabies in the long grass, wartime ruins in the forest, and ten steps from a tree with two trunks, a secret. Start with an easy walk or jog.' },
     steps: [
       say('tn-amira', '[whispers] Amira here. Wallabies everywhere. Stay on the path, let them be. They are just having breakfast.'),
       say('tn-ted', 'Ted, ranger. Morning. The wallabies are agile wallabies. Very relaxed. Do not feed them. They have plenty.'),
@@ -168,7 +168,7 @@ export const EPISODES = [
     place: { name: 'Darwin Waterfront', lat: -12.4685, lng: 130.8475 },
     loop: line('tn-amira', 'A loop! Like rain going round the gutters.'),
     early: line('tn-amira', 'Stop there, all good. Get out of the rain.'),
-    open: { scene: 'monsoon', chapter: 'The storm', text: 'Darwin Waterfront, in a monsoon storm. Rain like a waterfall, thunder rattling the windows, and steam rising off the warm footpaths. Start with an easy walk or jog.' },
+    open: { scene: 'monsoon', chapter: 'The storm', text: 'Darwin Waterfront in a monsoon storm. Rain like a waterfall, thunder shaking the cliff, and a clue that only shows itself in the wet. Start with an easy walk or jog.' },
     steps: [
       say('tn-amira', '[excited] Amira here. Ask the wet! Jim meant it literally. In big rain, water runs down the cliff and shows where the rock was cut.'),
       say('tn-ollie', 'So we go and look at the cliff in a storm? Okay. I brought an umbrella. It is already inside out.'),
@@ -203,7 +203,7 @@ export const EPISODES = [
     place: { name: 'Stokes Hill Wharf, Darwin', lat: -12.4710, lng: 130.8460 },
     loop: line('tn-amira', 'A loop. Back to the tunnels, where it started.'),
     early: line('tn-amira', 'Stop there, all good. Come to the market tonight.'),
-    open: { scene: 'harbour', chapter: 'Opening day', text: 'Darwin, a clear morning after the storm. A small crowd behind a safety fence, a crew in hard hats, and a lot of excited whispering. Start with an easy walk or jog.' },
+    open: { scene: 'harbour', chapter: 'Opening day', text: 'Darwin, a clear morning after the storm. A crowd behind a fence, a crew with a drill, and a tunnel sealed since 1945 about to open. Start with an easy walk or jog.' },
     steps: [
       say('tn-amira', '[whispers] Amira here. The crew is drilling out the old bricks. Ollie is holding June’s hand. June is holding a laksa. Everyone is nervous.'),
       say(null, 'The last brick comes out. The crew shines a torch in. A short tunnel, a few metres long, dry and dusty. On a ledge, a small tin box.', { fx: 'found' }),

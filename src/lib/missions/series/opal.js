@@ -61,7 +61,7 @@ export const EPISODES = [
     place: { name: 'Coober Pedy, South Australia', lat: -29.0135, lng: 134.7544 },
     loop: line('op-rosie', 'A loop! Like the tunnels in a dugout. You always end up back in the kitchen.'),
     early: line('op-rosie', 'Stop there, no worries. Come down into the cool for a cold drink.'),
-    open: { scene: 'outback', chapter: 'Opal Town', text: 'Coober Pedy, in the middle of South Australia. Red hills dotted with white piles of dirt, doors cut into hillsides, and heat already shimmering. Start with an easy walk or jog.' },
+    open: { scene: 'outback', chapter: 'Opal Town', text: 'Coober Pedy. Red hills, white chimneys poking out of the ground, and deep in a dugout, an old miner’s lucky opal has vanished. Start with an easy walk or jog.' },
     steps: [
       say('op-rosie', 'Hi! Rosie here. My family runs a guesthouse. Underground. It stays cool down there, even when it is forty five outside.'),
       say('op-sal', '[sighs] Nonno Sal. Fifty years I mine opal. One stone I never sell. The Little Comet. Blue and green and red, like fireworks. This morning, gone.'),
@@ -98,7 +98,7 @@ export const EPISODES = [
     place: { name: 'Coober Pedy fossicking area', lat: -29.0050, lng: 134.7600 },
     loop: line('op-rosie', 'A loop! Like sifting dirt. Round and round until something shines.'),
     early: line('op-rosie', 'Stop there, all good. Barry is not going anywhere. He loves it here.'),
-    open: { scene: 'outback', chapter: 'The heaps', text: 'The public fossicking area. Pale piles of dirt dug up from mines, and people of all ages bent over them, looking for a flash of colour. Start with an easy walk or jog.' },
+    open: { scene: 'outback', chapter: 'The heaps', text: 'The fossicking heaps of Coober Pedy. Pale hills of mine dirt, a hot wind, and a tourist from Wagga holding a stone that might not be his. Start with an easy walk or jog.' },
     steps: [
       say('op-rosie', 'Rosie here. Fossicking means looking through old mine dirt for opal the miners missed. Anyone can do it here. It is the safe, legal way.'),
       say('op-barry', '[laughs] G’day! Barry. Tourist. From Wagga. I found a beautiful stone yesterday! Right here. Blue, green and red. Fair and square!'),
@@ -135,7 +135,7 @@ export const EPISODES = [
     place: { name: 'Coober Pedy underground church', lat: -29.0160, lng: 134.7560 },
     loop: line('op-rosie', 'A loop! Like a round of golf. Eighteen holes, back to the clubhouse.'),
     early: line('op-rosie', 'Stop there, all good. The golf goes on till late.'),
-    open: { scene: 'night', chapter: 'After dark', text: 'Coober Pedy after dark. The air is finally cool. Above, more stars than you have ever seen. On the hill, little green lights are bouncing. Start with an easy walk or jog.' },
+    open: { scene: 'night', chapter: 'After dark', text: 'Coober Pedy after dark. The heat lets go, the stars come out, and on a golf course with no grass, a glowing ball holds a clue. Start with an easy walk or jog.' },
     steps: [
       say('op-rosie', '[whispers] Rosie here. First, a quick stop. The underground church. Nonno says the kid with the golf balls goes to the youth group there.'),
       say(null, 'Steps lead down into the hill. Inside, a church carved from sandstone, the walls curving like a cave, candles flickering.', { scene: 'tunnel', fx: 'bellring' }),
@@ -172,7 +172,7 @@ export const EPISODES = [
     place: { name: 'Dog fence near Coober Pedy', lat: -28.8500, lng: 134.8800 },
     loop: line('op-rosie', 'A loop! Like a fence line, out and back.'),
     early: line('op-rosie', 'Stop there, all good. Hop back in the ute.'),
-    open: { scene: 'outback', chapter: 'Out of town', text: 'A dirt road north of Coober Pedy. Flat, stony desert called gibber, a few low bushes, and a sky so blue it hurts. Start with an easy walk or jog.' },
+    open: { scene: 'outback', chapter: 'Out of town', text: 'A dirt road north of Coober Pedy. Gibber desert to the edge of the world, the longest fence on Earth, and a birthday surprise on its way. Start with an easy walk or jog.' },
     steps: [
       say('op-rosie', 'Rosie here. We drive, you run the last bit. We have water, hats and a birthday cake in an esky. Leo has the Comet.'),
       say('op-leo', '[excited] Dad does not know we are coming! He thinks it is just a normal Tuesday!'),
@@ -209,7 +209,7 @@ export const EPISODES = [
     place: { name: 'Coober Pedy main street', lat: -29.0130, lng: 134.7550 },
     loop: line('op-rosie', 'A loop! Like the parade. Up the street and back.'),
     early: line('op-rosie', 'Stop there, all good. The party is underground tonight.'),
-    open: { scene: 'festival', chapter: 'Festival day', text: 'Opal festival day in Coober Pedy. Stalls up the main street, a brass band, dancers and opals glittering in glass cases. Start with an easy walk or jog.' },
+    open: { scene: 'festival', chapter: 'Festival day', text: 'Opal festival day in Coober Pedy. Stalls up the main street, a parade about to start, and a wall of red dust rolling in from the south. Start with an easy walk or jog.' },
     steps: [
       say('op-rosie', '[excited] Rosie here! The whole town is out. And over there, in a glass case, the Little Comet. With a very serious guard. Leo.'),
       say('op-leo', 'I am guarding it. Nobody touches it. Not even me. Well. Only a little.'),
