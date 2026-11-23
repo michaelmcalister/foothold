@@ -124,6 +124,19 @@ const yourpatch = scene({
     + '<path d="M200 110 l14 -16 l14 16 l-14 18 Z" fill="#E5484D"/><path d="M214 128 q-10 30 -40 60 q-20 20 -30 60" stroke="#F4EAD8" stroke-width="1.2" fill="none"/>',
 })
 
+// The Maheno Postcard: a rusty ship on a white beach at sunrise, a whale's
+// tail out at sea, and a postcard tumbling on the breeze
+const maheno = scene({
+  sky: [[0, '#0E2A3A'], [0.45, '#2E7A8A'], [0.78, '#F2A93B'], [1, '#FFE2A0']], glow: '#FFE6A8', sun: [214, 214, 46],
+  hills: [], ground: [288, '#F3E6C8'], rim: '#F2A93B',
+  mark: () => '<rect x="0" y="232" width="300" height="56" fill="#1F6A7A"/>'
+    + '<path d="M150 276 l112 -6 l-6 -20 l-98 6 Z" fill="#8A4A26"/><path d="M168 256 l10 -1 l0 -20 l-10 1 Z M206 254 l10 -1 l0 -16 l-10 1 Z" fill="#6A3418"/>'
+    + [176, 196, 216, 236].map((x) => `<circle cx="${x}" cy="262" r="2.2" fill="#3A1E10"/>`).join('')
+    + '<path d="M0 290 q70 -8 130 -14 q60 -6 100 -10 q40 -4 70 -14 L300 290 Z" fill="#EBDCB6"/>'
+    + '<path d="M60 246 q6 -12 12 0 q6 -12 12 0 l-12 6 Z" fill="#0E3A48"/><rect x="70" y="250" width="4" height="6" fill="#0E3A48"/>'
+    + '<g transform="rotate(-14 236 140)"><rect x="214" y="126" width="44" height="30" rx="2" fill="#FFF6E2"/><path d="M220 134 h20 M220 140 h26 M220 146 h16" stroke="#C9A97A" stroke-width="2"/><rect x="246" y="130" width="8" height="9" fill="#E5484D"/></g>',
+})
+
 export const COVERS = [
   { saga: 'tiger', draw: tiger },
   { saga: 'mahogany', draw: mahogany },
@@ -137,4 +150,5 @@ export const COVERS = [
   { saga: 'nugget', draw: nugget },
   { saga: 'gathering', draw: gathering },
   { saga: 'yourpatch', draw: yourpatch },
+  { saga: 'maheno', draw: maheno },
 ]

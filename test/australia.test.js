@@ -13,7 +13,7 @@ import { coverSvg, SAGA_LOOK } from '../src/lib/missions/covers.js'
 import { SERIES } from '../src/lib/missions/series/index.js'
 import { compose, say, quiz, dash, steady, choice, line } from '../src/lib/missions/series/compose.js'
 
-const AUSTRALIA = ['tiger', 'mahogany', 'catalpa', 'minmin', 'opal', 'tunnels', 'canberra', 'panther', 'hawkesbury', 'nugget']
+const AUSTRALIA = ['tiger', 'mahogany', 'catalpa', 'minmin', 'opal', 'tunnels', 'canberra', 'panther', 'hawkesbury', 'nugget', 'maheno']
 const live = AUSTRALIA.filter((id) => SERIES.some((s) => s.SAGA.id === id))
 const eps = (saga) => MISSIONS.filter((m) => m.saga === saga)
 

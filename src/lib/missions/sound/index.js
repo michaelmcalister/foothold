@@ -39,8 +39,9 @@ import { SHEET as timerunners } from './timerunners.js'
 import { SHEET as velocity } from './velocity.js'
 import { SHEET as trailkeepers } from './trailkeepers.js'
 import { SHEET as twocities } from './twocities.js'
+import { SHEET as maheno } from './maheno.js'
 
-export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, ember, heist, signal, deepcover, timerunners, velocity, trailkeepers, twocities]
+export const SHEETS = [bondi, druitt, sydney, penrith, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, ember, heist, signal, deepcover, timerunners, velocity, trailkeepers, twocities, maheno]
 
 /**
  * Put a series' sheet onto its episodes and its LIBRARY (in place): each
