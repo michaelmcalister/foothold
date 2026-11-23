@@ -5,7 +5,7 @@
 // app's sound effects and the recap flyover music.
 import { ref, computed, onMounted } from 'vue'
 import { audio } from '../lib/audio/settings.js'
-import { australianVoices, voicesReady, speak, unlock, serverVoices, voiceTrouble } from '../lib/audio/voice.js'
+import { australianVoices, voicesReady, speak, unlock, serverVoices, voiceTrouble, sampleSession } from '../lib/audio/voice.js'
 import * as spotify from '../lib/audio/spotify.js'
 import { canListen } from '../lib/audio/listen.js'
 import { toast } from '../lib/store.js'
@@ -73,6 +73,7 @@ async function testMusic() {
 }
 
 function sampleSounds() {
+  sampleSession() // like a run: the silent switch doesn't hush the effects
   wakeSound() // inside the tap, so the phone allows it
   playSequence([{ name: 'claim', hexes: 12 }, { name: 'take' }, { name: 'levelUp' }])
 }

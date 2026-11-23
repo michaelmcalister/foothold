@@ -35,6 +35,7 @@ let fails = 0
  * after two failures in a row) the caller is told false and plays it the web way.
  */
 export async function playNative(bytes, { volume = 1, timeoutMs = 15000, wait = true } = {}) {
+  if (!proven) timeoutMs = Math.min(timeoutMs, 8000) // a first sound that never reports back is not left in silence for long
   const p = await player()
   if (!p) return false
   const done = p.play({ data: toBase64(bytes), volume }).then(
@@ -47,7 +48,15 @@ export async function playNative(bytes, { volume = 1, timeoutMs = 15000, wait = 
     },
   )
   if (!wait && proven) { done.catch(() => {}); return true }
-  await Promise.race([done, new Promise((r) => setTimeout(r, timeoutMs))])
+  const answered = await Promise.race([done.then(() => true), new Promise((r) => setTimeout(() => r(false), timeoutMs))])
+  if (!answered && !proven) {
+    // Never heard back: the phone player is likely silent, so don't trust it.
+    // The caller plays this one the web way, and after two the web way is used for good.
+    noteTrouble('phone player', 'no answer')
+    if (++fails >= 2) missing = true
+    p.stopAll().catch(() => {})
+    return false
+  }
   return true
 }
 

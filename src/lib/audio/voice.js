@@ -137,6 +137,18 @@ function webSession(kind) {
   if (s && 'type' in s) { try { s.type = kind || 'auto' } catch { /* not allowed here */ } }
   if (!s || !('type' in s)) holdSpeaker(kind === 'playback')
 }
+let sampleT = 0
+/**
+ * Outside a run, a sound sample (Settings) uses the run's 'playback' mode for
+ * a few seconds, so the effects aren't silenced by the silent switch (iPhone
+ * plays a web page's effects as 'ambient' otherwise, while the voice plays).
+ */
+export function sampleSession(ms = 5000) {
+  if (isIOSApp() || runSession) return
+  webSession('playback')
+  clearTimeout(sampleT)
+  sampleT = setTimeout(() => { if (!runSession) webSession(null) }, ms)
+}
 /**
  * iPhone app: the microphone takes over the app's sound while it listens and
  * switches it off afterwards, which silences everything else. Put Foothold's
@@ -261,7 +273,11 @@ async function soften(blob) {
   try {
     const C = window.OfflineAudioContext || window.webkitOfflineAudioContext
     if (!C) return blob
-    const buf = await new C(1, 1, 44100).decodeAudioData(await blob.arrayBuffer())
+    // the phone's decoder can hang (an interrupted audio session): don't wait on it
+    const buf = await Promise.race([
+      new C(1, 1, 44100).decodeAudioData(await blob.arrayBuffer()),
+      new Promise((_, no) => setTimeout(() => no(new Error('decode timed out')), 2500)),
+    ])
     let mono = buf.getChannelData(0)
     if (buf.numberOfChannels > 1) {
       const r = buf.getChannelData(1)

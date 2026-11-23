@@ -503,7 +503,7 @@ export async function rendered(name, opts) {
   limit.ratio.value = 12
   limit.connect(oc.destination)
   scheduleEffect(oc, limit, name, 0.01, shape)
-  const buf = await oc.startRendering()
+  const buf = await Promise.race([oc.startRendering(), new Promise((_, no) => setTimeout(() => no(new Error('render timed out')), 2500))]) // can hang on a phone
   const bytes = wavBytes(buf.getChannelData(0), rate)
   clips.set(key, bytes)
   return bytes
