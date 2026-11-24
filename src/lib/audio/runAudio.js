@@ -12,7 +12,7 @@ import { watch, ref } from 'vue'
 import { rec } from '../recorder.js'
 import { audio } from './settings.js'
 import { createAnnouncer } from './announcer.js'
-import { testLog } from './testLog.js'
+import { testLog, logTest, clearNowSound } from './testLog.js'
 import { inCrew, voteAndWait, sendProgress, crewLine, crew } from '../groupRun.js'
 import { speak, speakAs, prepareLines, forgetLines, unlock, hush, setRunSession, asAnnouncement, runSessionKind, reclaimSpeaker, setPrivateLines } from './voice.js'
 import { enqueue, clear } from './queue.js'
@@ -112,9 +112,9 @@ function sayLine(line) {
   if (!text || !audio.voice) return
   const radio = CAST[who]?.radio && s
   const play = async () => {
-    if (radio) { await s.sting('squelch'); s.radio(stripTags(text).length / 13) } // static and crackle under the line
+    if (radio) { await s.sting('squelch', { radio: true }); s.radio(stripTags(text).length / 13) } // static and crackle under the line
     await talking(() => speakAs(text, who, { coachVoice: audio.coachVoice, voiceName: audio.voiceName }))
-    if (radio) await s.sting('squelch')
+    if (radio) await s.sting('squelch', { radio: true })
   }
   // alongside Spotify, the radio sounds share the voice's announcement (see above)
   enqueue(() => spotify.aroundSpeech(() => (radio && runSessionKind() === 'ambient' ? asAnnouncement(play) : play()), { how: audio.music, duckTo: audio.duckTo }))
@@ -462,9 +462,14 @@ export function answerOffer(key, { quiet = false } = {}) {
 /** True when the run's music couldn't start because Spotify was asleep on this phone. */
 export const musicWaiting = ref(false)
 
+// A step that may hang on a phone (the iPhone sound mode, a slow network):
+// carry on after ms with 'late' rather than wait for ever. Never throws.
+const within = (p, ms) => Promise.race([Promise.resolve(p).catch(() => null), new Promise((r) => setTimeout(() => r('late'), ms))])
+
 export async function beginRun(mode, { onError = () => {}, missionId = null, walk = null } = {}) {
   endRun()
   unlock()
+  clearNowSound()
   // a mission that asks questions: ask for the microphone now, inside the tap
   const asks = missionId && missionById(missionId)?.beats.some((b) => b.options)
   if (asks && audio.answerByVoice && canListen()) primeListening()
@@ -472,7 +477,9 @@ export async function beginRun(mode, { onError = () => {}, missionId = null, wal
   // our own, or ambient alongside Spotify. Then the same tap wakes the sound.
   const session = setRunSession(audio.spotifyAutoplay && spotify.isLinked() ? 'ambient' : 'playback', { fresh: true })
   sfx.resume()
-  await session // the iPhone app sets its own mode first, then the run's sounds start
+  // the iPhone app sets its own mode first, then the run's sounds start
+  if ((await within(session, 3000)) === 'late') logTest('Problem', 'The sound mode took over 3 seconds to set. Carrying on')
+  else logTest('Start', 'Sound mode set')
   // iPhone pauses web sound when the mic opens or a call comes in: wake it again
   clearInterval(keepAwake)
   wakeOnTouch(false)
@@ -495,11 +502,17 @@ export async function beginRun(mode, { onError = () => {}, missionId = null, wal
       else onError(e.message)
     })
   }
-  const { paces, target } = await todaysTarget()
+  const today = await within(todaysTarget(), 5000)
+  if (today === 'late') logTest('Problem', 'Today’s plan took over 5 seconds to load. Carrying on without it')
+  const { paces, target } = today && today !== 'late' ? today : { paces: trainingPaces(DEFAULT_5K_S), target: null }
   runPaces = paces
   const script = missionId ? missionById(missionId) : null
-  if (script?.local) localWords = await nearbyWords()
+  if (script?.local) {
+    const words = await within(nearbyWords(), 5000)
+    localWords = words && words !== 'late' ? words : null
+  }
   startMission(script)
+  if (script) logTest('Start', `Story loaded: ${script.title}`)
   // a Story Maker story plays like a mission, moving by place (storyMaker/walk.js)
   if (walk) {
     mission = walk

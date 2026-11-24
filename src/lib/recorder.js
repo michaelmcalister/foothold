@@ -257,6 +257,7 @@ export function startSim(mode = 'run') {
   sim = true
   Object.assign(rec, { status: 'recording', mode, points: [], startedAt: Date.now(), elapsedS: 0, distanceM: 0, paceSPerKm: null, toStartM: null, error: null, lastFixAt: null, notice: null, rough: false, accuracy: 5 })
   pausedTotal = 0
+  keepAwake() // a play through runs for a long time: if the phone locks, the iPhone app pauses it
 }
 
 /** One pretend GPS fix, at a pretend time (seconds into the run). */

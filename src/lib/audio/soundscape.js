@@ -1250,14 +1250,15 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
         recorded.sfx(id).then((b) => { if (b) sfxBufs.set(id, b); else sfxBufs.delete(id) }).catch(() => sfxBufs.delete(id))
       }
     },
-    /** Play an effect now; resolves when it's done. */
-    sting(name) {
+    /** Play an effect now; resolves when it's done. radio: the click around a radio line (logged as Radio, not a story effect). */
+    sting(name, { radio = false } = {}) {
+      const kind = radio ? 'Radio' : 'Effect'
       const t = ctx.currentTime + 0.02
       // a recorded cue, once it has arrived; until then its synthesised stand-in
       const cue = SFX[name]?.sting ? SFX[name] : null
       const buf = cue ? sfxBufs.get(name) : null
       if (buf) {
-        logTest('Effect', `${name} · recorded sfx/${name}.mp3`)
+        logTest(kind, `${name} · recorded sfx/${name}.mp3`)
         const src = ctx.createBufferSource()
         src.buffer = buf
         const g = ctx.createGain()
@@ -1270,7 +1271,7 @@ export function createSoundscape(ctx, out, { score = null, seed = 7, music = tru
       const id = cue ? cue.sting : name
       const s = STINGS[id]
       if (!s) return Promise.resolve()
-      logTest('Effect', cue ? `${name} · stand-in synth sting ${id} (sfx/${name}.mp3 not here yet)` : `${name} · synth sting`)
+      logTest(kind, cue ? `${name} · stand-in synth sting ${id} (sfx/${name}.mp3 not here yet)` : `${name} · synth sting`)
       s.build(ctx, stingBus, t)
       return new Promise((res) => setTimeout(res, s.dur * 1000))
     },

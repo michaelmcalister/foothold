@@ -14,7 +14,7 @@ import { useRouter, useRoute } from 'vue-router'
 import TerritoryMap from '../../components/TerritoryMap.vue'
 import { rec, start, startSim, isSim, startAnyway, pause, resume, stop, discard, bridgeGaps, unfinished, forgetUnfinished } from '../../lib/recorder.js'
 import { auto, startAuto, stopAuto } from '../../lib/autoRun.js'
-import { testLog } from '../../lib/audio/testLog.js'
+import { testLog, nowSound } from '../../lib/audio/testLog.js'
 import { api, isLocal } from '../../lib/api/index.js'
 import { store, refresh, toast } from '../../lib/store.js'
 import { km, pace, duration, speedKmh, MODE_LABEL } from '../../lib/format.js'
@@ -246,6 +246,19 @@ async function backToReal() {
   maker.near = []
   maker.ready = null
 }
+
+// ---- admins: the sounds playing now, by file name, to pick out one to change ----
+const isAdmin = computed(() => !!store.user?.admin)
+const nowHidden = ref(false)
+const nowTick = ref(Date.now())
+const nowTimer = setInterval(() => { nowTick.value = Date.now() }, 2000)
+onBeforeUnmount(() => clearInterval(nowTimer))
+const nowRows = computed(() => {
+  const at = nowTick.value
+  const rows = [['Scene', nowSound.scene, 0], ['Music', nowSound.music, 0], ['Passing', nowSound.passing, 20000], ['Effect', nowSound.effect, 20000], ['App sound', nowSound.app, 20000]]
+  return rows.filter(([, v]) => v).map(([label, v, fresh]) => ({ label, text: v.text, old: fresh > 0 && at - v.at > fresh }))
+})
+const showNowSound = computed(() => isAdmin.value && !nowHidden.value && nowRows.value.length > 0 && rec.status !== 'idle')
 
 // ---- admins: hear a whole story without running it (lib/autoRun.js) ----
 const canAuto = computed(() => !!store.user?.admin && mode.value !== 'ride' && store.located)
@@ -598,6 +611,11 @@ onBeforeUnmount(() => {})
           <button v-if="finishing" class="btn" type="button" @click="keepGoing">Keep going</button>
           <button v-else class="btn" type="button" :disabled="rec.status === 'acquiring'" @click="askFinish">Finish</button>
         </div>
+        <div v-if="showNowSound" class="nowsound" aria-label="Sounds playing now">
+          <div class="ns-head"><b>Now playing</b><button type="button" class="ns-hide" @click="nowHidden = true">Hide</button></div>
+          <p v-for="row in nowRows" :key="row.label" :class="{ old: row.old }"><span>{{ row.label }}</span> {{ row.text }}</p>
+        </div>
+        <button v-else-if="isAdmin && nowHidden && nowRows.length" type="button" class="ns-show" @click="nowHidden = false">Show sound names</button>
         <template v-if="auto.on">
           <p class="finishing small" aria-live="polite">{{ auto.note }}. Nothing is saved.</p>
           <ol class="testlog" aria-label="What just played">
@@ -630,6 +648,14 @@ onBeforeUnmount(() => {})
 .testlog .mic b { color: #6FB5FF; }
 .testlog .problem b { color: #FF8A7A; }
 .testlog li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nowsound { margin: 6px 0 0; padding: 8px 10px; border-radius: 12px; background: #0B1622; color: #E8EEF4; font-size: 0.78rem; display: grid; gap: 3px; }
+.nowsound .ns-head { display: flex; align-items: center; justify-content: space-between; color: #9FB4C6; }
+.nowsound p { margin: 0; overflow-wrap: anywhere; }
+.nowsound p span { display: inline-block; min-width: 74px; color: #FFC15E; font-weight: 750; }
+.nowsound p.old { opacity: 0.55; }
+.ns-hide, .ns-show { border: 0; border-radius: 999px; font: inherit; font-weight: 750; cursor: pointer; }
+.ns-hide { background: transparent; color: #9FB4C6; padding: 4px 6px; min-height: 28px; }
+.ns-show { margin-top: 6px; background: #0B1622; color: #E8EEF4; padding: 6px 12px; min-height: 32px; font-size: 0.8rem; }
 .aim { position: absolute; left: 50%; top: 50%; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; stroke: #0B1622; fill: #0B1622; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9)); }
 .aim.set { stroke: #E8590C; fill: #E8590C; }
 .putme {

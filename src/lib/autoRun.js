@@ -14,6 +14,7 @@ import { stopListening, canListen } from './audio/listen.js'
 import { testLog, logTest } from './audio/testLog.js'
 import { audio } from './audio/settings.js'
 import { distance } from './engine/geo.js'
+import { report } from './monitoring.js'
 
 export const auto = reactive({ on: false, note: '' })
 
@@ -53,6 +54,12 @@ export function onLoop(start, d, r = 450) {
 
 let timer = 0
 let voiceWas = null
+
+// The iPhone app pauses when the phone locks or another app opens: say so in the log
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (!auto.on) return
+  logTest(document.visibilityState === 'hidden' ? 'Problem' : 'Start', document.visibilityState === 'hidden' ? 'Foothold went into the background. The play through waits' : 'Back in Foothold. Carrying on')
+})
 
 /**
  * Start moving. start: { lat, lng }. begin(): starts the pretend run and its
@@ -94,6 +101,9 @@ export function startAuto({ start, mode = 'run', begin = () => {}, leg = () => n
       else if (Date.now() - t0 > START_MS) {
         logTest('Problem', rec.status !== 'recording' ? 'The pretend run never started' : 'The story never started')
         auto.note = 'The story didn’t start. See the log'
+        // tell us what the phone got to (step names and sound names only, never places)
+        const SAFE = new Set(['Start', 'Problem', 'Scene', 'Music', 'Passing', 'Effect', 'App', 'Radio']) // never spoken lines or what the mic heard
+        report(new Error(`Play it through did not start: ${testLog.items.filter((it) => SAFE.has(it.kind)).map((it) => `${it.kind}: ${it.text}`).reverse().join(' | ')}`), 'play-through')
         clearInterval(timer)
         return
       }

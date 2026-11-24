@@ -472,14 +472,14 @@ export async function play(name, opts = {}) {
       const bytes = await rendered(name, opts)
       const volume = Math.max(0, Math.min(1, audio.sfxVolume)) * (opts.quiet ? 0.65 : 1)
       if (bytes && (await playNative(bytes, { volume, wait: false }))) {
-        logTest('Effect', `${name} (phone player)`)
+        logTest('App', `${name} (phone player)`)
         if (opts.wait !== false) await wait(EFFECTS[name].dur)
         return true
       }
     } catch { /* the web way below */ }
   }
-  if (!(await resume())) { logTest('Effect', `${name}: no sound, the web audio is asleep`); return false }
-  if (name !== 'tap') logTest('Effect', `${name} (web audio)`)
+  if (!(await resume())) { logTest('App', `${name}: no sound, the web audio is asleep`); return false }
+  if (name !== 'tap') logTest('App', `${name} (web audio)`)
   try {
     const out = opts.quiet ? quietBus() : sfxBus
     scheduleEffect(ctx, out, name, ctx.currentTime + 0.01, opts)

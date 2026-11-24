@@ -4,6 +4,7 @@
 // fails quietly: if a sound isn't there, the synthesised sound carries on.
 import { RUN_PLAYLIST, TRACKS, shuffled } from './library.js'
 import { SILENT } from './synth.js'
+import { logTest } from './testLog.js'
 
 const RAW = import.meta.env.VITE_API_URL || ''
 const API = RAW === 'self' ? '' : RAW.replace(/\/$/, '')
@@ -116,6 +117,7 @@ export function createRunMusic(ctx, dest, { list = RUN_PLAYLIST, level = 0.42, r
         if (stopped) return
         if (!buf) { if (i > order.length * 2) return; continue } // not made yet: try the next, give up after a lap
         api.nowPlaying = TRACKS[id]?.title || null
+        logTest('Music', `${id} · recorded track/${id}.mp3`)
         const p = playTrack(ctx, bus, buf, { level, onStop: (fn) => { stopNow = fn } })
         await p.finished
       }
