@@ -23,10 +23,11 @@ import * as nugget from './nugget.js'
 import * as gathering from './gathering.js'
 import * as yourpatch from './yourpatch.js'
 import * as maheno from './maheno.js'
+import * as nobbys from './nobbys.js'
 
 import { SHEETS, applySheet } from '../sound/index.js'
 
-const ALL = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, maheno]
+const ALL = [deepcover, timerunners, velocity, penrith, twocities, bondi, druitt, sydney, tiger, mahogany, catalpa, minmin, opal, tunnels, canberra, panther, hawkesbury, nugget, gathering, yourpatch, maheno, nobbys]
 // each series' sound sheet (missions/sound) adds its scenes, cues and passing sounds
 for (const sh of SHEETS) { const series = ALL.find((x) => x.SAGA.id === sh.series); if (series) applySheet(series, sh) }
 export const SERIES = ALL.filter((s) => s.EPISODES.length)

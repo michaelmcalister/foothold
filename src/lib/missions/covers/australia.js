@@ -137,6 +137,20 @@ const maheno = scene({
     + '<g transform="rotate(-14 236 140)"><rect x="214" y="126" width="44" height="30" rx="2" fill="#FFF6E2"/><path d="M220 134 h20 M220 140 h26 M220 146 h16" stroke="#C9A97A" stroke-width="2"/><rect x="246" y="130" width="8" height="9" fill="#E5484D"/></g>',
 })
 
+// The Nobbys Signal: the lighthouse on its headland at dawn, three beams of
+// light, the long breakwater and a coal ship waiting on the horizon
+const nobbys = scene({
+  sky: [[0, '#0B1E33'], [0.5, '#2C4F7A'], [0.8, '#E9925A'], [1, '#FFD9A0']], glow: '#FFE3A8', sun: [70, 236, 40], stars: 24,
+  hills: [], ground: [292, '#123049'], rim: '#F6C445',
+  mark: () => '<rect x="0" y="240" width="300" height="52" fill="#1B4566"/>'
+    + '<path d="M8 238 h22 v-4 h40 v4 h14 v2 H8 Z" fill="#0E2438"/><rect x="40" y="226" width="8" height="8" fill="#0E2438"/>'
+    + '<path d="M150 262 q30 -50 80 -54 q40 -2 70 20 V262 Z" fill="#26402E"/>'
+    + '<path d="M0 266 L170 258 L170 264 L0 272 Z" fill="#7A7366"/>'
+    + '<rect x="226" y="176" width="12" height="34" fill="#F4EEE2"/><rect x="223" y="170" width="18" height="7" fill="#2A2A2A"/><rect x="227" y="162" width="10" height="9" fill="#F6C445"/>'
+    + '<path d="M241 164 L300 140 L300 152 Z M241 167 L300 166 L300 178 Z M241 170 L300 192 L300 204 Z" fill="#FFF1B0" opacity="0.45"/>'
+    + '<rect x="200" y="204" width="44" height="8" fill="#F4EEE2"/>',
+})
+
 export const COVERS = [
   { saga: 'tiger', draw: tiger },
   { saga: 'mahogany', draw: mahogany },
@@ -151,4 +165,5 @@ export const COVERS = [
   { saga: 'gathering', draw: gathering },
   { saga: 'yourpatch', draw: yourpatch },
   { saga: 'maheno', draw: maheno },
+  { saga: 'nobbys', draw: nobbys },
 ]
